@@ -214,30 +214,67 @@ function downloadPDF() {
   const element = document.getElementById('vatti-pdf-area');
   html2pdf().from(element).save('Vatti_Kanakku.pdf');
 }
+let pendingVatti = null; // கார்த்தி உறுதிப்படுத்தலுக்கான தற்காலிக சேமிப்பு
 
 function processNLP(rawText) {
   const text = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // 1. வட்டி கணக்கை முதலிலேயே கண்டறிதல்
-  if (text.includes('வட்டி') || text.includes('பைசா')) {
-    let numbers = text.match(/\d+/g);
-    let nameMatch = rawText.match(/^([a-zA-A-ழ-ஹ]+)/);
-    let name = nameMatch ? nameMatch[0] : "நபர்";
-
-    if (numbers && numbers.length >= 2) {
-      let amt = parseInt(numbers[0]);
-      let rate = parseInt(numbers[1]);
-      let months = numbers[2] ? parseInt(numbers[2]) : 1;
-
-      db.vatti.push({ name, amt, rate, months, datetime });
+  // 1. கார்த்தி / நபர் உறுதிப்படுத்தும் உரையாடல் (Confirmation Flow)
+  if (pendingVatti) {
+    if (/(ஆமாம்|ஆமா|சேர்|சேர்க்கவும்|அவரிடம்|பழைய)/.test(text)) {
+      let target = pendingVatti.existing[0]; // முதல் நபரிடம் சேர்த்தல்
+      target.amt += pendingVatti.amt;
+      target.rate = pendingVatti.rate; // புதிய வட்டி விகிதம்
       saveData();
-      addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டது. அசல்: ₹${amt}, வட்டி: ${rate}%. 💰`, false);
+      addChat(`சரி பாலாஜி சார்! ${target.name} கணக்கில் ₹${pendingVatti.amt} சேர்க்கப்பட்டது. தற்போதைய மொத்த அசல்: ₹${target.amt} 💰`, false);
+      pendingVatti = null;
+      return;
+    } else if (/(புதிய|புதிதாக|தனி|வேற|வேலை)/.test(text)) {
+      let count = pendingVatti.existing.length + 1;
+      let newName = `${pendingVatti.name} ${count}`;
+      db.vatti.push({ name: newName, amt: pendingVatti.amt, rate: pendingVatti.rate, date: pendingVatti.date, datetime });
+      saveData();
+      addChat(`சரி பாலாஜி சார்! புதிய நபராக "${newName}" வட்டி கணக்கில் சேர்க்கப்பட்டார். அசல்: ₹${pendingVatti.amt}, வட்டி: ${pendingVatti.rate}% 💰`, false);
+      pendingVatti = null;
       return;
     }
   }
 
-  // 2. தொடர் கேள்விகளுக்கான பதில் (சம்பளம் / வீடு தேர்வு)
+  // 2. வட்டி கணக்கை கண்டறிதல்
+  if (text.includes('வட்டி') || text.includes('பைசா')) {
+    let numbers = text.match(/\d+/g);
+    
+    // பெயரிலிருந்து தேவையில்லாத வார்த்தைகளை நீக்கி தூய பெயரைப் பெறுதல்
+    let cleanNameText = rawText.replace(/(என்பவர்|என்பவருக்கு|என்பவரிடம்|என்பவரிடமிருந்து)/g, '').trim();
+    let nameMatch = cleanNameText.match(/^([a-zA-A-ழ-ஹ]+)/);
+    let name = nameMatch ? nameMatch[0] : "நபர்";
+
+    // தேதியைக் கண்டறிதல் (எ.கா: 11/3/2024 அல்லது இன்றைய தேதி)
+    let dateMatch = rawText.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
+    let entryDate = dateMatch ? dateMatch[0] : new Date().toLocaleDateString('en-GB');
+
+    if (numbers && numbers.length >= 2) {
+      let amt = parseInt(numbers[0]);
+      let rate = parseInt(numbers[1]);
+
+      // ஏற்கனவே இந்த பெயரில் யாராவது இருக்கிறார்களா எனச் சரிபார்த்தல்
+      let existingPersons = db.vatti.filter(v => v.name.toLowerCase().includes(name.toLowerCase()));
+
+      if (existingPersons.length > 0) {
+        pendingVatti = { name, amt, rate, date: entryDate, existing: existingPersons };
+        addChat(`பாலாஜி சார்! ஏற்கனவே "${name}" பெயரில் கணக்கு உள்ளது. ₹${amt} தொகையை பழைய ${name} கணக்கிலேயே சேர்க்கவா? அல்லது "புதிய நபர்" எனத் தனி கணக்காகப் பதியவா?`, false);
+        return;
+      } else {
+        db.vatti.push({ name, amt, rate, date: entryDate, datetime });
+        saveData();
+        addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார். அசல்: ₹${amt}, வட்டி: ${rate}%, தேதி: ${entryDate} 💰`, false);
+        return;
+      }
+    }
+  }
+
+  // 3. சம்பளம் / வீடு தொடர் கேள்விகள்
   if (pendingExpense) {
     if (/(சம்பளம்|சம்பள)/.test(text)) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
@@ -283,11 +320,9 @@ function processNLP(rawText) {
 
     if (/(சம்பளம்|சம்பளத்தில்|சம்பளப்|சம்பள)/.test(text)) {
       db.salary.push({ desc: rawText, amt, type: 'out', datetime });
-      saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 💼`, false);
     } else if (/(வீடு|வீட்டு|வீட்டில்|வீட்டுப்)/.test(text)) {
       db.home.push({ desc: rawText, amt, type: 'out', datetime });
-      saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 🏠`, false);
     } else {
       pendingExpense = { desc: rawText, amt, isKollai };
@@ -298,6 +333,7 @@ function processNLP(rawText) {
 
 function clearChat() {
   pendingExpense = null;
+  pendingVatti = null;
   document.getElementById('chatBox').innerHTML = '<div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>';
 }
 
