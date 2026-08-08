@@ -1,4 +1,4 @@
-let db = JSON.parse(localStorage.getItem('smartpa_db')) || { 
+let db = JSON.parse(localStorage.getItem('smartpa_db_v2')) || { 
   salary: [], 
   home: [], 
   vatti: [], 
@@ -8,11 +8,8 @@ let db = JSON.parse(localStorage.getItem('smartpa_db')) || {
 };
 let pendingExpense = null;
 
-// தமிழ் வார்த்தைகளை எண்களாக மாற்றும் செயல்பாடு
 function parseTamilNumbers(text) {
   let str = text;
-  
-  // தமிழ்ச் சொற்கள் மாற்றி
   const words = [
     { w: /ஒரு நூறு|நூறு/g, v: 100 },
     { w: /இரண்டு நூறு|இருநூறு/g, v: 200 },
@@ -32,21 +29,22 @@ function parseTamilNumbers(text) {
     { w: /லட்சம்|லக்ஷம்/g, v: 100000 }
   ];
 
-  // எண்களுடன் கலந்த "30 ஆயிரம்" போன்றவற்றை மாற்றுதல்
   str = str.replace(/(\d+)\s*ஆயிரம்/g, (m, p1) => parseInt(p1) * 1000);
   str = str.replace(/(\d+)\s*லட்சம்/g, (m, p1) => parseInt(p1) * 100000);
   str = str.replace(/(\d+)\s*நூறு/g, (m, p1) => parseInt(p1) * 100);
 
-  words.forEach(item => {
-    str = str.replace(item.w, item.v);
-  });
-
+  words.forEach(item => { str = str.replace(item.w, item.v); });
   return str;
 }
 
 function saveData() {
-  localStorage.setItem('smartpa_db', JSON.stringify(db));
+  localStorage.setItem('smartpa_db_v2', JSON.stringify(db));
   renderData();
+}
+
+function deleteItem(cat, idx) {
+  db[cat].splice(idx, 1);
+  saveData();
 }
 
 function renderData() {
@@ -54,31 +52,68 @@ function renderData() {
   let salBal = db.salary.reduce((acc, item) => item.type === 'in' ? acc + item.amt : acc - item.amt, 0);
   if(document.getElementById('bal-salary')) document.getElementById('bal-salary').innerText = salBal;
   if(document.getElementById('hist-salary')) {
-    document.getElementById('hist-salary').innerHTML = db.salary.map(i => `<div class="history-item"><span>${i.desc}</span><span class="${i.type}">₹${i.amt}</span></div>`).reverse().join('');
+    document.getElementById('hist-salary').innerHTML = db.salary.map((i, idx) => 
+      `<div class="history-item">
+        <span>${i.desc}</span>
+        <div>
+          <span class="${i.type}">₹${i.amt}</span>
+          <button class="btn-del" onclick="deleteItem('salary', ${idx})">🗑️</button>
+        </div>
+      </div>`
+    ).reverse().join('');
   }
 
   // 2. வீடு
   let homeBal = db.home.reduce((acc, item) => item.type === 'in' ? acc + item.amt : acc - item.amt, 0);
   if(document.getElementById('bal-home')) document.getElementById('bal-home').innerText = homeBal;
   if(document.getElementById('hist-home')) {
-    document.getElementById('hist-home').innerHTML = db.home.map(i => `<div class="history-item"><span>${i.desc}</span><span class="${i.type}">₹${i.amt}</span></div>`).reverse().join('');
+    document.getElementById('hist-home').innerHTML = db.home.map((i, idx) => 
+      `<div class="history-item">
+        <span>${i.desc}</span>
+        <div>
+          <span class="${i.type}">₹${i.amt}</span>
+          <button class="btn-del" onclick="deleteItem('home', ${idx})">🗑️</button>
+        </div>
+      </div>`
+    ).reverse().join('');
   }
 
-  // 3. கொள்ளை செலவு
+  // 3. கொள்ளை
   let kollaiTotal = db.kollai.reduce((acc, item) => acc + item.amt, 0);
   if(document.getElementById('total-kollai')) document.getElementById('total-kollai').innerText = kollaiTotal;
   if(document.getElementById('hist-kollai')) {
-    document.getElementById('hist-kollai').innerHTML = db.kollai.map(i => `<div class="history-item"><span>${i.desc}</span><span class="out">₹${i.amt}</span></div>`).reverse().join('');
+    document.getElementById('hist-kollai').innerHTML = db.kollai.map((i, idx) => 
+      `<div class="history-item">
+        <span>${i.desc}</span>
+        <div>
+          <span class="out">₹${i.amt}</span>
+          <button class="btn-del" onclick="deleteItem('kollai', ${idx})">🗑️</button>
+        </div>
+      </div>`
+    ).reverse().join('');
   }
 
-  // 4. வட்டி கணக்கு
+  // 4. வட்டி
   if(document.getElementById('hist-vatti')) {
-    document.getElementById('hist-vatti').innerHTML = db.vatti.map(i => `<div class="history-item"><span>${i.name} (${i.amt} @ ${i.rate}%)</span><span class="in">வட்டி: ₹${(i.amt * i.rate)/100}/மாதம்</span></div>`).reverse().join('');
+    document.getElementById('hist-vatti').innerHTML = db.vatti.map((i, idx) => 
+      `<div class="history-item">
+        <span>${i.name} (₹${i.amt} @ ${i.rate}%)</span>
+        <div>
+          <span class="in">வட்டி: ₹${(i.amt * i.rate)/100}/மாதம்</span>
+          <button class="btn-del" onclick="deleteItem('vatti', ${idx})">🗑️</button>
+        </div>
+      </div>`
+    ).reverse().join('');
   }
 
   // 5. நோட்பேட்
   if(document.getElementById('hist-notes')) {
-    document.getElementById('hist-notes').innerHTML = db.notes.map((n, idx) => `<div class="history-item"><span>${n}</span><button onclick="deleteNote(${idx})" style="padding:2px 5px; background:red;">X</button></div>`).reverse().join('');
+    document.getElementById('hist-notes').innerHTML = db.notes.map((n, idx) => 
+      `<div class="history-item">
+        <span>${n}</span>
+        <button class="btn-del" onclick="deleteItem('notes', ${idx})">🗑️</button>
+      </div>`
+    ).reverse().join('');
   }
 }
 
@@ -112,7 +147,27 @@ function processNLP(rawText) {
   const text = parseTamilNumbers(rawText.replace(/,/g, ''));
   const date = new Date().toLocaleDateString('ta-IN');
 
-  // நிலுவையில் இருந்த கேள்விகளுக்கு பதில்
+  // வாய்ஸ் டெலிட் கமாண்ட் (Voice Delete Controls)
+  if (text.includes('நீக்கு') || text.includes('அழி')) {
+    if (text.includes('அனைத்தையும்') || text.includes('எல்லாவற்றையும்')) {
+      db = { salary: [], home: [], vatti: [], kollai: [], notes: [], reminders: [] };
+      saveData();
+      addChat('பாலாஜி சார், அனைத்துக் கணக்குகளும் அழிக்கப்பட்டுவிட்டன! 🧹', false);
+      return;
+    } else if (text.includes('சம்பளம்') || text.includes('சம்பள')) {
+      db.salary.pop();
+      saveData();
+      addChat('சம்பளக் கணக்கின் கடைசிப் பதிவு நீக்கப்பட்டது! 🗑️', false);
+      return;
+    } else if (text.includes('வீடு') || text.includes('வீட்டு')) {
+      db.home.pop();
+      saveData();
+      addChat('வீட்டுக் கணக்கின் கடைசிப் பதிவு நீக்கப்பட்டது! 🗑️', false);
+      return;
+    }
+  }
+
+  // நிலுவை பதில்
   if (pendingExpense) {
     if (/(சம்பளம்|சம்பள)/.test(text)) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', date });
@@ -131,7 +186,6 @@ function processNLP(rawText) {
 
   const numMatch = text.match(/\d+/);
   if (!numMatch) {
-    // நோட்பேடில் சேர்க்கிறதா என்று சரிபார்த்தல்
     if (text.includes('நோட்') || text.includes('குறிப்பு')) {
       db.notes.push(rawText);
       saveData();
@@ -145,7 +199,6 @@ function processNLP(rawText) {
   const amt = parseInt(numMatch[0]);
   const isIncome = /(வந்தது|கொடுத்தார்கள்|அனுப்பினார்கள்|கிடைத்தது|சேர்ந்தது|வரவு)/.test(text);
 
-  // கொள்ளை செலவு
   if (text.includes('கொல்லை') || text.includes('கொல்லைக்கு')) {
     db.kollai.push({ desc: rawText, amt, date });
   }
@@ -161,7 +214,6 @@ function processNLP(rawText) {
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
     }
   } else {
-    // செலவு செய்யும் போது இடம் குறிப்பிடப்பட்டுள்ளதா?
     if (/(சம்பளம்|சம்பளத்தில்|சம்பளப்)/.test(text)) {
       db.salary.push({ desc: rawText, amt, type: 'out', date });
       saveData();
@@ -171,7 +223,6 @@ function processNLP(rawText) {
       saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 🏠`, false);
     } else {
-      // இடம் குறிப்பிடவில்லை என்றால் மட்டும் கேள்வி கேட்கும்!
       pendingExpense = { desc: rawText, amt };
       addChat(`பாலாஜி சார், ₹${amt} செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
     }
@@ -186,11 +237,6 @@ function addVatti() {
     db.vatti.push({ name, amt, rate });
     saveData();
   }
-}
-
-function deleteNote(idx) {
-  db.notes.splice(idx, 1);
-  saveData();
 }
 
 function clearChat() {
