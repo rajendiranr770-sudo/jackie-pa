@@ -219,20 +219,38 @@ function processNLP(rawText) {
   const text = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // "சம்பள பணம்" அல்லது "வீட்டு பணம்" என்று நேரடியாகக் கூறினால்
+  // 1. வட்டி கணக்கை முதலிலேயே கண்டறிதல்
+  if (text.includes('வட்டி') || text.includes('பைசா')) {
+    let numbers = text.match(/\d+/g);
+    let nameMatch = rawText.match(/^([a-zA-A-ழ-ஹ]+)/);
+    let name = nameMatch ? nameMatch[0] : "நபர்";
+
+    if (numbers && numbers.length >= 2) {
+      let amt = parseInt(numbers[0]);
+      let rate = parseInt(numbers[1]);
+      let months = numbers[2] ? parseInt(numbers[2]) : 1;
+
+      db.vatti.push({ name, amt, rate, months, datetime });
+      saveData();
+      addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டது. அசல்: ₹${amt}, வட்டி: ${rate}%. 💰`, false);
+      return;
+    }
+  }
+
+  // 2. தொடர் கேள்விகளுக்கான பதில் (சம்பளம் / வீடு தேர்வு)
   if (pendingExpense) {
     if (/(சம்பளம்|சம்பள)/.test(text)) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
       if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
       saveData();
-      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} சம்பளக் கணக்கில் கழிக்கப்பட்டு, கொள்ளை செலவிலும் சேர்க்கப்பட்டது! 💼`, false);
+      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} சம்பளக் கணக்கில் கழிக்கப்பட்டது! 💼`, false);
       pendingExpense = null;
       return;
     } else if (/(வீடு|வீட்டு)/.test(text)) {
       db.home.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
       if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
       saveData();
-      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} வீட்டுக் கணக்கில் கழிக்கப்பட்டு, கொள்ளை செலவிலும் சேர்க்கப்பட்டது! 🏠`, false);
+      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} வீட்டுக் கணக்கில் கழிக்கப்பட்டது! 🏠`, false);
       pendingExpense = null;
       return;
     }
@@ -261,7 +279,6 @@ function processNLP(rawText) {
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
     }
   } else {
-    // நேரடி செலவு கண்டறிதல் (ஆட்டோ-டிடெக்ட்)
     if (isKollai) db.kollai.push({ desc: rawText, amt, datetime });
 
     if (/(சம்பளம்|சம்பளத்தில்|சம்பளப்|சம்பள)/.test(text)) {
