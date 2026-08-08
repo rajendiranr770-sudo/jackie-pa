@@ -1,5 +1,48 @@
-let db = JSON.parse(localStorage.getItem('smartpa_db')) || { salary: [], home: [] };
+let db = JSON.parse(localStorage.getItem('smartpa_db')) || { 
+  salary: [], 
+  home: [], 
+  vatti: [], 
+  kollai: [], 
+  notes: [], 
+  reminders: [] 
+};
 let pendingExpense = null;
+
+// தமிழ் வார்த்தைகளை எண்களாக மாற்றும் செயல்பாடு
+function parseTamilNumbers(text) {
+  let str = text;
+  
+  // தமிழ்ச் சொற்கள் மாற்றி
+  const words = [
+    { w: /ஒரு நூறு|நூறு/g, v: 100 },
+    { w: /இரண்டு நூறு|இருநூறு/g, v: 200 },
+    { w: /முந்நூறு/g, v: 300 },
+    { w: /நானூறு/g, v: 400 },
+    { w: /ஐந்நூறு/g, v: 500 },
+    { w: /அறுநூறு/g, v: 600 },
+    { w: /எழுநூறு/g, v: 700 },
+    { w: /எண்ணூறு/g, v: 800 },
+    { w: /தொள்ளாயிரம்/g, v: 900 },
+    { w: /ஆயிரம்/g, v: 1000 },
+    { w: /பத்தாயிரம்/g, v: 10000 },
+    { w: /இருபதாயிரம்|இருபது ஆயிரம்/g, v: 20000 },
+    { w: /முப்பதாயிரம்|முப்பது ஆயிரம்/g, v: 30000 },
+    { w: /நாற்பதாயிரம்|நாற்பது ஆயிரம்/g, v: 40000 },
+    { w: /ஐம்பதாயிரம்|ஐம்பது ஆயிரம்/g, v: 50000 },
+    { w: /லட்சம்|லக்ஷம்/g, v: 100000 }
+  ];
+
+  // எண்களுடன் கலந்த "30 ஆயிரம்" போன்றவற்றை மாற்றுதல்
+  str = str.replace(/(\d+)\s*ஆயிரம்/g, (m, p1) => parseInt(p1) * 1000);
+  str = str.replace(/(\d+)\s*லட்சம்/g, (m, p1) => parseInt(p1) * 100000);
+  str = str.replace(/(\d+)\s*நூறு/g, (m, p1) => parseInt(p1) * 100);
+
+  words.forEach(item => {
+    str = str.replace(item.w, item.v);
+  });
+
+  return str;
+}
 
 function saveData() {
   localStorage.setItem('smartpa_db', JSON.stringify(db));
@@ -7,34 +50,35 @@ function saveData() {
 }
 
 function renderData() {
-  // Salary Calculation
+  // 1. சம்பளம்
   let salBal = db.salary.reduce((acc, item) => item.type === 'in' ? acc + item.amt : acc - item.amt, 0);
-  const salElem = document.getElementById('bal-salary');
-  if (salElem) {
-    salElem.innerText = salBal;
-    salElem.className = salBal < 0 ? 'minus' : '';
+  if(document.getElementById('bal-salary')) document.getElementById('bal-salary').innerText = salBal;
+  if(document.getElementById('hist-salary')) {
+    document.getElementById('hist-salary').innerHTML = db.salary.map(i => `<div class="history-item"><span>${i.desc}</span><span class="${i.type}">₹${i.amt}</span></div>`).reverse().join('');
   }
 
-  const histSalary = document.getElementById('hist-salary');
-  if (histSalary) {
-    histSalary.innerHTML = db.salary.map(i => 
-      `<div class="history-item"><span>${i.desc}</span><span class="${i.type}">₹${i.amt}</span></div>`
-    ).reverse().join('');
-  }
-
-  // Home Calculation
+  // 2. வீடு
   let homeBal = db.home.reduce((acc, item) => item.type === 'in' ? acc + item.amt : acc - item.amt, 0);
-  const homeElem = document.getElementById('bal-home');
-  if (homeElem) {
-    homeElem.innerText = homeBal;
-    homeElem.className = homeBal < 0 ? 'minus' : '';
+  if(document.getElementById('bal-home')) document.getElementById('bal-home').innerText = homeBal;
+  if(document.getElementById('hist-home')) {
+    document.getElementById('hist-home').innerHTML = db.home.map(i => `<div class="history-item"><span>${i.desc}</span><span class="${i.type}">₹${i.amt}</span></div>`).reverse().join('');
   }
 
-  const histHome = document.getElementById('hist-home');
-  if (histHome) {
-    histHome.innerHTML = db.home.map(i => 
-      `<div class="history-item"><span>${i.desc}</span><span class="${i.type}">₹${i.amt}</span></div>`
-    ).reverse().join('');
+  // 3. கொள்ளை செலவு
+  let kollaiTotal = db.kollai.reduce((acc, item) => acc + item.amt, 0);
+  if(document.getElementById('total-kollai')) document.getElementById('total-kollai').innerText = kollaiTotal;
+  if(document.getElementById('hist-kollai')) {
+    document.getElementById('hist-kollai').innerHTML = db.kollai.map(i => `<div class="history-item"><span>${i.desc}</span><span class="out">₹${i.amt}</span></div>`).reverse().join('');
+  }
+
+  // 4. வட்டி கணக்கு
+  if(document.getElementById('hist-vatti')) {
+    document.getElementById('hist-vatti').innerHTML = db.vatti.map(i => `<div class="history-item"><span>${i.name} (${i.amt} @ ${i.rate}%)</span><span class="in">வட்டி: ₹${(i.amt * i.rate)/100}/மாதம்</span></div>`).reverse().join('');
+  }
+
+  // 5. நோட்பேட்
+  if(document.getElementById('hist-notes')) {
+    document.getElementById('hist-notes').innerHTML = db.notes.map((n, idx) => `<div class="history-item"><span>${n}</span><button onclick="deleteNote(${idx})" style="padding:2px 5px; background:red;">X</button></div>`).reverse().join('');
   }
 }
 
@@ -42,7 +86,7 @@ function showSec(id, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  el.classList.add('active');
+  if(el) el.classList.add('active');
 }
 
 function addChat(text, isUser) {
@@ -64,61 +108,89 @@ function sendMsg() {
   processNLP(text);
 }
 
-function processNLP(text) {
-  const cleanText = text.replace(/,/g, '');
+function processNLP(rawText) {
+  const text = parseTamilNumbers(rawText.replace(/,/g, ''));
   const date = new Date().toLocaleDateString('ta-IN');
 
-  // 1. நிலுவையில் உள்ள செலவிற்குப் பதில் அளித்தால்
+  // நிலுவையில் இருந்த கேள்விகளுக்கு பதில்
   if (pendingExpense) {
-    if (cleanText.includes('சம்பளம்') || cleanText.includes('சம்பள')) {
+    if (/(சம்பளம்|சம்பள)/.test(text)) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', date });
       saveData();
-      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} (${pendingExpense.desc}) சம்பளக் கணக்கில் கழித்து பதிவு செய்யப்பட்டது. 💼`, false);
+      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} (${pendingExpense.desc}) சம்பளக் கணக்கில் கழிக்கப்பட்டது. 💼`, false);
       pendingExpense = null;
       return;
-    } else if (cleanText.includes('வீடு') || cleanText.includes('வீட்டு')) {
+    } else if (/(வீடு|வீட்டு)/.test(text)) {
       db.home.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', date });
       saveData();
-      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} (${pendingExpense.desc}) வீட்டுக் கணக்கில் கழித்து பதிவு செய்யப்பட்டது. 🏠`, false);
+      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} (${pendingExpense.desc}) வீட்டுக் கணக்கில் கழிக்கப்பட்டது. 🏠`, false);
       pendingExpense = null;
       return;
     }
   }
 
-  // 2. புதிய பதிவு
-  const numMatch = cleanText.match(/\d+/);
+  const numMatch = text.match(/\d+/);
   if (!numMatch) {
-    addChat('மன்னிக்கவும் பாலாஜி சார், தொகையை (எண்) சரியாகக் குறிப்பிடவும்.', false);
+    // நோட்பேடில் சேர்க்கிறதா என்று சரிபார்த்தல்
+    if (text.includes('நோட்') || text.includes('குறிப்பு')) {
+      db.notes.push(rawText);
+      saveData();
+      addChat(`சரி சார், நோட்பேடில் குறிப்பு எடுக்கப்பட்டது! 📝`, false);
+      return;
+    }
+    addChat('மன்னிக்கவும் பாலாஜி சார், தொகையைச் சரியாகக் குறிப்பிடவும்.', false);
     return;
   }
 
   const amt = parseInt(numMatch[0]);
-  const isIncome = /(வந்தது|கொடுத்தார்கள்|அனுப்பினார்கள்|கிடைத்தது|சேர்ந்தது|வரவு)/.test(cleanText);
+  const isIncome = /(வந்தது|கொடுத்தார்கள்|அனுப்பினார்கள்|கிடைத்தது|சேர்ந்தது|வரவு)/.test(text);
+
+  // கொள்ளை செலவு
+  if (text.includes('கொல்லை') || text.includes('கொல்லைக்கு')) {
+    db.kollai.push({ desc: rawText, amt, date });
+  }
 
   if (isIncome) {
-    if (cleanText.includes('வீடு') || cleanText.includes('வீட்டில்') || cleanText.includes('வீட்டிலிருந்து')) {
-      db.home.push({ desc: cleanText, amt, type: 'in', date });
+    if (/(வீடு|வீட்டில்|வீட்டிலிருந்து|விட்டு)/.test(text)) {
+      db.home.push({ desc: rawText, amt, type: 'in', date });
       saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 🏠`, false);
     } else {
-      db.salary.push({ desc: cleanText, amt, type: 'in', date });
+      db.salary.push({ desc: rawText, amt, type: 'in', date });
       saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
     }
   } else {
-    if (cleanText.includes('சம்பளம்')) {
-      db.salary.push({ desc: cleanText, amt, type: 'out', date });
+    // செலவு செய்யும் போது இடம் குறிப்பிடப்பட்டுள்ளதா?
+    if (/(சம்பளம்|சம்பளத்தில்|சம்பளப்)/.test(text)) {
+      db.salary.push({ desc: rawText, amt, type: 'out', date });
       saveData();
-      addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது. 💼`, false);
-    } else if (cleanText.includes('வீடு')) {
-      db.home.push({ desc: cleanText, amt, type: 'out', date });
+      addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 💼`, false);
+    } else if (/(வீடு|வீட்டு|வீட்டில்|விட்டு|வீட்டுப்)/.test(text)) {
+      db.home.push({ desc: rawText, amt, type: 'out', date });
       saveData();
-      addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது. 🏠`, false);
+      addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 🏠`, false);
     } else {
-      pendingExpense = { desc: cleanText, amt };
-      addChat(`பாலாஜி சார், ₹${amt} (${cleanText}) செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
+      // இடம் குறிப்பிடவில்லை என்றால் மட்டும் கேள்வி கேட்கும்!
+      pendingExpense = { desc: rawText, amt };
+      addChat(`பாலாஜி சார், ₹${amt} செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
     }
   }
+}
+
+function addVatti() {
+  const name = prompt("நபர் / விபரம்:");
+  const amt = parseFloat(prompt("அசல் தொகை (₹):"));
+  const rate = parseFloat(prompt("வட்டி விகிதம் (%):"));
+  if (name && amt && rate) {
+    db.vatti.push({ name, amt, rate });
+    saveData();
+  }
+}
+
+function deleteNote(idx) {
+  db.notes.splice(idx, 1);
+  saveData();
 }
 
 function clearChat() {
@@ -139,11 +211,6 @@ function startVoice() {
     document.getElementById('status').innerText = '🎤 தயார்';
     sendMsg();
   };
-}
-
-// Service Worker Register
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
