@@ -1,4 +1,4 @@
-let db = JSON.parse(localStorage.getItem('smartpa_db_v4')) || { 
+let db = JSON.parse(localStorage.getItem('smartpa_db_v5')) || { 
   salary: [], 
   home: [], 
   vatti: [], 
@@ -8,7 +8,6 @@ let db = JSON.parse(localStorage.getItem('smartpa_db_v4')) || {
 };
 let pendingExpense = null;
 
-// தமிழ் எண்களை துல்லியமாக மாற்றுதல்
 function parseTamilNumbers(text) {
   let str = text.replace(/,/g, '');
   const words = [
@@ -21,7 +20,7 @@ function parseTamilNumbers(text) {
     { w: /எழுநூறு/g, v: 700 },
     { w: /எண்ணூறு/g, v: 800 },
     { w: /தொள்ளாயிரம்/g, v: 900 },
-    { w: /இருபதாயிரம்|இருபது ஆயிரம்|இருபதுஆயிரம்/g, v: 20000 },
+    { w: /இருபதாயிரம்|இருபது ஆயிரம்/g, v: 20000 },
     { w: /முப்பதாயிரம்|முப்பது ஆயிரம்/g, v: 30000 },
     { w: /நாற்பதாயிரம்|நாற்பது ஆயிரம்/g, v: 40000 },
     { w: /ஐம்பதாயிரம்|ஐம்பது ஆயிரம்/g, v: 50000 },
@@ -32,7 +31,6 @@ function parseTamilNumbers(text) {
 
   str = str.replace(/(\d+)\s*ஆயிரம்/g, (m, p1) => parseInt(p1) * 1000);
   str = str.replace(/(\d+)\s*லட்சம்/g, (m, p1) => parseInt(p1) * 100000);
-  str = str.replace(/(\d+)\s*நூறு/g, (m, p1) => parseInt(p1) * 100);
 
   words.forEach(item => { str = str.replace(item.w, item.v); });
   return str;
@@ -44,7 +42,7 @@ function getDateTime() {
 }
 
 function saveData() {
-  localStorage.setItem('smartpa_db_v4', JSON.stringify(db));
+  localStorage.setItem('smartpa_db_v5', JSON.stringify(db));
   renderData();
 }
 
@@ -53,7 +51,30 @@ function deleteItem(cat, idx) {
   saveData();
 }
 
-// குரல் மூலம் பேசுதல் (Voice Alarm)
+// எடிட் செய்யும் வசதி (Edit Feature)
+function editItem(cat, idx) {
+  let item = db[cat][idx];
+  if (cat === 'salary' || cat === 'home' || cat === 'kollai') {
+    let newDesc = prompt("புதிய விவரம்:", item.desc);
+    let newAmt = prompt("புதிய தொகை (₹):", item.amt);
+    if (newDesc && newAmt) {
+      item.desc = newDesc;
+      item.amt = parseFloat(newAmt);
+      saveData();
+    }
+  } else if (cat === 'vatti') {
+    let newName = prompt("பெயர்:", item.name);
+    let newAmt = prompt("அசல்:", item.amt);
+    let newRate = prompt("வட்டி %:", item.rate);
+    if (newName && newAmt && newRate) {
+      item.name = newName;
+      item.amt = parseFloat(newAmt);
+      item.rate = parseFloat(newRate);
+      saveData();
+    }
+  }
+}
+
 function speak(text) {
   if ('speechSynthesis' in window) {
     const msg = new SpeechSynthesisUtterance(text);
@@ -68,7 +89,7 @@ function renderData() {
   if(document.getElementById('bal-salary')) document.getElementById('bal-salary').innerText = salBal;
   if(document.getElementById('hist-salary')) {
     document.getElementById('hist-salary').innerHTML = db.salary.map((i, idx) => 
-      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="${i.type}">₹${i.amt}</span> <button class="btn-del" onclick="deleteItem('salary', ${idx})">🗑️</button></div></div>`
+      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="${i.type}">₹${i.amt}</span> <button onclick="editItem('salary', ${idx})">✏️</button> <button class="btn-del" onclick="deleteItem('salary', ${idx})">🗑️</button></div></div>`
     ).reverse().join('');
   }
 
@@ -77,7 +98,7 @@ function renderData() {
   if(document.getElementById('bal-home')) document.getElementById('bal-home').innerText = homeBal;
   if(document.getElementById('hist-home')) {
     document.getElementById('hist-home').innerHTML = db.home.map((i, idx) => 
-      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="${i.type}">₹${i.amt}</span> <button class="btn-del" onclick="deleteItem('home', ${idx})">🗑️</button></div></div>`
+      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="${i.type}">₹${i.amt}</span> <button onclick="editItem('home', ${idx})">✏️</button> <button class="btn-del" onclick="deleteItem('home', ${idx})">🗑️</button></div></div>`
     ).reverse().join('');
   }
 
@@ -86,32 +107,28 @@ function renderData() {
   if(document.getElementById('total-kollai')) document.getElementById('total-kollai').innerText = kollaiTotal;
   if(document.getElementById('hist-kollai')) {
     document.getElementById('hist-kollai').innerHTML = db.kollai.map((i, idx) => 
-      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="out">₹${i.amt}</span> <button class="btn-del" onclick="deleteItem('kollai', ${idx})">🗑️</button></div></div>`
+      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="out">₹${i.amt}</span> <button onclick="editItem('kollai', ${idx})">✏️</button> <button class="btn-del" onclick="deleteItem('kollai', ${idx})">🗑️</button></div></div>`
     ).reverse().join('');
   }
 
-  // 4. வட்டி கணக்கு
+  // 4. வட்டி
   if(document.getElementById('hist-vatti')) {
     document.getElementById('hist-vatti').innerHTML = db.vatti.map((i, idx) => {
       let monthlyVatti = (i.amt * i.rate) / 100;
-      let totalVatti = monthlyVatti * i.months;
-      let paidVatti = i.paidVatti || 0;
-      let pendingVatti = totalVatti - paidVatti;
-      let grandTotal = i.amt + pendingVatti;
+      let totalVatti = monthlyVatti * (i.months || 1);
+      let grandTotal = i.amt + totalVatti;
       return `<div class="history-item" style="flex-direction:column; align-items:flex-start; gap:4px; border-bottom:1px solid #ccc; padding:8px 0;">
         <div style="width:100%; display:flex; justify-content:space-between;">
           <strong>👤 ${i.name} (${i.datetime})</strong>
-          <button class="btn-del" onclick="deleteItem('vatti', ${idx})">🗑️</button>
+          <div><button onclick="editItem('vatti', ${idx})">✏️</button> <button class="btn-del" onclick="deleteItem('vatti', ${idx})">🗑️</button></div>
         </div>
-        <div>அசல்: ₹${i.amt} | வட்டி விகிதம்: ${i.rate}% (மாத வட்டி ₹${monthlyVatti})</div>
-        <div>காலம்: ${i.months} மாதம் | மொத்த வட்டி: ₹${totalVatti}</div>
-        <div>இதுவரை கொடுத்த வட்டி: ₹${paidVatti} | மீதி வட்டி: ₹${pendingVatti}</div>
+        <div>அசல்: ₹${i.amt} | வட்டி: ${i.rate}% (மாத வட்டி ₹${monthlyVatti})</div>
         <div style="color:green; font-weight:bold;">மொத்தம் தர வேண்டியது: ₹${grandTotal}</div>
       </div>`;
     }).reverse().join('');
   }
 
-  // 5. நோட்பேட் & நினைவூட்டல்
+  // 5. நோட்பேட்
   if(document.getElementById('hist-notes')) {
     document.getElementById('hist-notes').innerHTML = db.notes.map((n, idx) => 
       `<div class="history-item"><span>${n.text} <br><small style="color:gray;">${n.datetime}</small></span><button class="btn-del" onclick="deleteItem('notes', ${idx})">🗑️</button></div>`
@@ -119,9 +136,56 @@ function renderData() {
   }
 }
 
+// மேனுவல் பதிவுகள் (Manual Functions)
+function addManual(cat, type) {
+  let desc = document.getElementById(`m-${cat}-desc`).value;
+  let amt = parseFloat(document.getElementById(`m-${cat}-amt`).value);
+  if(desc && amt) {
+    db[cat].push({ desc, amt, type, datetime: getDateTime() });
+    saveData();
+    document.getElementById(`m-${cat}-desc`).value = '';
+    document.getElementById(`m-${cat}-amt`).value = '';
+  }
+}
+
+function addManualKollai() {
+  let desc = document.getElementById('m-kollai-desc').value;
+  let amt = parseFloat(document.getElementById('m-kollai-amt').value);
+  if(desc && amt) {
+    db.kollai.push({ desc, amt, datetime: getDateTime() });
+    saveData();
+    document.getElementById('m-kollai-desc').value = '';
+    document.getElementById('m-kollai-amt').value = '';
+  }
+}
+
+function addManualVatti() {
+  let name = document.getElementById('m-vatti-name').value;
+  let amt = parseFloat(document.getElementById('m-vatti-amt').value);
+  let rate = parseFloat(document.getElementById('m-vatti-rate').value);
+  let months = parseInt(document.getElementById('m-vatti-months').value) || 1;
+  if(name && amt && rate) {
+    db.vatti.push({ name, amt, rate, months, datetime: getDateTime() });
+    saveData();
+    document.getElementById('m-vatti-name').value = '';
+    document.getElementById('m-vatti-amt').value = '';
+    document.getElementById('m-vatti-rate').value = '';
+    document.getElementById('m-vatti-months').value = '';
+  }
+}
+
+function addManualNote() {
+  let text = document.getElementById('m-note-text').value;
+  if(text) {
+    db.notes.push({ text, datetime: getDateTime() });
+    saveData();
+    document.getElementById('m-note-text').value = '';
+  }
+}
+
 function showSec(id, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(el) el.classList.add('active');
 }
@@ -155,61 +219,25 @@ function processNLP(rawText) {
   const text = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // 1. PDF டவுன்லோட் கோரிக்கை
-  if (text.includes('பிடிஎஃப்') || text.includes('PDF') || text.includes('pdf')) {
-    downloadPDF();
-    addChat('பாலாஜி சார், வட்டி கணக்கு PDF ஆகப் பதிவிறக்கம் செய்யப்படுகிறது! 📄', false);
-    return;
-  }
-
-  // 2. குறிப்பிட்ட நபர் கணக்கு விபரம் (எ.கா: கார்த்தி கணக்கை காட்டு)
-  if (text.includes('கணக்கை காட்டு') || text.includes('கணக்கு காட்டு')) {
-    let nameMatch = rawText.match(/^([a-zA-A-ழ-ஹ]+)/);
-    let name = nameMatch ? nameMatch[0] : "";
-    let person = db.vatti.find(item => item.name.toLowerCase().includes(name.toLowerCase()));
-    
-    if (person) {
-      let monthlyVatti = (person.amt * person.rate) / 100;
-      let totalVatti = monthlyVatti * person.months;
-      let paidVatti = person.paidVatti || 0;
-      let pendingVatti = totalVatti - paidVatti;
-      let grandTotal = person.amt + pendingVatti;
-
-      let reply = `👤 ${person.name} கணக்கு விவரம்:\n- அசல்: ₹${person.amt}\n- மாத வட்டி (${person.rate}%): ₹${monthlyVatti}\n- காலம்: ${person.months} மாதம்\n- இதுவரை கொடுத்த வட்டி: ₹${paidVatti}\n- மீதி வட்டி: ₹${pendingVatti}\n- மொத்தம் தர வேண்டியது: ₹${grandTotal}`;
-      addChat(reply, false);
-    } else {
-      addChat(`மன்னிக்கவும் பாலாஜி சார், ${name} என்பவரின் கணக்கு விவரம் கிடைக்கவில்லை.`, false);
-    }
-    return;
-  }
-
-  // 3. நினைவூட்டல் / அலாரம் (எ.கா: கார்த்திக் என்பவரை பார்க்க வேண்டும் ஞாபகப்படுத்து)
-  if (text.includes('ஞாபகப்படுத்து') || text.includes('நினைவூட்டு')) {
-    db.notes.push({ text: rawText, datetime });
-    saveData();
-    addChat(`சரி பாலாஜி சார்! "${rawText}" என்று நினைவூட்டல் பதிவு செய்யப்பட்டது. குறிப்பிட்ட நேரத்தில் குரல் மூலம் அலாரம் செய்யப்படும்! 🔔`, false);
-    return;
-  }
-
-  // 4. வட்டி கணக்கு பதிவு
-  if (text.includes('வட்டி') || text.includes('பைசா')) {
-    let nameMatch = rawText.match(/^([a-zA-A-ழ-ஹ]+)/);
-    let name = nameMatch ? nameMatch[0] : "நபர்";
-    let numbers = text.match(/\d+/g);
-    
-    if (numbers && numbers.length >= 2) {
-      let amt = parseInt(numbers[0]);
-      let rate = parseInt(numbers[1]);
-      let months = numbers[2] ? parseInt(numbers[2]) : 1;
-
-      db.vatti.push({ name, amt, rate, months, paidVatti: 0, datetime });
+  // "சம்பள பணம்" அல்லது "வீட்டு பணம்" என்று நேரடியாகக் கூறினால்
+  if (pendingExpense) {
+    if (/(சம்பளம்|சம்பள)/.test(text)) {
+      db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
+      if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
       saveData();
-      addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கு சேர்க்கப்பட்டது. அசல்: ₹${amt}, வட்டி: ${rate}%. 💰`, false);
+      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} சம்பளக் கணக்கில் கழிக்கப்பட்டு, கொள்ளை செலவிலும் சேர்க்கப்பட்டது! 💼`, false);
+      pendingExpense = null;
+      return;
+    } else if (/(வீடு|வீட்டு)/.test(text)) {
+      db.home.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
+      if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
+      saveData();
+      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} வீட்டுக் கணக்கில் கழிக்கப்பட்டு, கொள்ளை செலவிலும் சேர்க்கப்பட்டது! 🏠`, false);
+      pendingExpense = null;
       return;
     }
   }
 
-  // 5. வரவு / செலவு
   const numMatch = text.match(/\d+/);
   if (!numMatch) {
     db.notes.push({ text: rawText, datetime });
@@ -223,7 +251,7 @@ function processNLP(rawText) {
   const isKollai = text.includes('கொல்லை') || text.includes('கொல்லைக்கு');
 
   if (isIncome) {
-    if (/(வீடு|வீட்டில்|வீட்டிலிருந்து|விட்டு)/.test(text)) {
+    if (/(வீடு|வீட்டில்|வீட்டிலிருந்து)/.test(text)) {
       db.home.push({ desc: rawText, amt, type: 'in', datetime });
       saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 🏠`, false);
@@ -233,13 +261,14 @@ function processNLP(rawText) {
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
     }
   } else {
+    // நேரடி செலவு கண்டறிதல் (ஆட்டோ-டிடெக்ட்)
     if (isKollai) db.kollai.push({ desc: rawText, amt, datetime });
 
-    if (/(சம்பளம்|சம்பளத்தில்|சம்பளப்)/.test(text)) {
+    if (/(சம்பளம்|சம்பளத்தில்|சம்பளப்|சம்பள)/.test(text)) {
       db.salary.push({ desc: rawText, amt, type: 'out', datetime });
       saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 💼`, false);
-    } else if (/(வீடு|வீட்டு|வீட்டில்|விட்டு|வீட்டுப்)/.test(text)) {
+    } else if (/(வீடு|வீட்டு|வீட்டில்|வீட்டுப்)/.test(text)) {
       db.home.push({ desc: rawText, amt, type: 'out', datetime });
       saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 🏠`, false);
