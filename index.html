@@ -80,15 +80,16 @@
     </div>
   </div>
 
-  <!-- NAVIGATION BAR (கீழ் பகுதி பட்டன்கள்) -->
-  <div class="nav-bar">
-    <div class="nav-item active" onclick="showSec('sec-ai', this)">🤖 AI</div>
-    <div class="nav-item" onclick="showSec('sec-salary', this)">💼 சம்பளம்</div>
-    <div class="nav-item" onclick="showSec('sec-home', this)">🏠 வீடு</div>
-    <div class="nav-item" onclick="showSec('sec-kollai', this)">🌱 கொள்ளை</div>
-    <div class="nav-item" onclick="showSec('sec-vatti', this)">💰 வட்டி</div>
-    <div class="nav-item" onclick="showSec('sec-notes', this)">📝 நோட்பேட்</div>
+    <!-- NAVIGATION BAR -->
+  <div class="nav-bar" style="display: flex; overflow-x: auto; white-space: nowrap; background: white; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #ccc; padding: 5px 0;">
+    <div class="nav-item active" onclick="showSec('sec-ai', this)" style="flex: 1; text-align: center; padding: 5px;">🤖 AI</div>
+    <div class="nav-item" onclick="showSec('sec-salary', this)" style="flex: 1; text-align: center; padding: 5px;">💼 சம்பளம்</div>
+    <div class="nav-item" onclick="showSec('sec-home', this)" style="flex: 1; text-align: center; padding: 5px;">🏠 வீடு</div>
+    <div class="nav-item" onclick="showSec('sec-kollai', this)" style="flex: 1; text-align: center; padding: 5px;">🌱 கொள்ளை</div>
+    <div class="nav-item" onclick="showSec('sec-vatti', this)" style="flex: 1; text-align: center; padding: 5px;">💰 வட்டி</div>
+    <div class="nav-item" onclick="showSec('sec-notes', this)" style="flex: 1; text-align: center; padding: 5px;">📝 நோட்பேட்</div>
   </div>
+
 
   <script src="app.js"></script>
 </body>
