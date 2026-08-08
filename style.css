@@ -27,3 +27,10 @@ button.clear { background-color: #e53e3e; }
 .in { color: #38a169; font-weight: bold; }
 .out { color: #e53e3e; font-weight: bold; }
 .minus { color: #e53e3e; font-weight: bold; }
+.btn-del {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-left: 8px;
+}
