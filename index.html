@@ -3,665 +3,212 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ஜாக்கி - Smart PA</title>
+  <title>ஜோக்கி - Smart PA</title>
   <style>
-    :root {
-      --primary: #1e3a8a;
-      --secondary: #3b82f6;
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
-      --text: #0f172a;
-      --text-light: #64748b;
-      --green: #16a34a;
-      --red: #dc2626;
-      --border: #e2e8f0;
-    }
-
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding-bottom: 70px; }
-
-    header { background-color: var(--primary); color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    header h1 { font-size: 1.2rem; }
-
-    nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--card-bg); display: flex; overflow-x: auto; border-top: 1px solid var(--border); z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-    nav button { flex: 0 0 auto; padding: 10px 12px; border: none; background: none; color: var(--text-light); font-size: 0.75rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    nav button.active { color: var(--secondary); font-weight: bold; border-top: 2px solid var(--secondary); }
-
-    .page { display: none; padding: 15px; max-width: 600px; margin: 0 auto; }
-    .page.active { display: block; }
-
-    .card { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .card h2 { font-size: 1.1rem; margin-bottom: 12px; color: var(--primary); }
-
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .summary-card { background: #eff6ff; border-radius: 8px; padding: 12px; text-align: center; }
-    .summary-card span { font-size: 0.8rem; color: var(--text-light); }
-    .summary-card h3 { font-size: 1.2rem; color: var(--primary); margin-top: 5px; }
-
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-size: 0.85rem; margin-bottom: 4px; color: var(--text-light); }
-    input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none; }
+    body { background-color: #f4f7f6; color: #333; padding-bottom: 70px; }
+    header { background-color: #1a365d; color: white; text-align: center; padding: 15px; font-size: 1.2rem; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .container { padding: 15px; max-width: 600px; margin: 0 auto; }
+    .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    h2 { color: #2b6cb0; font-size: 1.1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .chat-box { height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #f8fafc; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; word-wrap: break-word; }
+    .bot { background: #e2e8f0; color: #2d3748; align-self: flex-start; border-bottom-left-radius: 2px; }
+    .user { background: #3182ce; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .input-group { display: flex; gap: 8px; margin-top: 5px; }
+    input[type="text"] { flex: 1; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; outline: none; }
+    button { padding: 10px 15px; border: none; border-radius: 6px; background-color: #3182ce; color: white; font-weight: bold; cursor: pointer; }
+    button.mic { background-color: #38a169; }
+    button.clear { background-color: #e53e3e; }
     
-    .btn-group { display: flex; gap: 8px; margin-top: 10px; }
-    button.btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: var(--secondary); color: white; }
-    button.btn.green { background: var(--green); }
-    button.btn.red { background: var(--red); }
-    button.btn.secondary { background: #e2e8f0; color: var(--text); }
-    button.delete { background: var(--red); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-
-    .record { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-    .record:last-child { border-bottom: none; }
-    .record small { display: block; color: var(--text-light); font-size: 0.75rem; margin-top: 2px; }
-    .record.done { opacity: 0.5; text-decoration: line-through; }
-
-    /* AI Chat */
-    .chat-box { height: 300px; overflow-y: auto; border: 1px solid var(--border); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .message { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; }
-    .message.user { background: var(--secondary); color: white; align-self: flex-end; }
-    .message.ai { background: #f1f5f9; color: var(--text); align-self: flex-start; }
-    .voice-ctrl { display: flex; gap: 8px; align-items: center; }
-
-    .empty { text-align: center; color: var(--text-light); padding: 20px; font-size: 0.85rem; }
+    .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #e2e8f0; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; color: #718096; text-decoration: none; cursor: pointer; }
+    .nav-item.active { color: #3182ce; font-weight: bold; }
+    
+    .section { display: none; }
+    .section.active { display: block; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e2e8f0; }
+    th { background-color: #edf2f7; color: #4a5568; }
+    .amount-in { color: #38a169; font-weight: bold; }
+    .amount-out { color: #e53e3e; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>🤖 ஜாக்கி - Smart PA</h1>
-  </header>
+  <header>🤖 ஜோக்கி - Smart PA</header>
 
-  <!-- HOME PAGE -->
-  <div id="homePage" class="page active">
-    <div class="card">
-      <h2>📊 நிதி மற்றும் செயல்கள் சுருக்கம்</h2>
-      <div class="grid-2">
-        <div class="summary-card">
-          <span>சம்பள மீதி</span>
-          <h3 id="summarySalary">₹0</h3>
+  <div class="container">
+    
+    <!-- AI CHAT SECTION -->
+    <div id="sec-ai" class="section active">
+      <div class="card">
+        <h2>🎙️ AI உதவி மற்றும் குரல் பதிவு</h2>
+        <div id="status" style="font-size: 0.8rem; color: #718096; margin-bottom: 5px;">🎤 தயார்</div>
+        <div class="chat-box" id="chatBox">
+          <div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன உதவி செய்ய வேண்டும்?</div>
         </div>
-        <div class="summary-card">
-          <span>வீட்டு மீதி</span>
-          <h3 id="summaryHome">₹0</h3>
+        <div class="input-group">
+          <input type="text" id="userInput" placeholder="உதாரணம்: சம்பளம் 20000 வந்தது...">
         </div>
-        <div class="summary-card">
-          <span>மொத்த செலவு</span>
-          <h3 id="summaryExpense">₹0</h3>
-        </div>
-        <div class="summary-card">
-          <span>நினைவூட்டல்கள்</span>
-          <h3 id="summaryRem">0</h3>
+        <div class="input-group" style="margin-top: 8px;">
+          <button onclick="sendMsg()" style="flex: 1;">அனுப்பு</button>
+          <button class="mic" onclick="startVoice()" style="flex: 1;">🎤 பேசு</button>
+          <button class="clear" onclick="clearChat()">அழி</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- AI CHAT PAGE -->
-  <div id="aiPage" class="page">
-    <div class="card">
-      <h2>🎙️ AI உதவி மற்றும் குரல் பதிவு</h2>
-      <div id="status" style="font-size:0.8rem; color:var(--text-light); margin-bottom:5px;">🎤 தயார்</div>
-      <div class="chat-box" id="chatBox">
-        <div class="message ai">வணக்கம் பாலாஜி சார்! என்ன செய்ய வேண்டும்?</div>
-      </div>
-      <div class="form-group">
-        <input type="text" id="textInput" placeholder="உதாரணம்: சம்பளம் 20000 வந்தது...">
-      </div>
-      <div class="voice-ctrl">
-        <button class="btn" onclick="sendMessage()">அனுப்பு</button>
-        <button class="btn green" onclick="startListening()">🎤 பேசு</button>
-        <button class="btn secondary" onclick="clearChat()">அழி</button>
+    <!-- INCOME SECTION -->
+    <div id="sec-income" class="section">
+      <div class="card">
+        <h2>💼 வரவு கணக்கு (Income)</h2>
+        <table>
+          <thead>
+            <tr><th>விவரம்</th><th>தொகை (₹)</th><th>தேதி</th></tr>
+          </thead>
+          <tbody id="incomeTable"></tbody>
+        </table>
       </div>
     </div>
-  </div>
 
-  <!-- SALARY PAGE -->
-  <div id="salaryPage" class="page">
-    <div class="card">
-      <h2>💼 சம்பளக் கணக்கு</h2>
-      <h3 style="margin-bottom:10px;">மீதி தொகை: <span id="salaryBalance" style="color:var(--green);">₹0</span></h3>
-      <div class="form-group"><input type="number" id="salaryAmount" placeholder="தொகை"></div>
-      <div class="form-group"><input type="text" id="salaryNote" placeholder="விவரம் (விருப்பப்பட்டால்)"></div>
-      <div class="btn-group">
-        <button class="btn green" onclick="addSalary('in')">+ வரவு</button>
-        <button class="btn red" onclick="addSalary('out')">- செலவு</button>
+    <!-- EXPENSE SECTION -->
+    <div id="sec-expense" class="section">
+      <div class="card">
+        <h2>💸 செலவு கணக்கு (Expenses)</h2>
+        <table>
+          <thead>
+            <tr><th>விவரம்</th><th>தொகை (₹)</th><th>தேதி</th></tr>
+          </thead>
+          <tbody id="expenseTable"></tbody>
+        </table>
       </div>
     </div>
-    <div class="card">
-      <h2>வரவு / செலவு வரலாறு</h2>
-      <div id="salaryList"></div>
-    </div>
-  </div>
 
-  <!-- EXPENSE PAGE -->
-  <div id="expensePage" class="page">
-    <div class="card">
-      <h2>💸 செலவுகள் பதிவு</h2>
-      <div class="form-group"><input type="text" id="expenseNote" placeholder="செலவு விவரம்"></div>
-      <div class="form-group"><input type="number" id="expenseAmount" placeholder="தொகை"></div>
-      <div class="form-group"><input type="text" id="expensePerson" placeholder="யாருக்கு / எதற்கு"></div>
-      <div class="form-group">
-        <select id="expenseSource">
-          <option value="salary">சம்பளக் கணக்கு</option>
-          <option value="home">வீட்டுக் கணக்கு</option>
-          <option value="cash">நேரடி பணம்</option>
-        </select>
-      </div>
-      <button class="btn" onclick="addExpenseManual()">செலவை பதிவு செய்</button>
-    </div>
-    <div class="card">
-      <h2>செலவு வரலாறு</h2>
-      <div id="expenseList"></div>
-    </div>
-  </div>
-
-  <!-- FARM PAGE -->
-  <div id="farmPage" class="page">
-    <div class="card">
-      <h2>🌾 கொல்லை நிர்வாகம்</h2>
-      <div class="form-group"><input type="text" id="farmNote" placeholder="வேலை / பொருட்கள் விவரம்"></div>
-      <div class="form-group"><input type="number" id="farmAmount" placeholder="தொகை"></div>
-      <div class="form-group">
-        <select id="farmSource">
-          <option value="salary">சம்பள பணம்</option>
-          <option value="home">வீட்டு பணம்</option>
-          <option value="cash">நேரடி பணம்</option>
-        </select>
-      </div>
-      <button class="btn green" onclick="addFarm()">பதிவு செய்</button>
-    </div>
-    <div class="card">
-      <h2>கொல்லை பதிவுகள்</h2>
-      <div id="farmList"></div>
-    </div>
-  </div>
-
-  <!-- HOME ACCOUNT PAGE -->
-  <div id="homeAccountPage" class="page">
-    <div class="card">
-      <h2>🏠 வீட்டுக் கணக்கு</h2>
-      <h3 style="margin-bottom:10px;">வீட்டு பண மீதி: <span id="homeBalance" style="color:var(--green);">₹0</span></h3>
-      <div class="form-group"><input type="number" id="homeAmount" placeholder="தொகை"></div>
-      <div class="form-group"><input type="text" id="homeNote" placeholder="விவரம்"></div>
-      <div class="btn-group">
-        <button class="btn green" onclick="addHome('in')">+ வரவு</button>
-        <button class="btn red" onclick="addHome('out')">- செலவு</button>
-      </div>
-    </div>
-    <div class="card">
-      <h2>வீட்டு கணக்கு வரலாறு</h2>
-      <div id="homeList"></div>
-    </div>
-  </div>
-
-  <!-- LOAN / INTEREST PAGE -->
-  <div id="loanPage" class="page">
-    <div class="card">
-      <h2>🤝 வட்டி & கடன் கணக்கு</h2>
-      <div class="form-group"><input type="text" id="loanName" placeholder="நபர் ಹೆಸರು"></div>
-      <div class="form-group"><input type="number" id="loanAmount" placeholder="அசல் தொகை"></div>
-      <div class="form-group"><input type="number" id="loanRate" placeholder="மாத வட்டி % (எ.கா: 1.5)"></div>
-      <div class="form-group"><input type="date" id="loanDate"></div>
-      <button class="btn" onclick="addLoan()">கடன் சேர்</button>
-    </div>
-    <div class="card">
-      <h2>கடன் விவரங்கள்</h2>
-      <div id="loanList"></div>
-    </div>
-  </div>
-
-  <!-- NOTE PAGE -->
-  <div id="notePage" class="page">
-    <div class="card">
-      <h2>📝 தற்காலிக குறிப்புகள்</h2>
-      <div class="form-group"><input type="text" id="tempText" placeholder="குறிப்பு..."></div>
-      <div class="btn-group">
-        <button class="btn" onclick="addNote('temp')">சேர்</button>
-        <button class="btn red" onclick="clearTemporary()">அனைத்தையும் அழி</button>
-      </div>
-      <div id="tempList" style="margin-top:10px;"></div>
-    </div>
-    <div class="card">
-      <h2>📌 நிரந்தர குறிப்புகள்</h2>
-      <div class="form-group"><input type="text" id="permText" placeholder="முக்கியமான குறிப்பு..."></div>
-      <button class="btn green" onclick="addNote('perm')">சேர்</button>
-      <div id="permList" style="margin-top:10px;"></div>
-    </div>
-  </div>
-
-  <!-- REMINDER PAGE -->
-  <div id="reminderPage" class="page">
-    <div class="card">
-      <h2>⏰ நினைவூட்டல் (Reminders)</h2>
-      <button class="btn secondary" style="margin-bottom:10px;" onclick="requestNotifications()">🔔 Notification அனுமதி பெறுக</button>
-      <div class="form-group"><input type="text" id="reminderText" placeholder="நினைவூட்டல் விவரம்"></div>
-      <div class="form-group"><input type="date" id="reminderDate"></div>
-      <div class="form-group"><input type="time" id="reminderTime"></div>
-      <div class="form-group">
-        <select id="reminderEarly">
-          <option value="0">சரியான நேரத்திற்கு</option>
-          <option value="5">5 நிமிடத்திற்கு முன்</option>
-          <option value="15">15 நிமிடத்திற்கு முன்</option>
-          <option value="30">30 நிமிடத்திற்கு முன்</option>
-        </select>
-      </div>
-      <button class="btn green" onclick="addReminder()">நினைவூட்டல் சேர்</button>
-    </div>
-    <div class="card">
-      <h2>நினைவூட்டல்கள் பட்டியல்</h2>
-      <div id="reminderList"></div>
-    </div>
   </div>
 
   <!-- NAVIGATION -->
-  <nav>
-    <button class="active" onclick="showPage('homePage')">🏠 முகப்பு</button>
-    <button onclick="showPage('aiPage')">🎙️ AI</button>
-    <button onclick="showPage('salaryPage')">💼 சம்பளம்</button>
-    <button onclick="showPage('expensePage')">💸 செலவு</button>
-    <button onclick="showPage('farmPage')">🌾 கொல்லை</button>
-    <button onclick="showPage('homeAccountPage')">🏠 வீடு</button>
-    <button onclick="showPage('loanPage')">🤝 வட்டி</button>
-    <button onclick="showPage('notePage')">📝 குறிப்பு</button>
-    <button onclick="showPage('reminderPage')">⏰ அலாரம்</button>
-  </nav>
+  <div class="nav-bar">
+    <div class="nav-item active" onclick="showSec('sec-ai', this)">🤖 AI</div>
+    <div class="nav-item" onclick="showSec('sec-income', this)">💼 வரவு</div>
+    <div class="nav-item" onclick="showSec('sec-expense', this)">💸 செலவு</div>
+  </div>
 
-  <!-- JAVASCRIPT LOGIC -->
   <script>
-    let db = {
-      salary: { balance: 0, history: [] },
-      home: { balance: 0, history: [] },
-      farm: { history: [] },
-      expenses: [],
-      loans: [],
-      notes: { temp: [], perm: [] },
-      reminders: []
-    };
+    let db = JSON.parse(localStorage.getItem('jackie_db')) || { income: [], expense: [] };
 
-    function loadDB() {
-      const saved = localStorage.getItem("jackie_pa_db");
-      if (saved) {
-        try { db = JSON.parse(saved); } catch (e) { console.error(e); }
-      }
+    function saveData() {
+      localStorage.setItem('jackie_db', JSON.stringify(db));
+      renderData();
     }
 
-    function saveDB() {
-      localStorage.setItem("jackie_pa_db", JSON.stringify(db));
-      renderAll();
+    function renderData() {
+      const incT = document.getElementById('incomeTable');
+      const expT = document.getElementById('expenseTable');
+      
+      incT.innerHTML = db.income.map(i => `<tr><td>${i.desc}</td><td class="amount-in">₹${i.amt}</td><td>${i.date}</td></tr>`).join('');
+      expT.innerHTML = db.expense.map(e => `<tr><td>${e.desc}</td><td class="amount-out">₹${e.amt}</td><td>${e.date}</td></tr>`).join('');
     }
 
-    function showPage(pageId) {
-      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-      document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
-
-      const target = document.getElementById(pageId);
-      if (target) target.classList.add("active");
-
-      const navMap = { homePage: 0, aiPage: 1, salaryPage: 2, expensePage: 3, farmPage: 4, homeAccountPage: 5, loanPage: 6, notePage: 7, reminderPage: 8 };
-      const btns = document.querySelectorAll("nav button");
-      if (navMap[pageId] !== undefined && btns[navMap[pageId]]) {
-        btns[navMap[pageId]].classList.add("active");
-      }
-      renderAll();
+    function showSec(id, el) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      el.classList.add('active');
     }
 
-    /* Voice AI */
-    let recognition = null;
-    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.lang = "ta-IN";
-      recognition.onstart = () => updateStatus("🎙️ கவனித்துக் கொண்டிருக்கிறேன்...");
-      recognition.onresult = (e) => {
-        const text = e.results[0][0].transcript;
-        document.getElementById("textInput").value = text;
-        updateStatus("✅ உரை பெறப்பட்டது!");
-        sendMessage();
-      };
-      recognition.onerror = () => updateStatus("❌ குரலை அறிவதில் பிழை.");
-      recognition.onend = () => updateStatus("🎤 தயார்");
-    }
-
-    function startListening() { recognition ? recognition.start() : alert("குரல் உள்ளீடு ஆதரிக்கப்படவில்லை."); }
-    function updateStatus(msg) { document.getElementById("status").innerText = msg; }
-
-    function speakText(text) {
-      if ("speechSynthesis" in window) {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = "ta-IN";
-        window.speechSynthesis.speak(u);
-      }
-    }
-
-    function addChatMessage(text, sender) {
-      const box = document.getElementById("chatBox");
-      const div = document.createElement("div");
-      div.className = `message ${sender}`;
+    function addChat(text, isUser) {
+      const box = document.getElementById('chatBox');
+      const div = document.createElement('div');
+      div.className = `msg ${isUser ? 'user' : 'bot'}`;
       div.innerText = text;
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
     }
 
-    function clearChat() {
-      document.getElementById("chatBox").innerHTML = `<div class="message ai">வணக்கம் பாலாஜி சார்! என்ன செய்ய வேண்டும்?</div>`;
-    }
-
-    function sendMessage() {
-      const input = document.getElementById("textInput");
+    function sendMsg() {
+      const input = document.getElementById('userInput');
       const text = input.value.trim();
       if (!text) return;
 
-      addChatMessage(text, "user");
-      input.value = "";
-      processAICommand(text);
+      addChat(text, true);
+      input.value = '';
+      processNLP(text);
     }
 
-    function processAICommand(text) {
-      let response = "மன்னிக்கவும் பாலாஜி சார், என்னால் புரிந்து கொள்ள முடியவில்லை.";
-      const numMatch = text.match(/\d+/g);
-      const amount = numMatch ? parseInt(numMatch[0]) : 0;
+    function processNLP(text) {
+      const cleanText = text.replace(/,/g, '');
+      const numMatch = cleanText.match(/\d+/);
 
-      if (text.includes("சம்பளம் வந்தது") || text.includes("சம்பளம் வரவு")) {
-        if (amount > 0) {
-          db.salary.balance += amount;
-          db.salary.history.push({ id: Date.now(), type: "in", amount, note: "AI வரவு", date: new Date().toLocaleDateString("ta-IN") });
-          saveDB();
-          response = `சம்பளக் கணக்கில் ₹${amount} வரவு வைக்கப்பட்டது. தற்போதைய மீதி ₹${db.salary.balance}.`;
-        }
-      } else if (text.includes("சம்பள பணத்தில் இருந்து") || text.includes("சம்பள செலவு")) {
-        if (amount > 0) {
-          db.salary.balance -= amount;
-          db.salary.history.push({ id: Date.now(), type: "out", amount, note: text, date: new Date().toLocaleDateString("ta-IN") });
-          db.expenses.push({ id: Date.now(), note: text, amount, person: "சுய பயன்பாடு", source: "salary", date: new Date().toLocaleDateString("ta-IN") });
-          saveDB();
-          response = `சம்பள பணத்தில் இருந்து ₹${amount} செலவு பதிவு செய்யப்பட்டது.`;
-        }
-      } else if (text.includes("வீட்டு பணத்தில்") || text.includes("வீட்டு செலவு")) {
-        if (amount > 0) {
-          db.home.balance -= amount;
-          db.home.history.push({ id: Date.now(), type: "out", amount, note: text, date: new Date().toLocaleDateString("ta-IN") });
-          db.expenses.push({ id: Date.now(), note: text, amount, person: "வீடு", source: "home", date: new Date().toLocaleDateString("ta-IN") });
-          saveDB();
-          response = `வீட்டு பணத்தில் ₹${amount} செலவு பதிவு செய்யப்பட்டது.`;
-        }
-      } else if (text.includes("நினைவில் வை") || text.includes("நினைவூட்டல்")) {
-        db.notes.temp.push({ id: Date.now(), text, date: new Date().toLocaleDateString("ta-IN") });
-        saveDB();
-        response = `குறிப்பு வெற்றிகரமாக நோட்பேடில் சேமிக்கப்பட்டது.`;
+      if (!numMatch) {
+        addChat('மன்னிக்கவும் பாலாஜி சார், தொகையை (எண்) சரியாகக் குறிப்பிடவும்.', false);
+        return;
       }
 
-      addChatMessage(response, "ai");
-      speakText(response);
-    }
+      const amt = parseInt(numMatch[0]);
+      const date = new Date().toLocaleDateString('ta-IN');
 
-    /* Salary Logic */
-    function addSalary(type) {
-      const amt = parseFloat(document.getElementById("salaryAmount").value);
-      const note = document.getElementById("salaryNote").value.trim() || (type === "in" ? "வரவு" : "செலவு");
-      if (!amt || amt <= 0) return alert("தொகையை உள்ளிடவும்");
+      // வரவுக்கான முக்கிய வார்த்தைகள் (Keywords for Income)
+      const incomeKeywords = ['வந்தது', 'கொடுத்தார்கள்', 'அனுப்பினார்கள்', 'கிடைத்தது', 'சேர்ந்தது', 'வரவு', 'சம்பளம்', 'பணம் வந்தது'];
+      
+      let isIncome = false;
+      for (let word of incomeKeywords) {
+        if (cleanText.includes(word)) {
+          isIncome = true;
+          break;
+        }
+      }
 
-      if (type === "in") db.salary.balance += amt;
-      else db.salary.balance -= amt;
+      // விவரத்தைக் கண்டறிதல் (Extract Description)
+      let desc = cleanText
+        .replace(numMatch[0], '')
+        .replace(/(வந்தது|கொடுத்தார்கள்|அனுப்பினார்கள்|கிடைத்தது|சேர்ந்தது|வரவு|ரூபாய்|ரூ|ஆயிரம்)/g, '')
+        .trim();
 
-      db.salary.history.push({ id: Date.now(), type, amount: amt, note, date: new Date().toLocaleDateString("ta-IN") });
-      document.getElementById("salaryAmount").value = "";
-      document.getElementById("salaryNote").value = "";
-      saveDB();
-    }
+      if (!desc) desc = isIncome ? 'வரவு' : 'செலவு';
 
-    function renderSalary() {
-      document.getElementById("salaryBalance").innerText = `₹${db.salary.balance}`;
-      const list = document.getElementById("salaryList");
-      list.innerHTML = db.salary.history.length ? db.salary.history.slice().reverse().map(item => `
-        <div class="record">
-          <div><b>${escapeHTML(item.note)}</b><small>📅 ${item.date}</small></div>
-          <div style="color: ${item.type === 'in' ? 'var(--green)' : 'var(--red)'}; font-weight: bold;">
-            ${item.type === 'in' ? '+' : '-'} ₹${item.amount}
-          </div>
-        </div>
-      `).join("") : `<div class="empty">பதிவுகள் இல்லை</div>`;
-    }
-
-    /* Expense Logic */
-    function addExpenseManual() {
-      const note = document.getElementById("expenseNote").value.trim();
-      const amount = parseFloat(document.getElementById("expenseAmount").value);
-      const person = document.getElementById("expensePerson").value.trim();
-      const source = document.getElementById("expenseSource").value;
-
-      if (!note || !amount) return alert("விவரங்களை நிரப்பவும்");
-
-      if (source === "salary") db.salary.balance -= amount;
-      if (source === "home") db.home.balance -= amount;
-
-      db.expenses.push({ id: Date.now(), note, amount, person, source, date: new Date().toLocaleDateString("ta-IN") });
-      document.getElementById("expenseNote").value = "";
-      document.getElementById("expenseAmount").value = "";
-      document.getElementById("expensePerson").value = "";
-      saveDB();
-    }
-
-    function renderExpenses() {
-      const list = document.getElementById("expenseList");
-      list.innerHTML = db.expenses.length ? db.expenses.slice().reverse().map(item => `
-        <div class="record">
-          <div><b>${escapeHTML(item.note)} (₹${item.amount})</b><small>👤 ${escapeHTML(item.person || 'பொது')} | 💳 ${item.source} | 📅 ${item.date}</small></div>
-          <button class="delete" onclick="deleteExpense(${item.id})">அழி</button>
-        </div>
-      `).join("") : `<div class="empty">செலவு பதிவுகள் இல்லை</div>`;
-    }
-
-    function deleteExpense(id) { db.expenses = db.expenses.filter(i => i.id !== id); saveDB(); }
-
-    /* Farm Logic */
-    function addFarm() {
-      const note = document.getElementById("farmNote").value.trim();
-      const amount = parseFloat(document.getElementById("farmAmount").value);
-      const source = document.getElementById("farmSource").value;
-      if (!note || !amount) return alert("விவரங்களை நிரப்பவும்");
-
-      db.farm.history.push({ id: Date.now(), note, amount, source, date: new Date().toLocaleDateString("ta-IN") });
-      document.getElementById("farmNote").value = "";
-      document.getElementById("farmAmount").value = "";
-      saveDB();
-    }
-
-    function renderFarm() {
-      const list = document.getElementById("farmList");
-      list.innerHTML = db.farm.history.length ? db.farm.history.slice().reverse().map(item => `
-        <div class="record">
-          <div><b>🌾 ${escapeHTML(item.note)}</b><small>💳 ${item.source} | 📅 ${item.date}</small></div>
-          <div style="font-weight: bold;">₹${item.amount}</div>
-        </div>
-      `).join("") : `<div class="empty">கொல்லை பதிவுகள் இல்லை</div>`;
-    }
-
-    /* Home Account Logic */
-    function addHome(type) {
-      const amt = parseFloat(document.getElementById("homeAmount").value);
-      const note = document.getElementById("homeNote").value.trim() || (type === "in" ? "வரவு" : "செலவு");
-      if (!amt || amt <= 0) return alert("தொகையை உள்ளிடவும்");
-
-      if (type === "in") db.home.balance += amt;
-      else db.home.balance -= amt;
-
-      db.home.history.push({ id: Date.now(), type, amount: amt, note, date: new Date().toLocaleDateString("ta-IN") });
-      document.getElementById("homeAmount").value = "";
-      document.getElementById("homeNote").value = "";
-      saveDB();
-    }
-
-    function renderHomeAccount() {
-      document.getElementById("homeBalance").innerText = `₹${db.home.balance}`;
-      const list = document.getElementById("homeList");
-      list.innerHTML = db.home.history.length ? db.home.history.slice().reverse().map(item => `
-        <div class="record">
-          <div><b>${escapeHTML(item.note)}</b><small>📅 ${item.date}</small></div>
-          <div style="color: ${item.type === 'in' ? 'var(--green)' : 'var(--red)'}; font-weight: bold;">
-            ${item.type === 'in' ? '+' : '-'} ₹${item.amount}
-          </div>
-        </div>
-      `).join("") : `<div class="empty">பதிவுகள் இல்லை</div>`;
-    }
-
-    /* Loan / Interest Logic */
-    function addLoan() {
-      const name = document.getElementById("loanName").value.trim();
-      const amount = parseFloat(document.getElementById("loanAmount").value);
-      const rate = parseFloat(document.getElementById("loanRate").value);
-      const date = document.getElementById("loanDate").value;
-
-      if (!name || !amount || !rate || !date) return alert("விவரங்களை நிரப்பவும்");
-
-      db.loans.push({ id: Date.now(), name, amount, rate, date });
-      document.getElementById("loanName").value = "";
-      document.getElementById("loanAmount").value = "";
-      document.getElementById("loanRate").value = "";
-      saveDB();
-    }
-
-    function renderLoans() {
-      const list = document.getElementById("loanList");
-      list.innerHTML = db.loans.length ? db.loans.map(loan => {
-        const months = calculateMonths(loan.date);
-        const monthlyInterest = (loan.amount * loan.rate) / 100;
-        const totalInterest = Math.round(monthlyInterest * months);
-
-        return `
-          <div class="record" style="flex-direction:column; align-items:flex-start; gap:5px;">
-            <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-              <b>👤 ${escapeHTML(loan.name)}</b>
-              <button class="delete" onclick="deleteLoan(${loan.id})">அழி</button>
-            </div>
-            <small>
-              அசல்: ₹${loan.amount} | வட்டி %: ${loan.rate}%<br>
-              மாத வட்டி: ₹${monthlyInterest} | காலம்: ${months} மாதங்கள்<br>
-              <b style="color:var(--primary);">மொத்த வட்டி: ₹${totalInterest}</b>
-            </small>
-          </div>
-        `;
-      }).join("") : `<div class="empty">கடன் பதிவுகள் இல்லை</div>`;
-    }
-
-    function calculateMonths(startDateStr) {
-      const start = new Date(startDateStr);
-      const now = new Date();
-      const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-      return months <= 0 ? 1 : months;
-    }
-
-    function deleteLoan(id) { db.loans = db.loans.filter(l => l.id !== id); saveDB(); }
-
-    /* Note Logic */
-    function addNote(type) {
-      const inputId = type === "temp" ? "tempText" : "permText";
-      const text = document.getElementById(inputId).value.trim();
-      if (!text) return;
-
-      db.notes[type].push({ id: Date.now(), text, date: new Date().toLocaleDateString("ta-IN") });
-      document.getElementById(inputId).value = "";
-      saveDB();
-    }
-
-    function clearTemporary() { db.notes.temp = []; saveDB(); }
-
-    function renderNotes() {
-      document.getElementById("tempList").innerHTML = db.notes.temp.length ? db.notes.temp.map(n => `
-        <div class="record"><div><b>${escapeHTML(n.text)}</b><small>📅 ${n.date}</small></div></div>
-      `).join("") : `<div class="empty">தற்காலிக குறிப்புகள் இல்லை</div>`;
-
-      document.getElementById("permList").innerHTML = db.notes.perm.length ? db.notes.perm.map(n => `
-        <div class="record"><div><b>${escapeHTML(n.text)}</b><small>📅 ${n.date}</small></div></div>
-      `).join("") : `<div class="empty">நிரந்தர குறிப்புகள் இல்லை</div>`;
-    }
-
-    /* Reminder Logic */
-    function requestNotifications() {
-      if ("Notification" in window) {
-        Notification.requestPermission().then(p => alert(p === "granted" ? "Notification அனுமதி அளிக்கப்பட்டது!" : "அனுமதி மறுக்கப்பட்டது."));
+      if (isIncome) {
+        db.income.push({ desc, amt, date });
+        saveData();
+        addChat(`சரி பாலாஜி சார், ₹${amt} [${desc}] வரவு கணக்கில் சேர்க்கப்பட்டது! ✅`, false);
+      } else {
+        db.expense.push({ desc, amt, date });
+        saveData();
+        addChat(`சரி பாலாஜி சார், ₹${amt} [${desc}] செலவு கணக்கில் பதிவு செய்யப்பட்டது! 💸`, false);
       }
     }
 
-    function addReminder() {
-      const text = document.getElementById("reminderText").value.trim();
-      const date = document.getElementById("reminderDate").value;
-      const time = document.getElementById("reminderTime").value;
-      const early = parseInt(document.getElementById("reminderEarly").value) || 0;
-
-      if (!text || !date || !time) return alert("தேதி மற்றும் நேரத்தைக் குறிப்பிடவும்");
-
-      db.reminders.push({ id: Date.now(), text, date, time, early, done: false, notified: false });
-      document.getElementById("reminderText").value = "";
-      saveDB();
+    function clearChat() {
+      document.getElementById('chatBox').innerHTML = '<div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன உதவி செய்ய வேண்டும்?</div>';
     }
 
-    function checkReminders() {
-      const now = new Date();
-      db.reminders.forEach(item => {
-        if (item.done || item.notified) return;
+    // Voice Recognition
+    function startVoice() {
+      const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Speech) {
+        alert('உங்கள் உலாவியில் குரல் பதிவு வசதி இல்லை.');
+        return;
+      }
+      const rec = new Speech();
+      rec.lang = 'ta-IN';
+      
+      document.getElementById('status').innerText = '🎤 கேட்கிறது... பேசுங்கள்...';
+      rec.start();
 
-        const remTime = new Date(`${item.date}T${item.time}`);
-        remTime.setMinutes(remTime.getMinutes() - item.early);
+      rec.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        document.getElementById('userInput').value = text;
+        document.getElementById('status').innerText = '🎤 தயார்';
+        sendMsg();
+      };
 
-        if (now >= remTime) {
-          item.notified = true;
-          if (Notification.permission === "granted") {
-            new Notification("⏰ ஜாக்கி நினைவூட்டல்", { body: item.text });
-          } else {
-            alert(`⏰ நினைவூட்டல்: ${item.text}`);
-          }
-          saveDB();
-        }
-      });
+      rec.onerror = () => {
+        document.getElementById('status').innerText = '🎤 மீண்டும் முயற்சிக்கவும்';
+      };
     }
 
-    function completeReminder(id) { const item = db.reminders.find(r => r.id === id); if (item) { item.done = true; saveDB(); } }
-    function deleteReminder(id) { db.reminders = db.reminders.filter(r => r.id !== id); saveDB(); }
-
-    function renderReminders() {
-      const list = document.getElementById("reminderList");
-      list.innerHTML = db.reminders.length ? db.reminders.map(item => `
-        <div class="record ${item.done ? 'done' : ''}">
-          <div>
-            <b>⏰ ${escapeHTML(item.text)}</b>
-            <small>📅 ${item.date} | ⏰ ${item.time} ${item.early ? `(${item.early} நிமி முன்)` : ''}</small>
-          </div>
-          <div>
-            ${!item.done ? `<button class="btn green" style="padding:2px 6px; font-size:0.75rem;" onclick="completeReminder(${item.id})">✔</button>` : ''}
-            <button class="delete" onclick="deleteReminder(${item.id})">அழி</button>
-          </div>
-        </div>
-      `).join("") : `<div class="empty">நினைவூட்டல் இல்லை</div>`;
-    }
-
-    /* Helper & Master Render */
-    function renderHome() {
-      document.getElementById("summarySalary").innerText = `₹${db.salary.balance}`;
-      document.getElementById("summaryHome").innerText = `₹${db.home.balance}`;
-      document.getElementById("summaryExpense").innerText = `₹${db.expenses.reduce((s, i) => s + i.amount, 0)}`;
-      document.getElementById("summaryRem").innerText = db.reminders.filter(r => !r.done).length;
-    }
-
-    function escapeHTML(str) {
-      return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    }
-
-    function renderAll() {
-      renderHome();
-      renderSalary();
-      renderHomeAccount();
-      renderFarm();
-      renderExpenses();
-      renderLoans();
-      renderNotes();
-      renderReminders();
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      loadDB();
-      setInterval(checkReminders, 30000);
-      renderAll();
-    });
+    renderData();
   </script>
 </body>
 </html>
-
