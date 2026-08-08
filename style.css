@@ -1,145 +1,20 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+body { background: #f0f2f5; padding-bottom: 80px; }
+.header { background: #1a365d; color: white; text-align: center; padding: 15px; font-weight: bold; font-size: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+.card { background: white; margin: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.input-box { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+.btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; width: 100%; margin-top: 5px; }
+.btn-blue { background: #2b6cb0; color: white; }
+.btn-green { background: #38a169; color: white; }
+.btn-red { background: #e53e3e; color: white; }
 
-body {
-  background-color: #f4f6f9;
-  color: #333;
-}
+/* Chat Box Styling */
+#chatBox { height: 250px; overflow-y: auto; border: 1px solid #edf2f7; padding: 10px; border-radius: 8px; background: #fafafa; margin-bottom: 10px; }
+.msg { margin: 8px 0; padding: 10px 14px; border-radius: 15px; max-width: 85%; font-size: 14px; line-height: 1.4; }
+.bot { background: #e2e8f0; color: #2d3748; align-self: flex-start; border-bottom-left-radius: 2px; }
+.user { background: #3182ce; color: white; margin-left: auto; border-bottom-right-radius: 2px; text-align: right; }
 
-header {
-  background: #1a365d;
-  color: white;
-  text-align: center;
-  padding: 15px;
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-.container {
-  padding: 15px;
-  padding-bottom: 80px; /* பாட்டம் பாருக்கு இடம் விட */
-  max-width: 500px;
-  margin: 0 auto;
-}
-
-.section {
-  display: none;
-}
-
-.section.active {
-  display: block;
-}
-
-.card {
-  background: white;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  margin-bottom: 15px;
-}
-
-.chat-box {
-  height: 250px;
-  overflow-y: auto;
-  border: 1px solid #e2e8f0;
-  padding: 10px;
-  border-radius: 8px;
-  background: #f8fafc;
-  margin-bottom: 10px;
-}
-
-.msg {
-  margin-bottom: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  max-width: 85%;
-  font-size: 0.9rem;
-}
-
-.msg.user {
-  background: #3182ce;
-  color: white;
-  margin-left: auto;
-}
-
-.msg.bot {
-  background: #e2e8f0;
-  color: #2d3748;
-}
-
-.input-group {
-  display: flex;
-  gap: 5px;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #cbd5e0;
-  border-radius: 6px;
-  font-size: 0.95rem;
-}
-
-button {
-  padding: 8px 12px;
-  border: none;
-  background: #3182ce;
-  color: white;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-button.mic { background: #38a169; }
-button.clear { background: #e53e3e; }
-
-.history-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #edf2f7;
-  font-size: 0.9rem;
-}
-
-.history-item .in { color: #38a169; font-weight: bold; }
-.history-item .out { color: #e53e3e; font-weight: bold; }
-
-/* நவீன பாட்டம் நேவிகேஷன் பார் */
-.nav-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 65px;
-  background: #ffffff;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  border-top: 1px solid #e2e8f0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
-  z-index: 9999;
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #718096;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 5px 0;
-  width: 16%;
-  text-decoration: none;
-}
-
-.nav-item.active {
-  color: #3182ce;
-  border-top: 3px solid #3182ce;
-}
+/* Fixed Bottom Navigation - அழகாக வரிசையாக இருக்க */
+.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 4px; box-shadow: 0 -2px 10px rgba(0,0,0,0.15); z-index: 1000; }
+.nav-btn { flex: 1; margin: 0 2px; padding: 8px 2px; background: #e2e8f0; border: none; border-radius: 6px; font-size: 11px; font-weight: bold; color: #2d3748; text-align: center; }
+.nav-btn.active { background: #2b6cb0; color: white; }
