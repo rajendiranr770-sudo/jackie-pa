@@ -6,10 +6,8 @@
   <title>ஜோக்கி - Smart PA</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
-  <style>
-    .nav-bar { display: flex; overflow-x: auto; white-space: nowrap; }
-    .nav-item { padding: 5px 10px; font-size: 0.75rem; }
-  </style>
+  <!-- PDF பதிவிறக்க லைப்ரரி -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -25,7 +23,7 @@
           <div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>
         </div>
         <div class="input-group">
-          <input type="text" id="userInput" placeholder="எ.கா: மருந்து வாங்கியது 500 சம்பளத்தில்">
+          <input type="text" id="userInput" placeholder="எ.கா: கார்த்தி கணக்கை காட்டு / PDF தா">
         </div>
         <div class="input-group" style="margin-top: 8px;">
           <button onclick="sendMsg()" style="flex: 1;">அனுப்பு</button>
@@ -64,33 +62,32 @@
 
     <!-- VATTI -->
     <div id="sec-vatti" class="section">
-      <div class="card">
+      <div class="card" id="vatti-pdf-area">
         <h2>💰 வட்டி கணக்கு</h2>
-        <button onclick="addVatti()" style="margin-bottom: 10px; width: 100%;">+ புதிய வட்டி கணக்கு சேர்க்க</button>
+        <button onclick="downloadPDF()" style="margin-bottom: 10px; background:#2b6cb0; color:white; border:none; padding:8px; border-radius:5px; width:100%;">📄 PDF டவுன்லோட் செய்</button>
         <div id="hist-vatti"></div>
       </div>
     </div>
 
-    <!-- NOTES -->
+    <!-- NOTES & REMINDERS -->
     <div id="sec-notes" class="section">
       <div class="card">
-        <h2>📝 நோட்பேட் (Notes)</h2>
+        <h2>📝 நோட்பேட் & 🔔 நினைவூட்டல்</h2>
         <div id="hist-notes"></div>
       </div>
     </div>
   </div>
 
-    <!-- NAVIGATION BAR -->
+  <!-- NAVIGATION BAR -->
   <div class="nav-bar" style="display: flex; overflow-x: auto; white-space: nowrap; background: white; position: fixed; bottom: 0; width: 100%; border-top: 1px solid #ccc; padding: 5px 0;">
-    <div class="nav-item active" onclick="showSec('sec-ai', this)" style="flex: 1; text-align: center; padding: 5px;">🤖 AI</div>
-    <div class="nav-item" onclick="showSec('sec-salary', this)" style="flex: 1; text-align: center; padding: 5px;">💼 சம்பளம்</div>
-    <div class="nav-item" onclick="showSec('sec-home', this)" style="flex: 1; text-align: center; padding: 5px;">🏠 வீடு</div>
-    <div class="nav-item" onclick="showSec('sec-kollai', this)" style="flex: 1; text-align: center; padding: 5px;">🌱 கொள்ளை</div>
-    <div class="nav-item" onclick="showSec('sec-vatti', this)" style="flex: 1; text-align: center; padding: 5px;">💰 வட்டி</div>
-    <div class="nav-item" onclick="showSec('sec-notes', this)" style="flex: 1; text-align: center; padding: 5px;">📝 நோட்பேட்</div>
+    <div class="nav-item active" onclick="showSec('sec-ai', this)" style="flex: 1; text-align: center;">🤖 AI</div>
+    <div class="nav-item" onclick="showSec('sec-salary', this)" style="flex: 1; text-align: center;">💼 சம்பளம்</div>
+    <div class="nav-item" onclick="showSec('sec-home', this)" style="flex: 1; text-align: center;">🏠 வீடு</div>
+    <div class="nav-item" onclick="showSec('sec-kollai', this)" style="flex: 1; text-align: center;">🌱 கொள்ளை</div>
+    <div class="nav-item" onclick="showSec('sec-vatti', this)" style="flex: 1; text-align: center;">💰 வட்டி</div>
+    <div class="nav-item" onclick="showSec('sec-notes', this)" style="flex: 1; text-align: center;">📝 நோட்பேட்</div>
   </div>
 
-
-  <script src="app.js"></script>
+  <script src="app.js?v=4.0"></script>
 </body>
 </html>
