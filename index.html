@@ -6,6 +6,10 @@
   <title>ஜோக்கி - Smart PA</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .nav-bar { display: flex; overflow-x: auto; white-space: nowrap; }
+    .nav-item { padding: 5px 10px; font-size: 0.75rem; }
+  </style>
 </head>
 <body>
 
@@ -21,7 +25,7 @@
           <div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>
         </div>
         <div class="input-group">
-          <input type="text" id="userInput" placeholder="எ.கா: கொல்லைக்கு மருந்து 500">
+          <input type="text" id="userInput" placeholder="எ.கா: மருந்து வாங்கியது 500 சம்பளத்தில்">
         </div>
         <div class="input-group" style="margin-top: 8px;">
           <button onclick="sendMsg()" style="flex: 1;">அனுப்பு</button>
@@ -48,13 +52,42 @@
         <div id="hist-home" style="margin-top: 10px;"></div>
       </div>
     </div>
+
+    <!-- KOLLAI -->
+    <div id="sec-kollai" class="section">
+      <div class="card">
+        <h2>🌱 கொள்ளை செலவு கணக்கு</h2>
+        <h3>மொத்த செலவு: ₹<span id="total-kollai">0</span></h3>
+        <div id="hist-kollai" style="margin-top: 10px;"></div>
+      </div>
+    </div>
+
+    <!-- VATTI -->
+    <div id="sec-vatti" class="section">
+      <div class="card">
+        <h2>💰 வட்டி கணக்கு</h2>
+        <button onclick="addVatti()" style="margin-bottom: 10px; width: 100%;">+ புதிய வட்டி கணக்கு சேர்க்க</button>
+        <div id="hist-vatti"></div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div id="sec-notes" class="section">
+      <div class="card">
+        <h2>📝 நோட்பேட் (Notes)</h2>
+        <div id="hist-notes"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- NAVIGATION -->
+  <!-- NAVIGATION BAR (கீழ் பகுதி பட்டன்கள்) -->
   <div class="nav-bar">
     <div class="nav-item active" onclick="showSec('sec-ai', this)">🤖 AI</div>
     <div class="nav-item" onclick="showSec('sec-salary', this)">💼 சம்பளம்</div>
     <div class="nav-item" onclick="showSec('sec-home', this)">🏠 வீடு</div>
+    <div class="nav-item" onclick="showSec('sec-kollai', this)">🌱 கொள்ளை</div>
+    <div class="nav-item" onclick="showSec('sec-vatti', this)">💰 வட்டி</div>
+    <div class="nav-item" onclick="showSec('sec-notes', this)">📝 நோட்பேட்</div>
   </div>
 
   <script src="app.js"></script>
