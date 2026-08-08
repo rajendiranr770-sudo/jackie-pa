@@ -1,13 +1,13 @@
-let db = JSON.parse(localStorage.getItem('jackie_pa_v3')) || { salary: [], home: [] };
+let db = JSON.parse(localStorage.getItem('smartpa_db')) || { salary: [], home: [] };
 let pendingExpense = null;
 
 function saveData() {
-  localStorage.setItem('jackie_pa_v3', JSON.stringify(db));
+  localStorage.setItem('smartpa_db', JSON.stringify(db));
   renderData();
 }
 
 function renderData() {
-  // Salary
+  // Salary Calculation
   let salBal = db.salary.reduce((acc, item) => item.type === 'in' ? acc + item.amt : acc - item.amt, 0);
   const salElem = document.getElementById('bal-salary');
   if (salElem) {
@@ -19,10 +19,10 @@ function renderData() {
   if (histSalary) {
     histSalary.innerHTML = db.salary.map(i => 
       `<div class="history-item"><span>${i.desc}</span><span class="${i.type}">₹${i.amt}</span></div>`
-    ).join('');
+    ).reverse().join('');
   }
 
-  // Home
+  // Home Calculation
   let homeBal = db.home.reduce((acc, item) => item.type === 'in' ? acc + item.amt : acc - item.amt, 0);
   const homeElem = document.getElementById('bal-home');
   if (homeElem) {
@@ -34,7 +34,7 @@ function renderData() {
   if (histHome) {
     histHome.innerHTML = db.home.map(i => 
       `<div class="history-item"><span>${i.desc}</span><span class="${i.type}">₹${i.amt}</span></div>`
-    ).join('');
+    ).reverse().join('');
   }
 }
 
@@ -73,13 +73,13 @@ function processNLP(text) {
     if (cleanText.includes('சம்பளம்') || cleanText.includes('சம்பள')) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', date });
       saveData();
-      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} (${pendingExpense.desc}) சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது. 💼`, false);
+      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} (${pendingExpense.desc}) சம்பளக் கணக்கில் கழித்து பதிவு செய்யப்பட்டது. 💼`, false);
       pendingExpense = null;
       return;
     } else if (cleanText.includes('வீடு') || cleanText.includes('வீட்டு')) {
       db.home.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', date });
       saveData();
-      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} (${pendingExpense.desc}) வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது. 🏠`, false);
+      addChat(`சரி பாலாஜி சார்! ₹${pendingExpense.amt} (${pendingExpense.desc}) வீட்டுக் கணக்கில் கழித்து பதிவு செய்யப்பட்டது. 🏠`, false);
       pendingExpense = null;
       return;
     }
@@ -141,7 +141,11 @@ function startVoice() {
   };
 }
 
-// பக்கத்தை லோட் செய்யும் போது இயங்க
+// Service Worker Register
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   renderData();
 });
