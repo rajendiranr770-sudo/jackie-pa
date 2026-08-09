@@ -4,138 +4,145 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ஜோக்கி - Smart PA</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Mukta', sans-serif; margin: 0; padding: 0; }
+    body { background-color: #f1f5f9; color: #1e293b; padding-bottom: 80px; }
+    .header { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .container { max-width: 500px; margin: 0 auto; padding: 12px; }
+    .card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .card-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #0f172a; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
+    
+    /* Chat Box UI */
+    .chat-box { height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: #fafafa; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 15px; line-height: 1.4; }
+    .msg.bot { background: #e0f2fe; color: #0369a1; align-self: flex-start; border-bottom-left-radius: 2px; }
+    .msg.user { background: #2563eb; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+    
+    /* Inputs & Buttons */
+    input[type="text"], input[type="number"], input[type="date"] { width: 100%; padding: 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 15px; margin-bottom: 8px; outline: none; }
+    input:focus { border-color: #2563eb; }
+    
+    .btn-group { display: flex; gap: 6px; margin-top: 6px; }
+    .btn { border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+    .btn-blue { background: #2563eb; color: white; }
+    .btn-green { background: #16a34a; color: white; }
+    .btn-red { background: #dc2626; color: white; }
+    .btn-gray { background: #64748b; color: white; }
+    .btn:active { transform: scale(0.96); }
+
+    /* Bottom Navigation Bar */
+    .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #e2e8f0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+    .nav-btn { border: none; background: transparent; font-size: 12px; font-weight: bold; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex: 1; }
+    .nav-btn.active { color: #2563eb; }
+    .nav-btn span { font-size: 18px; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .bal-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 12px; font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 12px; color: #1e293b; }
+  </style>
 </head>
 <body>
 
-  <header>🤖 ஜோக்கி - Smart PA</header>
+  <div class="header">🤖 ஜோக்கி - Smart PA</div>
 
-  <div class="container" style="padding-bottom: 70px;">
-    <!-- AI CHAT -->
+  <div class="container">
+    
+    <!-- 1. AI சாட் & வாய்ஸ் -->
     <div id="sec-ai" class="section active">
       <div class="card">
-        <h2>🎙️ AI உதவி மற்றும் குரல் பதிவு</h2>
-        <div id="status" style="font-size: 0.8rem; color: #718096; margin-bottom: 5px;">🎤 தயார்</div>
-        <div class="chat-box" id="chatBox">
+        <div class="card-title">🎙️ AI உதவி மற்றும் குரல் பதிவு</div>
+        <div id="chatBox" class="chat-box">
           <div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>
         </div>
-        <div class="input-group">
-          <input type="text" id="userInput" placeholder="எ.கா: சம்பளத்தில் கொல்லைக்கு 1000">
+        <input type="text" id="userInput" placeholder="எ.கா: சம்பளத்தில் 400 பெட்ரோல்">
+        <div class="btn-group">
+          <button class="btn btn-blue" style="flex:1" onclick="sendMsg()">அனுப்பு</button>
+          <button class="btn btn-green" style="flex:1" onclick="startVoice()">🎤 பேசு</button>
+          <button class="btn btn-red" onclick="clearChat()">அழி</button>
         </div>
-        <div class="input-group" style="margin-top: 8px;">
-          <button onclick="sendMsg()" style="flex: 1;">அனுப்பு</button>
-          <button class="mic" onclick="startVoice()" style="flex: 1;">🎤 பேசு</button>
-          <button class="clear" onclick="clearChat()">அழி</button>
-        </div>
+        <div id="status" style="font-size:12px; color:gray; margin-top:4px; text-align:center;">🎤 தயார்</div>
       </div>
     </div>
 
-    <!-- SAMBALAM -->
+    <!-- 2. சம்பளக் கணக்கு -->
     <div id="sec-salary" class="section">
       <div class="card">
-        <h2>💼 சம்பளக் கணக்கு</h2>
-        <h3>மீதித் தொகை: ₹<span id="bal-salary">0</span></h3>
-        <hr>
-        <h4>➕ மேனுவல் பதிவு:</h4>
-        <input type="text" id="m-sal-desc" placeholder="விவரம் (எ.கா: சம்பளம் வந்தது)">
-        <input type="number" id="m-sal-amt" placeholder="தொகை (₹)" style="margin-top:5px;">
-        <div style="display:flex; gap:5px; margin-top:5px;">
-          <button onclick="addManual('salary', 'in')" style="flex:1; background:#48bb78;">வரவு (+)</button>
-          <button onclick="addManual('salary', 'out')" style="flex:1; background:#e53e3e;">செலவு (-)</button>
+        <div class="card-title">💼 சம்பளக் கணக்கு</div>
+        <div class="bal-card">மீதித் தொகை: ₹<span id="bal-salary">0</span></div>
+        <input type="text" id="m-salary-desc" placeholder="விவரம் (எ.கா: சம்பளம் வந்தது)">
+        <input type="number" id="m-salary-amt" placeholder="தொகை (₹)">
+        <div class="btn-group">
+          <button class="btn btn-green" style="flex:1" onclick="addManual('salary', 'in')">வரவு (+)</button>
+          <button class="btn btn-red" style="flex:1" onclick="addManual('salary', 'out')">செலவு (-)</button>
         </div>
-        <div id="hist-salary" style="margin-top: 15px;"></div>
+        <div id="hist-salary" style="margin-top:15px;"></div>
       </div>
     </div>
 
-    <!-- VEEDU -->
+    <!-- 3. வீட்டுக் கணக்கு -->
     <div id="sec-home" class="section">
       <div class="card">
-        <h2>🏠 வீட்டுக் கணக்கு</h2>
-        <h3>மீதித் தொகை: ₹<span id="bal-home">0</span></h3>
-        <hr>
-        <h4>➕ மேனுவல் பதிவு:</h4>
+        <div class="card-title">🏠 வீட்டுக் கணக்கு</div>
+        <div class="bal-card">மீதித் தொகை: ₹<span id="bal-home">0</span></div>
         <input type="text" id="m-home-desc" placeholder="விவரம் (எ.கா: காய்கறி வாங்கியது)">
-        <input type="number" id="m-home-amt" placeholder="தொகை (₹)" style="margin-top:5px;">
-        <div style="display:flex; gap:5px; margin-top:5px;">
-          <button onclick="addManual('home', 'in')" style="flex:1; background:#48bb78;">வரவு (+)</button>
-          <button onclick="addManual('home', 'out')" style="flex:1; background:#e53e3e;">செலவு (-)</button>
+        <input type="number" id="m-home-amt" placeholder="தொகை (₹)">
+        <div class="btn-group">
+          <button class="btn btn-green" style="flex:1" onclick="addManual('home', 'in')">வரவு (+)</button>
+          <button class="btn btn-red" style="flex:1" onclick="addManual('home', 'out')">செலவு (-)</button>
         </div>
-        <div id="hist-home" style="margin-top: 15px;"></div>
+        <div id="hist-home" style="margin-top:15px;"></div>
       </div>
     </div>
 
-    <!-- KOLLAI -->
+    <!-- 4. கொள்ளை செலவு -->
     <div id="sec-kollai" class="section">
       <div class="card">
-        <h2>🌱 கொள்ளை செலவு கணக்கு</h2>
-        <h3>மொத்த செலவு: ₹<span id="total-kollai">0</span></h3>
-        <hr>
-        <h4>➕ மேனுவல் பதிவு:</h4>
+        <div class="card-title">🌱 கொள்ளை செலவு கணக்கு</div>
+        <div class="bal-card" style="color:#dc2626;">மொத்த செலவு: ₹<span id="total-kollai">0</span></div>
         <input type="text" id="m-kollai-desc" placeholder="விவரம் (எ.கா: உரம் வாங்கியது)">
-        <input type="number" id="m-kollai-amt" placeholder="தொகை (₹)" style="margin-top:5px;">
-        <button onclick="addManualKollai()" style="margin-top:5px; width:100%; background:#e53e3e; color:white; padding:8px; border:none; border-radius:5px;">செலவு சேர் (-)</button>
-        <div id="hist-kollai" style="margin-top: 15px;"></div>
+        <input type="number" id="m-kollai-amt" placeholder="தொகை (₹)">
+        <button class="btn btn-red" style="width:100%;" onclick="addManualKollai()">செலவு சேர் (-)</button>
+        <div id="hist-kollai" style="margin-top:15px;"></div>
       </div>
     </div>
 
-<!-- வட்டி கணக்கு பிரிவு -->
-<div class="card">
-  <h2>💰 வட்டி கணக்கு</h2>
-  <button class="btn btn-blue" onclick="downloadAllPDF()">📄 PDF டவுன்லோட் செய்</button>
-  
-  <div class="form-group" style="margin-top:15px;">
-    <h3>➕ மேனுவல் வட்டிப் பதிவு:</h3>
-    <input type="text" id="vName" class="input-box" placeholder="நபர் பெயர்">
-    <input type="number" id="vAmt" class="input-box" placeholder="அசல் தொகை (₹)">
-    <input type="number" id="vRate" class="input-box" placeholder="வட்டி % (எ.கா: 3)">
-    <input type="text" id="vDate" class="input-box" placeholder="தேதி (எ.கா: 11/03/2026)">
-    <button class="btn btn-green" onclick="addManualVatti()">வட்டி சேர் 💰</button>
-  </div>
-  
-  <div id="vattiList" style="margin-top:20px;"></div>
-</div>
+    <!-- 5. வட்டி கணக்கு -->
+    <div id="sec-vatti" class="section">
+      <div class="card">
+        <div class="card-title">💰 வட்டி கணக்கு</div>
+        <input type="text" id="vName" placeholder="நபர் பெயர்">
+        <input type="number" id="vAmt" placeholder="அசல் தொகை (₹)">
+        <input type="number" id="vRate" placeholder="வட்டி % (எ.கா: 3)">
+        <input type="text" id="vDate" placeholder="தேதி (DD/MM/YYYY) (எ.கா: 02/06/2026)">
+        <button class="btn btn-green" style="width:100%; margin-top:4px;" onclick="addManualVatti()">கணக்கு சேர் 💰</button>
+        <div id="vattiList" style="margin-top:15px;"></div>
+      </div>
+    </div>
 
-    <!-- NOTES & REMINDERS -->
+    <!-- 6. நோட்பேட் -->
     <div id="sec-notes" class="section">
       <div class="card">
-        <h2>📝 நோட்பேட் & 🔔 நினைவூட்டல்</h2>
+        <div class="card-title">📝 நோட்பேட்</div>
         <input type="text" id="m-note-text" placeholder="குறிப்பு எழுதவும்...">
-        <button onclick="addManualNote()" style="margin-top:5px; width:100%; background:#4a5568; color:white; padding:8px; border:none; border-radius:5px;">சேமி 📝</button>
-        <div id="hist-notes" style="margin-top: 15px;"></div>
+        <button class="btn btn-gray" style="width:100%;" onclick="addManualNote()">சேமி 📝</button>
+        <div id="hist-notes" style="margin-top:15px;"></div>
       </div>
     </div>
+
   </div>
 
-  <!-- MODERN BOTTOM NAVIGATION BAR -->
-  <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="showSec('sec-ai', this)">
-      <span class="nav-icon">🤖</span>
-      <span class="nav-label">AI</span>
-    </button>
-    <button class="nav-btn" onclick="showSec('sec-salary', this)">
-      <span class="nav-icon">💼</span>
-      <span class="nav-label">சம்பளம்</span>
-    </button>
-    <button class="nav-btn" onclick="showSec('sec-home', this)">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-label">வீடு</span>
-    </button>
-    <button class="nav-btn" onclick="showSec('sec-kollai', this)">
-      <span class="nav-icon">🌱</span>
-      <span class="nav-label">கொள்ளை</span>
-    </button>
-    <button class="nav-btn" onclick="showSec('sec-vatti', this)">
-      <span class="nav-icon">💰</span>
-      <span class="nav-label">வட்டி</span>
-    </button>
-    <button class="nav-btn" onclick="showSec('sec-notes', this)">
-      <span class="nav-icon">📝</span>
-      <span class="nav-label">குறிப்பு</span>
-    </button>
-  </nav>
+  <!-- Bottom Navigation Bar -->
+  <div class="nav-bar">
+    <button class="nav-btn active" onclick="showSec('sec-ai', this)"><span>🤖</span>AI</button>
+    <button class="nav-btn" onclick="showSec('sec-salary', this)"><span>💼</span>சம்பளம்</button>
+    <button class="nav-btn" onclick="showSec('sec-home', this)"><span>🏠</span>வீடு</button>
+    <button class="nav-btn" onclick="showSec('sec-kollai', this)"><span>🌱</span>கொள்ளை</button>
+    <button class="nav-btn" onclick="showSec('sec-vatti', this)"><span>💰</span>வட்டி</button>
+    <button class="nav-btn" onclick="showSec('sec-notes', this)"><span>📝</span>குறிப்பு</button>
+  </div>
 
-  <script src="app.js?v=5.0"></script>
+  <script src="app.js"></script>
 </body>
 </html>
