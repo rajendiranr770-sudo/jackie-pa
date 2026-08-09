@@ -214,33 +214,56 @@ function downloadPDF() {
   const element = document.getElementById('vatti-pdf-area');
   html2pdf().from(element).save('Vatti_Kanakku.pdf');
 }
-let pendingVatti = null; // கார்த்தி உறுதிப்படுத்தலுக்கான தற்காலிக சேமிப்புlet pendingVatti = null;let pendingVatti = null;
+let pendingVatti = null; // கார்த்தி உறுதிப்படுத்தலுக்கான தற்காலிக சேமிப்புlet pendingVatti = null;let pendingVatti = null;let pendingVatti = null;
 
-// வட்டி கணக்கிடும் பிரத்யேக ஃபங்க்ஷன்
+// தொடக்கத் தேதியில் இருந்து ஆண்டுகள், மாதங்கள், நாட்களைத் துல்லியமாகக் கணக்கிடும் ஃபங்க்ஷன்
 function calculateInterest(amt, rate, startDateStr) {
   let parts = (startDateStr || '').split(/[\/\-.]/);
   let start = (parts.length === 3) ? new Date(parts[2], parts[1] - 1, parts[0]) : new Date();
   let today = new Date();
-  
-  let diffTime = Math.abs(today - start);
-  let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  let months = (diffDays / 30.44).toFixed(1);
 
+  // தேதிகளுக்கு இடையிலான வித்தியாசம்
+  let years = today.getFullYear() - start.getFullYear();
+  let months = today.getMonth() - start.getMonth();
+  let days = today.getDate() - start.getDate();
+
+  if (days < 0) {
+    months--;
+    // முந்தைய மாதத்தின் மொத்த நாட்களைக் கணக்கிடுதல்
+    let prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  // மொத்த மாதங்கள் (ஆண்டுகளையும் மாதங்களாக மாற்றி)
+  let totalMonths = (years * 12) + months;
+
+  // 100 ரூபாய்க்கு ஒரு மாத வட்டி
   let monthlyInterest = (amt * rate) / 100;
-  let totalInterest = Math.round(monthlyInterest * (diffDays / 30.44));
+  
+  // 1 நாளுக்கான வட்டி (1 மாதம் = 30 நாட்கள்)
+  let dailyInterest = monthlyInterest / 30;
+
+  // மொத்த வட்டி கணக்கீடு (மாத வட்டி + நாள் வட்டி)
+  let totalInterest = Math.round((totalMonths * monthlyInterest) + (days * dailyInterest));
   let grandTotal = amt + totalInterest;
 
-  return { diffDays, months, monthlyInterest, totalInterest, grandTotal };
+  return { years, months, days, totalMonths, totalInterest, grandTotal };
 }
 
-// தனிநபர் வட்டி PDF டவுன்லோட் செய்யும் ஃபங்க்ஷன்
+// தனிநபர் வட்டி அறிக்கை டவுன்லோட் ஃபங்க்ஷன்
 function downloadPersonPDF(name) {
   const personData = db.vatti.filter(v => v.name.toLowerCase() === name.toLowerCase());
   if (personData.length === 0) { alert('கணக்கு எதுவும் இல்லை!'); return; }
 
   let details = personData.map(v => {
     let calc = calculateInterest(v.amt, v.rate, v.date);
-    return `நபர்: ${v.name}\nகடன் தேதி: ${v.date || 'N/A'}\nஅசல் தொகை: ₹${v.amt}\nவட்டி விகிதம்: ${v.rate}%\nஇன்றைய நாள் வரை வட்டி: ₹${calc.totalInterest}\nமொத்தம் தர வேண்டியது: ₹${calc.grandTotal}\n------------------------`;
+    let durationText = `${calc.totalMonths} மாதம், ${calc.days} நாட்கள்`;
+    return `நபர்: ${v.name}\nகடன் தேதி: ${v.date || 'N/A'}\nஅசல் தொகை: ₹${v.amt}\nவட்டி விகிதம்: ${v.rate}%\nகால அளவு: ${durationText}\nஇன்றைய நாள் வரை வட்டி: ₹${calc.totalInterest}\nமொத்தம் தர வேண்டியது: ₹${calc.grandTotal}\n------------------------`;
   }).join('\n\n');
 
   let blob = new Blob([`*** பாலாஜி ஜோக்கி வட்டி கணக்கு அறிக்கை ***\n\n${details}`], { type: "text/plain;charset=utf-8" });
@@ -254,19 +277,19 @@ function processNLP(rawText) {
   const text = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // 1. தனிநபர் கணக்கை திரையில் கேட்கும் கேள்விகள் (எ.கா: "ராஜாவின் வட்டி கணக்கை காட்டு")
+  // 1. "ராஜாவின் வட்டி கணக்கை காட்டு" எனப் பேசினால் தேதியிலிருந்து மாதங்கள் + நாட்களைக் கணக்கிட்டு சொல்லும் லோஜிக்
   if (/(காட்டு|எவ்வளவு|கணக்கு|விவரம்)/.test(text) && (text.includes('வட்டி') || text.includes('கணக்கு'))) {
     let cleanName = rawText.replace(/(வா|வட்டி|கணக்கை|கணக்கு|காட்டு|எவ்வளவு|விவரம்|இன்|உடைய)/g, '').trim();
     let person = db.vatti.find(v => v.name.toLowerCase().includes(cleanName.toLowerCase()));
 
     if (person) {
       let calc = calculateInterest(person.amt, person.rate, person.date);
-      addChat(`📊 **${person.name} வட்டி விவரம்:**\n• அசல்: ₹${person.amt}\n• வட்டி %: ${person.rate}%\n• எடுத்த தேதி: ${person.date || 'N/A'}\n• கழிந்த நாட்கள்: ${calc.diffDays} நாட்கள் (${calc.months} மாதம்)\n• வட்டி தொகை: ₹${calc.totalInterest}\n💰 **மொத்தம் தர வேண்டியது: ₹${calc.grandTotal}**`, false);
+      addChat(`📊 **${person.name} வட்டி விவரம்:**\n• அசல்: ₹${person.amt}\n• வட்டி %: ${person.rate}%\n• கடன் தேதி: ${person.date || 'N/A'}\n• கழிந்த காலம்: ${calc.totalMonths} மாதம், ${calc.days} நாட்கள்\n• வட்டி தொகை: ₹${calc.totalInterest}\n💰 **மொத்தம் தர வேண்டியது: ₹${calc.grandTotal}**`, false);
       return;
     }
   }
 
-  // 2. உறுதிப்படுத்தும் உரையாடல் (Top-up or New Person)
+  // 2. பழைய கணக்கில் சேர்ப்பதா / புதிய கணக்கா என உறுதியளித்தல்
   if (pendingVatti) {
     if (/(ஆமாம்|ஆமா|சேர்|சேர்க்கவும்|அவரிடம்|பழைய)/.test(text)) {
       let target = pendingVatti.existing[0];
@@ -312,7 +335,7 @@ function processNLP(rawText) {
         db.vatti.push({ name, amt, rate, date: entryDate, datetime });
         saveData();
         let calc = calculateInterest(amt, rate, entryDate);
-        addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார். அசல்: ₹${amt}, வட்டி: ${rate}%, தேதி: ${entryDate}. (இன்றைய நாள் வரை மொத்தம்: ₹${calc.grandTotal}) 💰`, false);
+        addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார். அசல்: ₹${amt}, வட்டி: ${rate}%, கடன் தேதி: ${entryDate}.\n(${calc.totalMonths} மாதம், ${calc.days} நாட்களுக்கு மொத்தம் தர வேண்டியது: ₹${calc.grandTotal}) 💰`, false);
         return;
       }
     }
