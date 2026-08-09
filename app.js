@@ -9,8 +9,26 @@ let db = JSON.parse(localStorage.getItem('smartpa_db_v5')) || {
 let pendingExpense = null;
 let pendingVatti = null;
 
+// தமிழ் எண்களையும் பேச்சுகளையும் சரியாக எண்களாக மாற்றும் லோஜிக்
 function parseTamilNumbers(text) {
   let str = text.replace(/,/g, '');
+  
+  // லட்சங்கள்
+  str = str.replace(/(இரண்டு|ரெண்டு|2)\s*(லட்சம்|லக்ஷம்)/g, '200000');
+  str = str.replace(/(மூன்று|மூணு|3)\s*(லட்சம்|லக்ஷம்)/g, '300000');
+  str = str.replace(/(நான்கு|நாலு|4)\s*(லட்சம்|லக்ஷம்)/g, '400000');
+  str = str.replace(/(ஐந்து|அஞ்சு|5)\s*(லட்சம்|லக்ஷம்)/g, '500000');
+  str = str.replace(/(\d+)\s*(லட்சம்|லக்ஷம்)/g, (m, p1) => parseInt(p1) * 100000);
+  str = str.replace(/(ஒரு லட்சம்|ஒரு லக்ஷம்|லட்சம்|லக்ஷம்)/g, '100000');
+
+  // ஆயிரங்கள்
+  str = str.replace(/(இருபதாயிரம்|இருபது ஆயிரம்)/g, '20000');
+  str = str.replace(/(முப்பதாயிரம்|முப்பது ஆயிரம்)/g, '30000');
+  str = str.replace(/(நாற்பதாயிரம்|நாற்பது ஆயிரம்)/g, '40000');
+  str = str.replace(/(ஐம்பதாயிரம்|ஐம்பது ஆயிரம்)/g, '50000');
+  str = str.replace(/(\d+)\s*ஆயிரம்/g, (m, p1) => parseInt(p1) * 1000);
+  str = str.replace(/(ஒரு ஆயிரம்|ஆயிரம்)/g, '1000');
+
   const words = [
     { w: /ஒரு நூறு|நூறு/g, v: 100 },
     { w: /இருநூறு|இரண்டு நூறு/g, v: 200 },
@@ -20,18 +38,8 @@ function parseTamilNumbers(text) {
     { w: /அறுநூறு/g, v: 600 },
     { w: /எழுநூறு/g, v: 700 },
     { w: /எண்ணூறு/g, v: 800 },
-    { w: /தொள்ளாயிரம்/g, v: 900 },
-    { w: /இருபதாயிரம்|இருபது ஆயிரம்/g, v: 20000 },
-    { w: /முப்பதாயிரம்|முப்பது ஆயிரம்/g, v: 30000 },
-    { w: /நாற்பதாயிரம்|நாற்பது ஆயிரம்/g, v: 40000 },
-    { w: /ஐம்பதாயிரம்|ஐம்பது ஆயிரம்/g, v: 50000 },
-    { w: /பத்தாயிரம்|பத்து ஆயிரம்/g, v: 10000 },
-    { w: /ஒரு ஆயிரம்|ஆயிரம்/g, v: 1000 },
-    { w: /ஒரு லட்சம்|ஒரு லக்ஷம்|லட்சம்|லக்ஷம்/g, v: 100000 }
+    { w: /தொள்ளாயிரம்/g, v: 900 }
   ];
-
-  str = str.replace(/(\d+)\s*ஆயிரம்/g, (m, p1) => parseInt(p1) * 1000);
-  str = str.replace(/(\d+)\s*லட்சம்/g, (m, p1) => parseInt(p1) * 100000);
 
   words.forEach(item => { str = str.replace(item.w, item.v); });
   return str;
@@ -52,7 +60,7 @@ function deleteItem(cat, idx) {
   saveData();
 }
 
-// எடிட் செய்யும் வசதி (Edit Feature)
+// எடிட் செய்யும் வசதி
 function editItem(cat, idx) {
   let item = db[cat][idx];
   if (cat === 'salary' || cat === 'home' || cat === 'kollai') {
@@ -86,10 +94,20 @@ function speak(text) {
   }
 }
 
-// தொடக்க தேதியை வைத்து மாதங்கள் + நாட்களை துல்லியமாக கணக்கிடுதல்
+// தொடக்க தேதியை வைத்து மாதங்கள் + நாட்களை கணக்கிடுதல்
 function calculateInterest(amt, rate, startDateStr) {
-  let parts = (startDateStr || '').split(/[\/\-.]/);
-  let start = (parts.length === 3) ? new Date(parts[2], parts[1] - 1, parts[0]) : new Date();
+  let parts = (startDateStr || '').split(/[\/\-\s.]/);
+  let start;
+  if (parts.length >= 3) {
+    let day = parseInt(parts[0]);
+    let month = parseInt(parts[1]) - 1;
+    let year = parseInt(parts[2]);
+    if (year < 100) year += 2000;
+    start = new Date(year, month, day);
+  } else {
+    start = new Date();
+  }
+  
   let today = new Date();
 
   let years = today.getFullYear() - start.getFullYear();
@@ -122,7 +140,14 @@ function renderData() {
   if(document.getElementById('bal-salary')) document.getElementById('bal-salary').innerText = salBal;
   if(document.getElementById('hist-salary')) {
     document.getElementById('hist-salary').innerHTML = db.salary.map((i, idx) => 
-      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="${i.type}">₹${i.amt}</span> <button onclick="editItem('salary', ${idx})">✏️</button> <button class="btn-del" onclick="deleteItem('salary', ${idx})">🗑️</button></div></div>`
+      `<div class="history-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0;">
+        <span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span>
+        <div>
+          <span class="${i.type}" style="font-weight:bold; margin-right:8px; color:${i.type==='in'?'#16a34a':'#dc2626'};">₹${i.amt}</span> 
+          <button style="background:#e2e8f0; border:none; padding:5px 8px; border-radius:6px; cursor:pointer;" onclick="editItem('salary', ${idx})">✏️</button> 
+          <button style="background:#fee2e2; color:#dc2626; border:none; padding:5px 8px; border-radius:6px; cursor:pointer;" onclick="deleteItem('salary', ${idx})">🗑️</button>
+        </div>
+      </div>`
     ).reverse().join('');
   }
 
@@ -131,7 +156,14 @@ function renderData() {
   if(document.getElementById('bal-home')) document.getElementById('bal-home').innerText = homeBal;
   if(document.getElementById('hist-home')) {
     document.getElementById('hist-home').innerHTML = db.home.map((i, idx) => 
-      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="${i.type}">₹${i.amt}</span> <button onclick="editItem('home', ${idx})">✏️</button> <button class="btn-del" onclick="deleteItem('home', ${idx})">🗑️</button></div></div>`
+      `<div class="history-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0;">
+        <span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span>
+        <div>
+          <span class="${i.type}" style="font-weight:bold; margin-right:8px; color:${i.type==='in'?'#16a34a':'#dc2626'};">₹${i.amt}</span> 
+          <button style="background:#e2e8f0; border:none; padding:5px 8px; border-radius:6px; cursor:pointer;" onclick="editItem('home', ${idx})">✏️</button> 
+          <button style="background:#fee2e2; color:#dc2626; border:none; padding:5px 8px; border-radius:6px; cursor:pointer;" onclick="deleteItem('home', ${idx})">🗑️</button>
+        </div>
+      </div>`
     ).reverse().join('');
   }
 
@@ -140,22 +172,32 @@ function renderData() {
   if(document.getElementById('total-kollai')) document.getElementById('total-kollai').innerText = kollaiTotal;
   if(document.getElementById('hist-kollai')) {
     document.getElementById('hist-kollai').innerHTML = db.kollai.map((i, idx) => 
-      `<div class="history-item"><span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span><div><span class="out">₹${i.amt}</span> <button onclick="editItem('kollai', ${idx})">✏️</button> <button class="btn-del" onclick="deleteItem('kollai', ${idx})">🗑️</button></div></div>`
+      `<div class="history-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0;">
+        <span>${i.desc} <br><small style="color:gray;">${i.datetime}</small></span>
+        <div>
+          <span class="out" style="font-weight:bold; margin-right:8px; color:#dc2626;">₹${i.amt}</span> 
+          <button style="background:#e2e8f0; border:none; padding:5px 8px; border-radius:6px; cursor:pointer;" onclick="editItem('kollai', ${idx})">✏️</button> 
+          <button style="background:#fee2e2; color:#dc2626; border:none; padding:5px 8px; border-radius:6px; cursor:pointer;" onclick="deleteItem('kollai', ${idx})">🗑️</button>
+        </div>
+      </div>`
     ).reverse().join('');
   }
 
-  // 4. வட்டி (தேதி அடிப்படையிலான கணக்கீடு)
+  // 4. வட்டி
   renderVatti();
 
   // 5. நோட்பேட்
   if(document.getElementById('hist-notes')) {
     document.getElementById('hist-notes').innerHTML = db.notes.map((n, idx) => 
-      `<div class="history-item"><span>${n.text} <br><small style="color:gray;">${n.datetime}</small></span><button class="btn-del" onclick="deleteItem('notes', ${idx})">🗑️</button></div>`
+      `<div class="history-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0;">
+        <span>${n.text} <br><small style="color:gray;">${n.datetime}</small></span>
+        <button style="background:#fee2e2; color:#dc2626; border:none; padding:5px 8px; border-radius:6px; cursor:pointer;" onclick="deleteItem('notes', ${idx})">🗑️</button>
+      </div>`
     ).reverse().join('');
   }
 }
 
-// வட்டி லிஸ்ட்டை துல்லியமாகக் காட்டும் ஃபங்க்ஷன் (உங்களின் புதிய UI -க்கு ஏற்றவாறு)
+// வட்டி கார்டு டிசைன்
 function renderVatti() {
   let list = document.getElementById('vattiList') || document.getElementById('hist-vatti');
   if (!list) return;
@@ -169,7 +211,7 @@ function renderVatti() {
   db.vatti.forEach((i, idx) => {
     let calc = calculateInterest(i.amt, i.rate, i.date);
     list.innerHTML += `
-      <div class="vatti-card" style="background:#f8fafc; border:1.5px solid #cbd5e1; padding:14px; border-radius:14px; margin-bottom:12px;">
+      <div class="vatti-card" style="background:#f8fafc; border:1.5px solid #cbd5e1; padding:14px; border-radius:14px; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
         <div style="width:100%; display:flex; justify-content:space-between; font-weight:bold; color:#1e3a8a;">
           <span>👤 ${i.name}</span>
           <span style="font-size:13px; color:#64748b;">📅 ${i.date || 'N/A'}</span>
@@ -183,15 +225,15 @@ function renderVatti() {
           💰 மொத்தம் தர வேண்டியது: ₹${calc.grandTotal}
         </div>
         <div style="margin-top:10px; display:flex; gap:8px;">
-          <button class="btn btn-blue" style="padding:6px; font-size:12px; flex:1;" onclick="editItem('vatti', ${idx})">✏️ எடிட்</button>
-          <button class="btn btn-red" style="padding:6px; font-size:12px; flex:1;" onclick="deleteItem('vatti', ${idx})">🗑️ நீக்கு</button>
-          <button class="btn btn-green" style="padding:6px; font-size:12px; flex:1;" onclick="downloadPersonPDF('${i.name}')">📄 PDF</button>
+          <button style="background:#2563eb; color:white; border:none; padding:8px; border-radius:8px; font-weight:bold; flex:1; cursor:pointer;" onclick="editItem('vatti', ${idx})">✏️ எடிட்</button>
+          <button style="background:#dc2626; color:white; border:none; padding:8px; border-radius:8px; font-weight:bold; flex:1; cursor:pointer;" onclick="deleteItem('vatti', ${idx})">🗑️ நீக்கு</button>
+          <button style="background:#16a34a; color:white; border:none; padding:8px; border-radius:8px; font-weight:bold; flex:1; cursor:pointer;" onclick="downloadPersonPDF('${i.name}')">📄 PDF</button>
         </div>
       </div>`;
   });
 }
 
-// மேனுவல் பதிவுகள் (Manual Functions)
+// மேனுவல் பதிவுகள்
 function addManual(cat, type) {
   let desc = document.getElementById(`m-${cat}-desc`).value;
   let amt = parseFloat(document.getElementById(`m-${cat}-amt`).value);
@@ -214,7 +256,7 @@ function addManualKollai() {
   }
 }
 
-// வட்டி சேர் பட்டன் வேலை செய்வதற்கான துல்லியமான ஃபங்க்ஷன்
+// வட்டி சேர் பட்டன்
 function addManualVatti() {
   let nameEl = document.getElementById('vName') || document.getElementById('m-vatti-name');
   let amtEl = document.getElementById('vAmt') || document.getElementById('m-vatti-amt');
@@ -282,7 +324,6 @@ function sendMsg() {
   processNLP(text);
 }
 
-// தனிநபர் வட்டி அறிக்கை டவுன்லோட் ஃபங்க்ஷன்
 function downloadPersonPDF(name) {
   const personData = db.vatti.filter(v => v.name.toLowerCase() === name.toLowerCase());
   if (personData.length === 0) { alert('கணக்கு எதுவும் இல்லை!'); return; }
@@ -305,6 +346,7 @@ function downloadPDF() {
   html2pdf().from(element).save('Vatti_Kanakku.pdf');
 }
 
+// AI குரல் பதிவை அலசி ஆராயும்NLP லோஜிக்
 function processNLP(rawText) {
   const text = parseTamilNumbers(rawText);
   const datetime = getDateTime();
@@ -321,7 +363,7 @@ function processNLP(rawText) {
     }
   }
 
-  // 2. பழைய கணக்கில் சேர்ப்பதா / புதிய கணக்கா என உறுதியளித்தல்
+  // 2. பழைய கணக்கில் சேர்ப்பதா / புதிய கணக்கா
   if (pendingVatti) {
     if (/(ஆமாம்|ஆமா|சேர்|சேர்க்கவும்|அவரிடம்|பழைய)/.test(text)) {
       let target = pendingVatti.existing[0];
@@ -345,13 +387,23 @@ function processNLP(rawText) {
   // 3. புதிய வட்டி கணக்கை பதிவு செய்தல்
   if (text.includes('வட்டி') || text.includes('பைசா')) {
     let numbers = text.match(/\d+/g);
-    let cleanText = rawText.replace(/(என்பவர்|என்பவருக்கு|என்பவரிடம்|வாங்கியுள்ளார்|வாங்கி|உள்ளார)/g, '').trim();
-    let words = cleanText.split(' ');
+    let words = rawText.split(' ');
     let name = words[0] && isNaN(words[0]) ? words[0] : "நபர்";
 
-    let dateMatch = rawText.match(/\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/);
+    // பேச்சில் வரும் தேதியைக் கண்டறிதல் (எ.கா: 3 6 2026 அல்லது 3/6/2026)
+    let dateMatch = rawText.match(/\d{1,2}[\/\-.\s]\d{1,2}[\/\-.\s]\d{2,4}/);
     let todayStr = new Date().toLocaleDateString('en-GB');
-    let entryDate = dateMatch ? dateMatch[0].replace(/\./g, '/') : todayStr;
+    let entryDate = todayStr;
+
+    if (dateMatch) {
+      let rawDateParts = dateMatch[0].trim().split(/[\/\-.\s]+/);
+      if (rawDateParts.length >= 3) {
+        let d = rawDateParts[0].padStart(2, '0');
+        let m = rawDateParts[1].padStart(2, '0');
+        let y = rawDateParts[2].length === 2 ? '20' + rawDateParts[2] : rawDateParts[2];
+        entryDate = `${d}/${m}/${y}`;
+      }
+    }
 
     if (numbers && numbers.length >= 2) {
       let amt = parseInt(numbers[0]);
@@ -455,6 +507,21 @@ function startVoice() {
   };
 }
 
+// UI பட்டன்களுக்கு இன்லைன் ஸ்டைல் சேர்ப்பது
 document.addEventListener('DOMContentLoaded', () => {
   renderData();
+
+  // அனுப்பு, பேசு, அழி பட்டன்களுக்கு அழகான ஸ்டைல்
+  const btns = document.querySelectorAll('button');
+  btns.forEach(btn => {
+    if (btn.innerText.includes('அனுப்பு')) {
+      btn.style.cssText = "background-color:#2563eb; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; margin:2px; cursor:pointer;";
+    } else if (btn.innerText.includes('பேசு')) {
+      btn.style.cssText = "background-color:#16a34a; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; margin:2px; cursor:pointer;";
+    } else if (btn.innerText.includes('அழி')) {
+      btn.style.cssText = "background-color:#dc2626; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; margin:2px; cursor:pointer;";
+    } else if (btn.innerText.includes('வட்டி சேர்')) {
+      btn.style.cssText = "background-color:#10b981; color:white; border:none; padding:12px; border-radius:10px; font-weight:bold; font-size:16px; width:100%; margin-top:10px; cursor:pointer;";
+    }
+  });
 });
