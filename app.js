@@ -7,6 +7,7 @@ let db = JSON.parse(localStorage.getItem('smartpa_db_v5')) || {
   reminders: [] 
 };
 let pendingExpense = null;
+let pendingVatti = null;
 
 function parseTamilNumbers(text) {
   let str = text.replace(/,/g, '');
@@ -66,10 +67,12 @@ function editItem(cat, idx) {
     let newName = prompt("பெயர்:", item.name);
     let newAmt = prompt("அசல்:", item.amt);
     let newRate = prompt("வட்டி %:", item.rate);
+    let newDate = prompt("தேதி (DD/MM/YYYY):", item.date || '');
     if (newName && newAmt && newRate) {
       item.name = newName;
       item.amt = parseFloat(newAmt);
       item.rate = parseFloat(newRate);
+      if (newDate) item.date = newDate;
       saveData();
     }
   }
@@ -81,6 +84,36 @@ function speak(text) {
     msg.lang = 'ta-IN';
     window.speechSynthesis.speak(msg);
   }
+}
+
+// தொடக்க தேதியை வைத்து மாதங்கள் + நாட்களை துல்லியமாக கணக்கிடுதல்
+function calculateInterest(amt, rate, startDateStr) {
+  let parts = (startDateStr || '').split(/[\/\-.]/);
+  let start = (parts.length === 3) ? new Date(parts[2], parts[1] - 1, parts[0]) : new Date();
+  let today = new Date();
+
+  let years = today.getFullYear() - start.getFullYear();
+  let months = today.getMonth() - start.getMonth();
+  let days = today.getDate() - start.getDate();
+
+  if (days < 0) {
+    months--;
+    let prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  let totalMonths = (years * 12) + months;
+  let monthlyInterest = (amt * rate) / 100;
+  let dailyInterest = monthlyInterest / 30;
+
+  let totalInterest = Math.round((totalMonths * monthlyInterest) + (days * dailyInterest));
+  let grandTotal = amt + totalInterest;
+
+  return { totalMonths, days, monthlyInterest: Math.round(monthlyInterest), totalInterest, grandTotal };
 }
 
 function renderData() {
@@ -111,22 +144,8 @@ function renderData() {
     ).reverse().join('');
   }
 
-  // 4. வட்டி
-  if(document.getElementById('hist-vatti')) {
-    document.getElementById('hist-vatti').innerHTML = db.vatti.map((i, idx) => {
-      let monthlyVatti = (i.amt * i.rate) / 100;
-      let totalVatti = monthlyVatti * (i.months || 1);
-      let grandTotal = i.amt + totalVatti;
-      return `<div class="history-item" style="flex-direction:column; align-items:flex-start; gap:4px; border-bottom:1px solid #ccc; padding:8px 0;">
-        <div style="width:100%; display:flex; justify-content:space-between;">
-          <strong>👤 ${i.name} (${i.datetime})</strong>
-          <div><button onclick="editItem('vatti', ${idx})">✏️</button> <button class="btn-del" onclick="deleteItem('vatti', ${idx})">🗑️</button></div>
-        </div>
-        <div>அசல்: ₹${i.amt} | வட்டி: ${i.rate}% (மாத வட்டி ₹${monthlyVatti})</div>
-        <div style="color:green; font-weight:bold;">மொத்தம் தர வேண்டியது: ₹${grandTotal}</div>
-      </div>`;
-    }).reverse().join('');
-  }
+  // 4. வட்டி (தேதி அடிப்படையிலான கணக்கீடு)
+  renderVatti();
 
   // 5. நோட்பேட்
   if(document.getElementById('hist-notes')) {
@@ -134,6 +153,37 @@ function renderData() {
       `<div class="history-item"><span>${n.text} <br><small style="color:gray;">${n.datetime}</small></span><button class="btn-del" onclick="deleteItem('notes', ${idx})">🗑️</button></div>`
     ).reverse().join('');
   }
+}
+
+// வட்டி லிஸ்ட்டை துல்லியமாகக் காட்டும் ஃபங்க்ஷன்
+function renderVatti() {
+  let list = document.getElementById('hist-vatti') || document.getElementById('vattiList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  db.vatti.forEach((i, idx) => {
+    let calc = calculateInterest(i.amt, i.rate, i.date);
+    list.innerHTML += `
+      <div class="vatti-card" style="background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:12px; margin-bottom:10px;">
+        <div style="width:100%; display:flex; justify-content:space-between; font-weight:bold;">
+          <span>👤 ${i.name}</span>
+          <span>📅 ${i.date || 'N/A'}</span>
+        </div>
+        <div style="margin-top:6px; font-size:14px; color:#334155;">
+          • அசல்: ₹${i.amt} | வட்டி: ${i.rate}% (மாத வட்டி ₹${calc.monthlyInterest})<br>
+          • கழிந்த காலம்: ${calc.totalMonths} மாதம், ${calc.days} நாட்கள்<br>
+          • சேர்ந்த வட்டி: ₹${calc.totalInterest}
+        </div>
+        <div style="color:#15803d; font-weight:bold; margin-top:6px; font-size:15px;">
+          💰 மொத்தம் தர வேண்டியது: ₹${calc.grandTotal}
+        </div>
+        <div style="margin-top:8px; display:flex; gap:8px;">
+          <button onclick="editItem('vatti', ${idx})">✏️ எடிட்</button>
+          <button class="btn-del" onclick="deleteItem('vatti', ${idx})">🗑️ நீக்கு</button>
+          <button onclick="downloadPersonPDF('${i.name}')">📄 PDF</button>
+        </div>
+      </div>`;
+  });
 }
 
 // மேனுவல் பதிவுகள் (Manual Functions)
@@ -160,18 +210,29 @@ function addManualKollai() {
 }
 
 function addManualVatti() {
-  let name = document.getElementById('m-vatti-name').value;
-  let amt = parseFloat(document.getElementById('m-vatti-amt').value);
-  let rate = parseFloat(document.getElementById('m-vatti-rate').value);
-  let months = parseInt(document.getElementById('m-vatti-months').value) || 1;
-  if(name && amt && rate) {
-    db.vatti.push({ name, amt, rate, months, datetime: getDateTime() });
-    saveData();
-    document.getElementById('m-vatti-name').value = '';
-    document.getElementById('m-vatti-amt').value = '';
-    document.getElementById('m-vatti-rate').value = '';
-    document.getElementById('m-vatti-months').value = '';
+  let name = document.getElementById('vName') ? document.getElementById('vName').value.trim() : document.getElementById('m-vatti-name').value.trim();
+  let amt = parseFloat(document.getElementById('vAmt') ? document.getElementById('vAmt').value : document.getElementById('m-vatti-amt').value);
+  let rate = parseFloat(document.getElementById('vRate') ? document.getElementById('vRate').value : document.getElementById('m-vatti-rate').value);
+  let dateInput = document.getElementById('vDate') ? document.getElementById('vDate').value.trim() : (document.getElementById('m-vatti-date') ? document.getElementById('m-vatti-date').value.trim() : '');
+
+  let todayStr = new Date().toLocaleDateString('en-GB');
+  let entryDate = dateInput ? dateInput : todayStr;
+
+  if (!name || isNaN(amt) || isNaN(rate)) {
+    alert('தயவுசெய்து அனைத்து விவரங்களையும் சரியாக உள்ளிடவும்!');
+    return;
   }
+
+  db.vatti.push({ name, amt, rate, date: entryDate, datetime: getDateTime() });
+  saveData();
+
+  if(document.getElementById('vName')) document.getElementById('vName').value = '';
+  if(document.getElementById('vAmt')) document.getElementById('vAmt').value = '';
+  if(document.getElementById('vRate')) document.getElementById('vRate').value = '';
+  if(document.getElementById('vDate')) document.getElementById('vDate').value = '';
+  if(document.getElementById('m-vatti-name')) document.getElementById('m-vatti-name').value = '';
+  if(document.getElementById('m-vatti-amt')) document.getElementById('m-vatti-amt').value = '';
+  if(document.getElementById('m-vatti-rate')) document.getElementById('m-vatti-rate').value = '';
 }
 
 function addManualNote() {
@@ -192,6 +253,7 @@ function showSec(id, el) {
 
 function addChat(text, isUser) {
   const box = document.getElementById('chatBox');
+  if(!box) return;
   const div = document.createElement('div');
   div.className = `msg ${isUser ? 'user' : 'bot'}`;
   div.innerText = text;
@@ -208,51 +270,6 @@ function sendMsg() {
   addChat(text, true);
   input.value = '';
   processNLP(text);
-}
-
-function downloadPDF() {
-  const element = document.getElementById('vatti-pdf-area');
-  html2pdf().from(element).save('Vatti_Kanakku.pdf');
-}
-let pendingVatti = null; // கார்த்தி உறுதிப்படுத்தலுக்கான தற்காலிக சேமிப்புlet pendingVatti = null;let pendingVatti = null;let pendingVatti = null;
-
-// தொடக்கத் தேதியில் இருந்து ஆண்டுகள், மாதங்கள், நாட்களைத் துல்லியமாகக் கணக்கிடும் ஃபங்க்ஷன்
-function calculateInterest(amt, rate, startDateStr) {
-  let parts = (startDateStr || '').split(/[\/\-.]/);
-  let start = (parts.length === 3) ? new Date(parts[2], parts[1] - 1, parts[0]) : new Date();
-  let today = new Date();
-
-  // தேதிகளுக்கு இடையிலான வித்தியாசம்
-  let years = today.getFullYear() - start.getFullYear();
-  let months = today.getMonth() - start.getMonth();
-  let days = today.getDate() - start.getDate();
-
-  if (days < 0) {
-    months--;
-    // முந்தைய மாதத்தின் மொத்த நாட்களைக் கணக்கிடுதல்
-    let prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-    days += prevMonth.getDate();
-  }
-
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
-
-  // மொத்த மாதங்கள் (ஆண்டுகளையும் மாதங்களாக மாற்றி)
-  let totalMonths = (years * 12) + months;
-
-  // 100 ரூபாய்க்கு ஒரு மாத வட்டி
-  let monthlyInterest = (amt * rate) / 100;
-  
-  // 1 நாளுக்கான வட்டி (1 மாதம் = 30 நாட்கள்)
-  let dailyInterest = monthlyInterest / 30;
-
-  // மொத்த வட்டி கணக்கீடு (மாத வட்டி + நாள் வட்டி)
-  let totalInterest = Math.round((totalMonths * monthlyInterest) + (days * dailyInterest));
-  let grandTotal = amt + totalInterest;
-
-  return { years, months, days, totalMonths, totalInterest, grandTotal };
 }
 
 // தனிநபர் வட்டி அறிக்கை டவுன்லோட் ஃபங்க்ஷன்
@@ -273,11 +290,16 @@ function downloadPersonPDF(name) {
   a.click();
 }
 
+function downloadPDF() {
+  const element = document.getElementById('vatti-pdf-area') || document.body;
+  html2pdf().from(element).save('Vatti_Kanakku.pdf');
+}
+
 function processNLP(rawText) {
   const text = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // 1. "ராஜாவின் வட்டி கணக்கை காட்டு" எனப் பேசினால் தேதியிலிருந்து மாதங்கள் + நாட்களைக் கணக்கிட்டு சொல்லும் லோஜிக்
+  // 1. "ராஜாவின் வட்டி கணக்கை காட்டு" எனப் பேசினால்
   if (/(காட்டு|எவ்வளவு|கணக்கு|விவரம்)/.test(text) && (text.includes('வட்டி') || text.includes('கணக்கு'))) {
     let cleanName = rawText.replace(/(வா|வட்டி|கணக்கை|கணக்கு|காட்டு|எவ்வளவு|விவரம்|இன்|உடைய)/g, '').trim();
     let person = db.vatti.find(v => v.name.toLowerCase().includes(cleanName.toLowerCase()));
@@ -403,7 +425,9 @@ function processNLP(rawText) {
 function clearChat() {
   pendingExpense = null;
   pendingVatti = null;
-  document.getElementById('chatBox').innerHTML = '<div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>';
+  if(document.getElementById('chatBox')) {
+    document.getElementById('chatBox').innerHTML = '<div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>';
+  }
 }
 
 function startVoice() {
@@ -411,12 +435,12 @@ function startVoice() {
   if (!Speech) { alert('குரல் பதிவு வசதி இல்லை.'); return; }
   const rec = new Speech();
   rec.lang = 'ta-IN';
-  document.getElementById('status').innerText = '🎤 கேட்கிறது... பேசுங்கள்...';
+  if(document.getElementById('status')) document.getElementById('status').innerText = '🎤 கேட்கிறது... பேசுங்கள்...';
   rec.start();
 
   rec.onresult = (e) => {
-    document.getElementById('userInput').value = e.results[0][0].transcript;
-    document.getElementById('status').innerText = '🎤 தயார்';
+    if(document.getElementById('userInput')) document.getElementById('userInput').value = e.results[0][0].transcript;
+    if(document.getElementById('status')) document.getElementById('status').innerText = '🎤 தயார்';
     sendMsg();
   };
 }
