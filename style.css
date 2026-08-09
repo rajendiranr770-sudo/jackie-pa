@@ -4,18 +4,18 @@
 body { background: #f4f6f9; padding-bottom: 90px; color: #333; }
 
 .header {
-  background: linear-gradient(135deg, #0d3b66, #114b7f);
+  background: linear-gradient(135deg, #1e3a8a, #3b82f6);
   color: white; text-align: center; padding: 16px;
   font-weight: 700; font-size: 21px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;
+  border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;
 }
 
 .card {
   background: #ffffff; margin: 15px auto; padding: 18px; max-width: 500px;
-  border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); border: 1px solid #eef2f6;
+  border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
 }
 
-.card h2 { color: #0d3b66; font-size: 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.card h2 { color: #1e3a8a; font-size: 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
 .input-box {
   width: 100%; padding: 12px 14px; margin: 8px 0; border: 1.5px solid #cbd5e1;
@@ -23,39 +23,37 @@ body { background: #f4f6f9; padding-bottom: 90px; color: #333; }
 }
 .input-box:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
 
+/* புதிய பட்டன் ஸ்டைல்கள் */
 .btn {
-  padding: 12px 18px; border: none; border-radius: 10px; cursor: pointer;
-  font-weight: 600; font-size: 15px; display: inline-flex; align-items: center;
-  justify-content: center; gap: 6px; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  padding: 12px 18px; border: none; border-radius: 12px; cursor: pointer;
+  font-weight: 700; font-size: 15px; display: inline-flex; align-items: center;
+  justify-content: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.12);
 }
-.btn:active { transform: scale(0.98); }
+.btn:active { transform: scale(0.96); }
 .btn-blue { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
 .btn-green { background: linear-gradient(135deg, #059669, #047857); color: white; }
 .btn-red { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
-.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
-
-/* Action buttons container */
-.action-group { display: flex; gap: 8px; margin-top: 10px; }
-.action-group .btn { flex: 1; }
+.btn-gray { background: linear-gradient(135deg, #64748b, #475569); color: white; }
+.btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
 
 /* Chat Box */
 #chatBox {
   height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; padding: 12px;
-  border-radius: 12px; background: #f8fafc; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;
+  border-radius: 14px; background: #f8fafc; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;
 }
 .msg { padding: 10px 14px; border-radius: 14px; max-width: 85%; font-size: 14px; line-height: 1.5; }
-.bot { background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; }
+.bot { background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1; align-self: flex-start; border-bottom-left-radius: 2px; }
 .user { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
 
-/* Bottom Nav - Clean & Fixed */
+/* அடியில் இருக்கும் புதிய நேவிகேஷன் பட்டன்கள் */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff;
   display: flex; justify-content: space-around; padding: 10px 6px;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.08); border-top: 1px solid #f1f5f9; z-index: 1000;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.1); border-top: 1px solid #f1f5f9; z-index: 1000;
 }
 .nav-btn {
   flex: 1; margin: 0 3px; padding: 10px 2px; background: #f1f5f9; border: none;
-  border-radius: 10px; font-size: 11px; font-weight: 700; color: #64748b;
-  display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: 0.3s;
+  border-radius: 12px; font-size: 12px; font-weight: 700; color: #475569;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: 0.3s;
 }
-.nav-btn.active { background: #2563eb; color: #ffffff; box-shadow: 0 4px 10px rgba(37,99,235,0.3); }
+.nav-btn.active { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; box-shadow: 0 4px 12px rgba(37,99,235,0.35); }
