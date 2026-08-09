@@ -155,32 +155,37 @@ function renderData() {
   }
 }
 
-// வட்டி லிஸ்ட்டை துல்லியமாகக் காட்டும் ஃபங்க்ஷன்
+// வட்டி லிஸ்ட்டை துல்லியமாகக் காட்டும் ஃபங்க்ஷன் (உங்களின் புதிய UI -க்கு ஏற்றவாறு)
 function renderVatti() {
-  let list = document.getElementById('hist-vatti') || document.getElementById('vattiList');
+  let list = document.getElementById('vattiList') || document.getElementById('hist-vatti');
   if (!list) return;
   list.innerHTML = '';
+
+  if (db.vatti.length === 0) {
+    list.innerHTML = '<div style="text-align:center; color:gray; padding:10px;">பதிவுகள் எதுவும் இல்லை</div>';
+    return;
+  }
 
   db.vatti.forEach((i, idx) => {
     let calc = calculateInterest(i.amt, i.rate, i.date);
     list.innerHTML += `
-      <div class="vatti-card" style="background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:12px; margin-bottom:10px;">
-        <div style="width:100%; display:flex; justify-content:space-between; font-weight:bold;">
+      <div class="vatti-card" style="background:#f8fafc; border:1.5px solid #cbd5e1; padding:14px; border-radius:14px; margin-bottom:12px;">
+        <div style="width:100%; display:flex; justify-content:space-between; font-weight:bold; color:#1e3a8a;">
           <span>👤 ${i.name}</span>
-          <span>📅 ${i.date || 'N/A'}</span>
+          <span style="font-size:13px; color:#64748b;">📅 ${i.date || 'N/A'}</span>
         </div>
-        <div style="margin-top:6px; font-size:14px; color:#334155;">
-          • அசல்: ₹${i.amt} | வட்டி: ${i.rate}% (மாத வட்டி ₹${calc.monthlyInterest})<br>
-          • கழிந்த காலம்: ${calc.totalMonths} மாதம், ${calc.days} நாட்கள்<br>
-          • சேர்ந்த வட்டி: ₹${calc.totalInterest}
+        <div style="margin-top:8px; font-size:14px; color:#334155; line-height:1.6;">
+          • அசல்: <b>₹${i.amt}</b> | வட்டி: <b>${i.rate}%</b> (மாத வட்டி ₹${calc.monthlyInterest})<br>
+          • கழிந்த காலம்: <b>${calc.totalMonths} மாதம், ${calc.days} நாட்கள்</b><br>
+          • சேர்ந்த வட்டி: <b style="color:#d97706;">₹${calc.totalInterest}</b>
         </div>
-        <div style="color:#15803d; font-weight:bold; margin-top:6px; font-size:15px;">
+        <div style="color:#15803d; font-weight:bold; margin-top:8px; font-size:16px; background:#e0f2fe; padding:8px; border-radius:8px; text-align:center;">
           💰 மொத்தம் தர வேண்டியது: ₹${calc.grandTotal}
         </div>
-        <div style="margin-top:8px; display:flex; gap:8px;">
-          <button onclick="editItem('vatti', ${idx})">✏️ எடிட்</button>
-          <button class="btn-del" onclick="deleteItem('vatti', ${idx})">🗑️ நீக்கு</button>
-          <button onclick="downloadPersonPDF('${i.name}')">📄 PDF</button>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button class="btn btn-blue" style="padding:6px; font-size:12px; flex:1;" onclick="editItem('vatti', ${idx})">✏️ எடிட்</button>
+          <button class="btn btn-red" style="padding:6px; font-size:12px; flex:1;" onclick="deleteItem('vatti', ${idx})">🗑️ நீக்கு</button>
+          <button class="btn btn-green" style="padding:6px; font-size:12px; flex:1;" onclick="downloadPersonPDF('${i.name}')">📄 PDF</button>
         </div>
       </div>`;
   });
@@ -209,30 +214,35 @@ function addManualKollai() {
   }
 }
 
+// வட்டி சேர் பட்டன் வேலை செய்வதற்கான துல்லியமான ஃபங்க்ஷன்
 function addManualVatti() {
-  let name = document.getElementById('vName') ? document.getElementById('vName').value.trim() : document.getElementById('m-vatti-name').value.trim();
-  let amt = parseFloat(document.getElementById('vAmt') ? document.getElementById('vAmt').value : document.getElementById('m-vatti-amt').value);
-  let rate = parseFloat(document.getElementById('vRate') ? document.getElementById('vRate').value : document.getElementById('m-vatti-rate').value);
-  let dateInput = document.getElementById('vDate') ? document.getElementById('vDate').value.trim() : (document.getElementById('m-vatti-date') ? document.getElementById('m-vatti-date').value.trim() : '');
+  let nameEl = document.getElementById('vName') || document.getElementById('m-vatti-name');
+  let amtEl = document.getElementById('vAmt') || document.getElementById('m-vatti-amt');
+  let rateEl = document.getElementById('vRate') || document.getElementById('m-vatti-rate');
+  let dateEl = document.getElementById('vDate') || document.getElementById('m-vatti-date');
+
+  let name = nameEl ? nameEl.value.trim() : '';
+  let amt = amtEl ? parseFloat(amtEl.value) : NaN;
+  let rate = rateEl ? parseFloat(rateEl.value) : NaN;
+  let dateInput = dateEl ? dateEl.value.trim() : '';
 
   let todayStr = new Date().toLocaleDateString('en-GB');
   let entryDate = dateInput ? dateInput : todayStr;
 
   if (!name || isNaN(amt) || isNaN(rate)) {
-    alert('தயவுசெய்து அனைத்து விவரங்களையும் சரியாக உள்ளிடவும்!');
+    alert('தயவுசெய்து நபர் பெயர், அசல் தொகை மற்றும் வட்டி % ஆகியவற்றைச் சரியாக உள்ளிடவும்!');
     return;
   }
 
   db.vatti.push({ name, amt, rate, date: entryDate, datetime: getDateTime() });
   saveData();
 
-  if(document.getElementById('vName')) document.getElementById('vName').value = '';
-  if(document.getElementById('vAmt')) document.getElementById('vAmt').value = '';
-  if(document.getElementById('vRate')) document.getElementById('vRate').value = '';
-  if(document.getElementById('vDate')) document.getElementById('vDate').value = '';
-  if(document.getElementById('m-vatti-name')) document.getElementById('m-vatti-name').value = '';
-  if(document.getElementById('m-vatti-amt')) document.getElementById('m-vatti-amt').value = '';
-  if(document.getElementById('m-vatti-rate')) document.getElementById('m-vatti-rate').value = '';
+  if (nameEl) nameEl.value = '';
+  if (amtEl) amtEl.value = '';
+  if (rateEl) rateEl.value = '';
+  if (dateEl) dateEl.value = '';
+
+  alert(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கு வெற்றிகரமாகச் சேர்க்கப்பட்டது! 💰`);
 }
 
 function addManualNote() {
