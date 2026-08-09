@@ -80,21 +80,22 @@
       </div>
     </div>
 
-    <!-- VATTI -->
-    <div id="sec-vatti" class="section">
-      <div class="card" id="vatti-pdf-area">
-        <h2>💰 வட்டி கணக்கு</h2>
-        <button onclick="downloadPDF()" style="margin-bottom: 10px; background:#2b6cb0; color:white; border:none; padding:8px; border-radius:5px; width:100%;">📄 PDF டவுன்லோட் செய்</button>
-        <hr>
-        <h4>➕ மேனுவல் வட்டிப் பதிவு:</h4>
-        <input type="text" id="m-vatti-name" placeholder="நபர் பெயர்">
-        <input type="number" id="m-vatti-amt" placeholder="அசல் தொகை (₹)" style="margin-top:5px;">
-        <input type="number" id="m-vatti-rate" placeholder="வட்டி % (எ.கா: 3)" style="margin-top:5px;">
-        <input type="number" id="m-vatti-months" placeholder="மாதங்கள்" style="margin-top:5px;">
-        <button onclick="addManualVatti()" style="margin-top:5px; width:100%; background:#3182ce; color:white; padding:8px; border:none; border-radius:5px;">வட்டி சேர் 💰</button>
-        <div id="hist-vatti" style="margin-top: 15px;"></div>
-      </div>
-    </div>
+<!-- வட்டி கணக்கு பிரிவு -->
+<div class="card">
+  <h2>💰 வட்டி கணக்கு</h2>
+  <button class="btn btn-blue" onclick="downloadAllPDF()">📄 PDF டவுன்லோட் செய்</button>
+  
+  <div class="form-group" style="margin-top:15px;">
+    <h3>➕ மேனுவல் வட்டிப் பதிவு:</h3>
+    <input type="text" id="vName" class="input-box" placeholder="நபர் பெயர்">
+    <input type="number" id="vAmt" class="input-box" placeholder="அசல் தொகை (₹)">
+    <input type="number" id="vRate" class="input-box" placeholder="வட்டி % (எ.கா: 3)">
+    <input type="text" id="vDate" class="input-box" placeholder="தேதி (எ.கா: 11/03/2026)">
+    <button class="btn btn-green" onclick="addManualVatti()">வட்டி சேர் 💰</button>
+  </div>
+  
+  <div id="vattiList" style="margin-top:20px;"></div>
+</div>
 
     <!-- NOTES & REMINDERS -->
     <div id="sec-notes" class="section">
