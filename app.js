@@ -214,38 +214,59 @@ function downloadPDF() {
   const element = document.getElementById('vatti-pdf-area');
   html2pdf().from(element).save('Vatti_Kanakku.pdf');
 }
-let pendingVatti = null; // கார்த்தி உறுதிப்படுத்தலுக்கான தற்காலிக சேமிப்புlet pendingVatti = null;
+let pendingVatti = null; // கார்த்தி உறுதிப்படுத்தலுக்கான தற்காலிக சேமிப்புlet pendingVatti = null;let pendingVatti = null;
 
-// தேதிகளுக்கு இடையிலான வித்தியாசத்தைக் கணக்கிடும் ஃபங்க்ஷன் (நாட்கள்/மாதங்கள்)
+// வட்டி கணக்கிடும் பிரத்யேக ஃபங்க்ஷன்
 function calculateInterest(amt, rate, startDateStr) {
-  let parts = startDateStr.split(/[\/\-.]/);
-  let start;
-  if (parts.length === 3) {
-    // DD/MM/YYYY
-    start = new Date(parts[2], parts[1] - 1, parts[0]);
-  } else {
-    start = new Date();
-  }
+  let parts = (startDateStr || '').split(/[\/\-.]/);
+  let start = (parts.length === 3) ? new Date(parts[2], parts[1] - 1, parts[0]) : new Date();
   let today = new Date();
   
-  // நாட்களின் வித்தியாசம்
   let diffTime = Math.abs(today - start);
   let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  let months = (diffDays / 30.44).toFixed(1); // தோராய மாதங்கள்
+  let months = (diffDays / 30.44).toFixed(1);
 
-  // 100 ரூபாய்க்கு வட்டி %
   let monthlyInterest = (amt * rate) / 100;
   let totalInterest = Math.round(monthlyInterest * (diffDays / 30.44));
   let grandTotal = amt + totalInterest;
 
-  return { diffDays, months, totalInterest, grandTotal };
+  return { diffDays, months, monthlyInterest, totalInterest, grandTotal };
+}
+
+// தனிநபர் வட்டி PDF டவுன்லோட் செய்யும் ஃபங்க்ஷன்
+function downloadPersonPDF(name) {
+  const personData = db.vatti.filter(v => v.name.toLowerCase() === name.toLowerCase());
+  if (personData.length === 0) { alert('கணக்கு எதுவும் இல்லை!'); return; }
+
+  let details = personData.map(v => {
+    let calc = calculateInterest(v.amt, v.rate, v.date);
+    return `நபர்: ${v.name}\nகடன் தேதி: ${v.date || 'N/A'}\nஅசல் தொகை: ₹${v.amt}\nவட்டி விகிதம்: ${v.rate}%\nஇன்றைய நாள் வரை வட்டி: ₹${calc.totalInterest}\nமொத்தம் தர வேண்டியது: ₹${calc.grandTotal}\n------------------------`;
+  }).join('\n\n');
+
+  let blob = new Blob([`*** பாலாஜி ஜோக்கி வட்டி கணக்கு அறிக்கை ***\n\n${details}`], { type: "text/plain;charset=utf-8" });
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${name}_Vatti_Kanakku.txt`;
+  a.click();
 }
 
 function processNLP(rawText) {
   const text = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // 1. கார்த்தி / நபர் உறுதிப்படுத்தும் உரையாடல்
+  // 1. தனிநபர் கணக்கை திரையில் கேட்கும் கேள்விகள் (எ.கா: "ராஜாவின் வட்டி கணக்கை காட்டு")
+  if (/(காட்டு|எவ்வளவு|கணக்கு|விவரம்)/.test(text) && (text.includes('வட்டி') || text.includes('கணக்கு'))) {
+    let cleanName = rawText.replace(/(வா|வட்டி|கணக்கை|கணக்கு|காட்டு|எவ்வளவு|விவரம்|இன்|உடைய)/g, '').trim();
+    let person = db.vatti.find(v => v.name.toLowerCase().includes(cleanName.toLowerCase()));
+
+    if (person) {
+      let calc = calculateInterest(person.amt, person.rate, person.date);
+      addChat(`📊 **${person.name} வட்டி விவரம்:**\n• அசல்: ₹${person.amt}\n• வட்டி %: ${person.rate}%\n• எடுத்த தேதி: ${person.date || 'N/A'}\n• கழிந்த நாட்கள்: ${calc.diffDays} நாட்கள் (${calc.months} மாதம்)\n• வட்டி தொகை: ₹${calc.totalInterest}\n💰 **மொத்தம் தர வேண்டியது: ₹${calc.grandTotal}**`, false);
+      return;
+    }
+  }
+
+  // 2. உறுதிப்படுத்தும் உரையாடல் (Top-up or New Person)
   if (pendingVatti) {
     if (/(ஆமாம்|ஆமா|சேர்|சேர்க்கவும்|அவரிடம்|பழைய)/.test(text)) {
       let target = pendingVatti.existing[0];
@@ -266,16 +287,13 @@ function processNLP(rawText) {
     }
   }
 
-  // 2. வட்டி கணக்கை கண்டறிதல்
+  // 3. புதிய வட்டி கணக்கை பதிவு செய்தல்
   if (text.includes('வட்டி') || text.includes('பைசா')) {
     let numbers = text.match(/\d+/g);
-    
-    // பெயரைக் கண்டறிதல்
-    let cleanText = rawText.replace(/(என்பவர்|என்பவருக்கு|என்பவரிடம்|என்பவரிடமிருந்து|வாங்கியுள்ளார்|வாங்கி|உள்ளார)/g, '').trim();
+    let cleanText = rawText.replace(/(என்பவர்|என்பவருக்கு|என்பவரிடம்|வாங்கியுள்ளார்|வாங்கி|உள்ளார)/g, '').trim();
     let words = cleanText.split(' ');
     let name = words[0] && isNaN(words[0]) ? words[0] : "நபர்";
 
-    // தேதியைக் கண்டறிதல் (DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY)
     let dateMatch = rawText.match(/\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/);
     let todayStr = new Date().toLocaleDateString('en-GB');
     let entryDate = dateMatch ? dateMatch[0].replace(/\./g, '/') : todayStr;
@@ -293,15 +311,14 @@ function processNLP(rawText) {
       } else {
         db.vatti.push({ name, amt, rate, date: entryDate, datetime });
         saveData();
-        
         let calc = calculateInterest(amt, rate, entryDate);
-        addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார். அசல்: ₹${amt}, வட்டி: ${rate}%, கடன் தேதி: ${entryDate}. (இன்றைய நாள் வரை மொத்தம் தர வேண்டியது: ₹${calc.grandTotal}) 💰`, false);
+        addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார். அசல்: ₹${amt}, வட்டி: ${rate}%, தேதி: ${entryDate}. (இன்றைய நாள் வரை மொத்தம்: ₹${calc.grandTotal}) 💰`, false);
         return;
       }
     }
   }
 
-  // 3. சம்பளம் / வீடு தொடர் கேள்விகள்
+  // 4. சம்பளம் / வீடு செலவுகள்
   if (pendingExpense) {
     if (/(சம்பளம்|சம்பள)/.test(text)) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
