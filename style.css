@@ -3,11 +3,11 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Mukta Malar', 'Latha', 'Segoe UI', Arial, sans-serif; /* தெளிவான பழைய தமிழ் ஃபான்ட் */
   margin: 0;
   padding: 10px;
-  padding-bottom: 80px; /* கீழே உள்ள பார் மறைக்காமல் இருக்க இடைவெளி */
-  background-color: #f1f5f9;
+  padding-bottom: 75px;
+  background-color: #f4f6f9;
 }
 
 .section {
@@ -18,15 +18,14 @@ body {
   display: block;
 }
 
-/* Chat Box Styling */
 .chat-box {
-  height: 300px;
+  height: 260px;
   overflow-y: auto;
-  background: white;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #d1d5db;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -34,42 +33,40 @@ body {
 
 .msg {
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   max-width: 85%;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.4;
 }
 
 .msg.bot {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: #e5e7eb;
+  color: #111827;
   align-self: flex-start;
 }
 
 .msg.user {
-  background: #2563eb;
+  background: #1d4ed8;
   color: white;
   align-self: flex-end;
 }
 
-/* Input Area */
 .input-area {
   background: white;
   padding: 10px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
 }
 
 input[type="text"] {
   width: 100%;
   padding: 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 14px;
+  border: 1px solid #9ca3af;
+  border-radius: 6px;
+  font-size: 15px;
   outline: none;
 }
 
-/* Buttons */
 .btn-grid {
   display: flex;
   gap: 6px;
@@ -78,9 +75,9 @@ input[type="text"] {
 
 .btn {
   flex: 1;
-  padding: 10px 4px;
+  padding: 10px 2px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: bold;
   font-size: 13px;
   color: white;
@@ -88,23 +85,22 @@ input[type="text"] {
   text-align: center;
 }
 
-.btn-blue { background-color: #2563eb; }
+.btn-blue { background-color: #1d4ed8; }
 .btn-green { background-color: #16a34a; }
 .btn-orange { background-color: #d97706; }
 .btn-red { background-color: #dc2626; }
 
-/* Fixed Bottom Navigation Bar */
 .nav-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   height: 60px;
-  background: white;
+  background: #ffffff;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #d1d5db;
   z-index: 1000;
 }
 
@@ -112,7 +108,7 @@ input[type="text"] {
   border: none;
   background: none;
   font-size: 11px;
-  color: #64748b;
+  color: #4b5563;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -120,10 +116,6 @@ input[type="text"] {
 }
 
 .nav-btn.active {
-  color: #2563eb;
+  color: #1d4ed8;
   font-weight: bold;
 }
-
-.history-box {
-  margin-top: 10px;
-  }
