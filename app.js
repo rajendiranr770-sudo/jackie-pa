@@ -102,7 +102,7 @@ function processNLP(rawText) {
   const parsedText = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // 1. நிலுவை பதில் (Pending Logic - Kollai included)
+  // 1. நிலுவை பதில் (Pending Logic)
   if (pendingExpense) {
     if (/(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்|1)/.test(parsedText)) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
@@ -138,20 +138,7 @@ function processNLP(rawText) {
   let numMatch = cleanTextForNum.match(/\d+/);
   let amt = numMatch ? parseInt(numMatch[0]) : null;
 
-  // 3. கொல்லை செலவு
-  if (parsedText.includes('கொல்லை')) {
-    if (amt) {
-      pendingExpense = { desc: rawText, amt: amt, isKollai: true };
-      addChat(`பாலாஜி சார், ₹${amt} கொல்லைச் செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
-    } else {
-      db.notes.push({ text: rawText, datetime });
-      saveData();
-      addChat(`நோட்பேடில் குறிப்பு எடுக்கப்பட்டது! 📝`, false);
-    }
-    return;
-  }
-
-  // 4. வட்டி கணக்கு
+  // 3. வட்டி கணக்கு (Name detection fixed)
   if (parsedText.includes('வட்டி') || parsedText.includes('பைசா')) {
     let numbers = cleanTextForNum.match(/\d+/g);
     if (numbers && numbers.length > 0) {
@@ -160,9 +147,9 @@ function processNLP(rawText) {
       let rate = nums.length > 1 ? Math.min(...nums) : 3;
 
       let name = "நபர்";
-      let match = rawText.match(/([a-zA-Aஅ-ஹ்]+)(க்கு|விடம்|இடம்)/);
-      if (match && !/(வட்டி|பைசா|பணம்)/.test(match[1])) {
-        name = match[1];
+      let nameMatch = rawText.match(/^([^\s]+)\s*(க்கு|விடம்|இடம்)?/);
+      if (nameMatch && !/(வட்டி|பைசா|பணம்|கொடுத்துள்ளேன்)/.test(nameMatch[1])) {
+        name = nameMatch[1].replace(/(க்கு|விடம்|இடம்)$/, '');
       }
 
       let todayStr = new Date().toLocaleDateString('en-GB');
@@ -171,6 +158,31 @@ function processNLP(rawText) {
       addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார்.\n• அசல்: ₹${vattiAmt}\n• வட்டி: ${rate}%\n• தேதி: ${todayStr}`, false);
       return;
     }
+  }
+
+  // 4. கொல்லை செலவு (Direct account statement fixed)
+  if (parsedText.includes('கொல்லை')) {
+    if (amt) {
+      if (/(வீடு|வீட்டில்|வீட்டு|வீட்டுப் பணத்தில்)/.test(parsedText)) {
+        db.home.push({ desc: rawText, amt, type: 'out', datetime });
+        db.kollai.push({ desc: rawText, amt, datetime });
+        saveData();
+        addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, வீட்டுக் கணக்கில் மைனஸ் செய்யப்பட்டது! 🏠🌱`, false);
+      } else if (/(சம்பளம்|சம்பளத்தில்|சம்பளப் பணத்தில்)/.test(parsedText)) {
+        db.salary.push({ desc: rawText, amt, type: 'out', datetime });
+        db.kollai.push({ desc: rawText, amt, datetime });
+        saveData();
+        addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, சம்பளக் கணக்கில் மைனஸ் செய்யப்பட்டது! 💼🌱`, false);
+      } else {
+        pendingExpense = { desc: rawText, amt: amt, isKollai: true };
+        addChat(`பாலாஜி சார், ₹${amt} கொல்லைச் செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
+      }
+    } else {
+      db.notes.push({ text: rawText, datetime });
+      saveData();
+      addChat(`நோட்பேடில் குறிப்பு எடுக்கப்பட்டது! 📝`, false);
+    }
+    return;
   }
 
   // எண்கள் இல்லை எனில் நோட்பேட்
@@ -312,7 +324,6 @@ function renderAll() {
   if (elHistNotes) elHistNotes.innerHTML = htmlNotes;
 }
 
-// பக்க லோடுக்கு பிறகு இயக்க
 window.onload = function() {
   renderAll();
 };
