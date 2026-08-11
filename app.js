@@ -34,14 +34,29 @@ function getDateTime() {
 
 function parseTamilNumbers(text) {
   let parsed = text;
-  parsed = parsed.replace(/இருபதாயிரம்|20 ஆயிரம்/g, '20000')
-                .replace(/பத்தாயிரம்|10 ஆயிரம்/g, '10000')
-                .replace(/ஐயாயிரம்|அஞ்சாயிரம்|5 ஆயிரம்/g, '5000')
-                .replace(/நாலாயிரம்|4 ஆயிரம்/g, '4000')
-                .replace(/மூன்றாயிரம்|3 ஆயிரம்/g, '3000')
-                .replace(/இரண்டாயிரம்|2 ஆயிரம்/g, '2000')
-                .replace(/ஆயிரம்|1 ஆயிரம்/g, '1000');
+  parsed = parsed.replace(/இருபதாயிரம்|20 ஆயிரம்/gi, '20000')
+                .replace(/பத்தாயிரம்|10 ஆயிரம்/gi, '10000')
+                .replace(/ஐம்பதாயிரம்|50 ஆயிரம்/gi, '50000')
+                .replace(/ஐயாயிரம்|அஞ்சாயிரம்|5 ஆயிரம்/gi, '5000')
+                .replace(/நாலாயிரம்|4 ஆயிரம்/gi, '4000')
+                .replace(/மூன்றாயிரம்|3 ஆயிரம்/gi, '3000')
+                .replace(/இரண்டாயிரம்|2 ஆயிரம்/gi, '2000')
+                .replace(/ஆயிரம்|1 ஆயிரம்/gi, '1000');
   return parsed;
+}
+
+function extractAmount(text) {
+  // 'டீ', 'டி' போன்ற சொற்கள் எண்களாக மாறாமல் தடுக்க சுத்தம் செய்தல்
+  let cleanText = text.replace(/,/g, '');
+  
+  // 1000, 50000 போன்ற தெளிவான எண்களை மட்டும் எடுத்தல்
+  let matches = cleanText.match(/\d+/g);
+  if (!matches) return null;
+  
+  let numbers = matches.map(Number);
+  
+  // மிகப்பெரிய எண்ணை தொகையாக எடுத்தல் (வட்டி விகிதம் தவிர்த்து)
+  return Math.max(...numbers);
 }
 
 function addChat(msg, isUser = false) {
@@ -102,90 +117,67 @@ function processNLP(rawText) {
   const parsedText = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
+  // பேச்சு வழக்கு சொற்கள் (Colloquial matching)
+  const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்|சம்பளப் பணத்தில்|சம்பள பணத்துல|சம்பளப் பணத்துல|சம்பளத்துல)/i.test(parsedText);
+  const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணத்தில்|வீட்டுப் பணத்தில்|வீட்டு பணத்துல|வீட்டுப் பணத்துல|வீட்டுல)/i.test(parsedText);
+  const isKollai = /(கொல்லை|கொல்லைக்கு)/i.test(parsedText);
+  const isVatti = /(வட்டி|பைசா)/i.test(parsedText);
+  const isReminder = /(ஞாபகப்படுத்து|ஞாபகம்|நினைவூட்டு|ரிமைண்டர்|மணிக்கு)/i.test(parsedText);
+
   // 1. நிலுவை பதில் (Pending Logic)
   if (pendingExpense) {
-    if (/(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்|1)/.test(parsedText)) {
+    if (isSalary || parsedText === '1') {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
+      if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
       
-      if (pendingExpense.isKollai) {
-        db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
-        addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} கொல்லைச் செலவாகப் பதிவாகி, சம்பளக் கணக்கில் மைனஸ் செய்யப்பட்டது! 💼🌱`, false);
-      } else {
-        addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} சம்பளக் கணக்கில் செலவாகச் சேர்க்கப்பட்டது! 💼`, false);
-      }
-      
+      addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} சம்பளக் கணக்கில் மைனஸ் செய்யப்பட்டது! 💼`, false);
       pendingExpense = null;
       saveData();
       return;
-    } else if (/(வீடு|வீட்டில்|வீட்டு பணத்தில்|2)/.test(parsedText)) {
+    } else if (isHome || parsedText === '2') {
       db.home.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
+      if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
       
-      if (pendingExpense.isKollai) {
-        db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
-        addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} கொல்லைச் செலவாகப் பதிவாகி, வீட்டுக் கணக்கில் மைனஸ் செய்யப்பட்டது! 🏠🌱`, false);
-      } else {
-        addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} வீட்டுக் கணக்கில் செலவாகச் சேர்க்கப்பட்டது! 🏠`, false);
-      }
-      
+      addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} வீட்டுக் கணக்கில் மைனஸ் செய்யப்பட்டது! 🏠`, false);
       pendingExpense = null;
       saveData();
       return;
     }
   }
 
-  // 2. தொகையைக் கண்டறிதல்
-  let cleanTextForNum = parsedText.replace(/,/g, '');
-  let numMatch = cleanTextForNum.match(/\d+/);
-  let amt = numMatch ? parseInt(numMatch[0]) : null;
+  // 2. ரிமைண்டர் / நினைவூட்டல் (Reminders without financial words)
+  if (isReminder && !isVatti && !/(செலவு|வரவு|ரூபாய்|வாங்கியது|கொடுத்தேன்)/i.test(parsedText)) {
+    db.notes.push({ text: rawText, datetime });
+    saveData();
+    addChat(`சரி பாலாஜி சார், நினைவூட்டல் குறிப்பாகச் சேமிக்கப்பட்டது: "${rawText}" ⏰📝`, false);
+    return;
+  }
 
-  // 3. வட்டி கணக்கு (Name detection fixed)
-  if (parsedText.includes('வட்டி') || parsedText.includes('பைசா')) {
-    let numbers = cleanTextForNum.match(/\d+/g);
-    if (numbers && numbers.length > 0) {
-      let nums = numbers.map(Number);
-      let vattiAmt = Math.max(...nums);
-      let rate = nums.length > 1 ? Math.min(...nums) : 3;
+  // 3. வட்டி கணக்கு (Vatti Logic)
+  if (isVatti) {
+    let amt = extractAmount(parsedText);
+    if (amt) {
+      let numbers = parsedText.replace(/,/g, '').match(/\d+/g).map(Number);
+      let rate = numbers.length > 1 ? Math.min(...numbers) : 3;
 
       let name = "நபர்";
       let nameMatch = rawText.match(/^([^\s]+)\s*(க்கு|விடம்|இடம்)?/);
-      if (nameMatch && !/(வட்டி|பைசா|பணம்|கொடுத்துள்ளேன்)/.test(nameMatch[1])) {
+      if (nameMatch && !/(வட்டி|பைசா|பணம்|கொடுத்து|தந்தோம்)/i.test(nameMatch[1])) {
         name = nameMatch[1].replace(/(க்கு|விடம்|இடம்)$/, '');
       }
 
       let todayStr = new Date().toLocaleDateString('en-GB');
-      db.vatti.push({ name, amt: vattiAmt, rate, date: todayStr, datetime });
+      db.vatti.push({ name, amt, rate, date: todayStr, datetime });
       saveData();
-      addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார்.\n• அசல்: ₹${vattiAmt}\n• வட்டி: ${rate}%\n• தேதி: ${todayStr}`, false);
+      addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார்.\n• அசல்: ₹${amt}\n• வட்டி: ${rate}%\n• தேதி: ${todayStr}`, false);
       return;
     }
   }
 
-  // 4. கொல்லை செலவு (Direct account statement fixed)
-  if (parsedText.includes('கொல்லை')) {
-    if (amt) {
-      if (/(வீடு|வீட்டில்|வீட்டு|வீட்டுப் பணத்தில்)/.test(parsedText)) {
-        db.home.push({ desc: rawText, amt, type: 'out', datetime });
-        db.kollai.push({ desc: rawText, amt, datetime });
-        saveData();
-        addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, வீட்டுக் கணக்கில் மைனஸ் செய்யப்பட்டது! 🏠🌱`, false);
-      } else if (/(சம்பளம்|சம்பளத்தில்|சம்பளப் பணத்தில்)/.test(parsedText)) {
-        db.salary.push({ desc: rawText, amt, type: 'out', datetime });
-        db.kollai.push({ desc: rawText, amt, datetime });
-        saveData();
-        addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, சம்பளக் கணக்கில் மைனஸ் செய்யப்பட்டது! 💼🌱`, false);
-      } else {
-        pendingExpense = { desc: rawText, amt: amt, isKollai: true };
-        addChat(`பாலாஜி சார், ₹${amt} கொல்லைச் செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
-      }
-    } else {
-      db.notes.push({ text: rawText, datetime });
-      saveData();
-      addChat(`நோட்பேடில் குறிப்பு எடுக்கப்பட்டது! 📝`, false);
-    }
-    return;
-  }
+  // 4. தொகையைக் கண்டறிதல்
+  let amt = extractAmount(parsedText);
 
-  // எண்கள் இல்லை எனில் நோட்பேட்
+  // தொகை இல்லை என்றால் நோட்பேட்
   if (!amt) {
     db.notes.push({ text: rawText, datetime });
     saveData();
@@ -193,33 +185,46 @@ function processNLP(rawText) {
     return;
   }
 
-  // 5. வரவு / செலவு
-  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு)/.test(parsedText);
+  // 5. வரவு / செலவு மற்றும் கொல்லை கணக்கு
+  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு)/i.test(parsedText);
+
+  if (isKollai) {
+    db.kollai.push({ desc: rawText, amt, datetime });
+    if (isHome) {
+      db.home.push({ desc: rawText, amt, type: 'out', datetime });
+      addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, வீட்டுக் கணக்கில் மைனஸ் செய்யப்பட்டது! 🏠🌱`, false);
+    } else if (isSalary) {
+      db.salary.push({ desc: rawText, amt, type: 'out', datetime });
+      addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, சம்பளக் கணக்கில் மைனஸ் செய்யப்பட்டது! 💼🌱`, false);
+    } else {
+      pendingExpense = { desc: rawText, amt, isKollai: true };
+      addChat(`பாலாஜி சார், ₹${amt} கொல்லைச் செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
+    }
+    saveData();
+    return;
+  }
 
   if (isIncome) {
-    if (/(வீடு|வீட்டில்|வீட்டு)/.test(parsedText)) {
+    if (isHome) {
       db.home.push({ desc: rawText, amt, type: 'in', datetime });
-      saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 🏠`, false);
     } else {
       db.salary.push({ desc: rawText, amt, type: 'in', datetime });
-      saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
     }
   } else {
-    if (/(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்)/.test(parsedText)) {
-      db.salary.push({ desc: rawText, amt, type: 'out', datetime });
-      saveData();
-      addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 💼`, false);
-    } else if (/(வீடு|வீட்டு|வீட்டு பணத்தில்)/.test(parsedText)) {
+    if (isHome) {
       db.home.push({ desc: rawText, amt, type: 'out', datetime });
-      saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 🏠`, false);
+    } else if (isSalary) {
+      db.salary.push({ desc: rawText, amt, type: 'out', datetime });
+      addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 💼`, false);
     } else {
-      pendingExpense = { desc: rawText, amt: amt, isKollai: false };
+      pendingExpense = { desc: rawText, amt, isKollai: false };
       addChat(`பாலாஜி சார், ₹${amt} செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
     }
   }
+  saveData();
 }
 
 function deleteItem(cat, index) {
