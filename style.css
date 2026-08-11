@@ -1,11 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;700&display=swap');
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
-  font-family: 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-family: 'Noto Sans Tamil', sans-serif;
   margin: 0;
   padding: 12px;
   padding-bottom: 75px;
@@ -13,77 +11,65 @@ body {
   color: #1f2937;
 }
 
-.section {
-  display: none;
+.section { display: none; }
+.section.active { display: block; }
+
+.card {
+  background: white;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 15px;
 }
 
-.section.active {
-  display: block;
+.manual-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+input[type="text"], input[type="number"], input[type="date"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Noto Sans Tamil', sans-serif;
 }
 
 .chat-box {
-  height: 280px;
+  height: 260px;
   overflow-y: auto;
   background: #ffffff;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
   border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .msg {
-  padding: 10px 14px;
-  border-radius: 10px;
-  max-width: 85%;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.msg.bot {
-  background: #f3f4f6;
-  color: #111827;
-  align-self: flex-start;
-}
-
-.msg.user {
-  background: #2563eb;
-  color: white;
-  align-self: flex-end;
-}
-
-.input-area {
-  background: #ffffff;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-}
-
-input[type="text"] {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #d1d5db;
+  padding: 8px 12px;
   border-radius: 8px;
-  font-size: 15px;
-  font-family: 'Noto Sans Tamil', sans-serif;
-  outline: none;
+  max-width: 85%;
+  font-size: 14px;
 }
 
-.btn-grid {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
+.msg.bot { background: #f3f4f6; color: #111827; align-self: flex-start; }
+.msg.user { background: #2563eb; color: white; align-self: flex-end; }
+
+.btn-grid { display: flex; gap: 6px; }
 
 .btn {
   flex: 1;
   padding: 10px 4px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: white;
   cursor: pointer;
   text-align: center;
@@ -96,9 +82,7 @@ input[type="text"] {
 
 .nav-bar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   height: 60px;
   background: #ffffff;
   display: flex;
@@ -109,18 +93,11 @@ input[type="text"] {
 }
 
 .nav-btn {
-  border: none;
-  background: none;
-  font-size: 12px;
-  color: #6b7280;
+  border: none; background: none;
+  font-size: 11px; color: #6b7280;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: flex; flex-direction: column; align-items: center;
   font-family: 'Noto Sans Tamil', sans-serif;
 }
 
-.nav-btn.active {
-  color: #2563eb;
-  font-weight: bold;
-}
+.nav-btn.active { color: #2563eb; font-weight: bold; }
