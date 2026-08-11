@@ -1,13 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;700&display=swap');
+
 * {
   box-sizing: border-box;
 }
 
 body {
-  font-family: 'Mukta Malar', 'Latha', 'Segoe UI', Arial, sans-serif; /* தெளிவான பழைய தமிழ் ஃபான்ட் */
+  font-family: 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   margin: 0;
-  padding: 10px;
+  padding: 12px;
   padding-bottom: 75px;
-  background-color: #f4f6f9;
+  background-color: #f8fafc;
+  color: #1f2937;
 }
 
 .section {
@@ -19,75 +22,76 @@ body {
 }
 
 .chat-box {
-  height: 260px;
+  height: 280px;
   overflow-y: auto;
   background: #ffffff;
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .msg {
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
   max-width: 85%;
   font-size: 15px;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .msg.bot {
-  background: #e5e7eb;
+  background: #f3f4f6;
   color: #111827;
   align-self: flex-start;
 }
 
 .msg.user {
-  background: #1d4ed8;
+  background: #2563eb;
   color: white;
   align-self: flex-end;
 }
 
 .input-area {
-  background: white;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
 }
 
 input[type="text"] {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #9ca3af;
-  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
   font-size: 15px;
+  font-family: 'Noto Sans Tamil', sans-serif;
   outline: none;
 }
 
 .btn-grid {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .btn {
   flex: 1;
-  padding: 10px 2px;
+  padding: 10px 4px;
   border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  font-size: 13px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
   color: white;
   cursor: pointer;
   text-align: center;
+  font-family: 'Noto Sans Tamil', sans-serif;
 }
 
-.btn-blue { background-color: #1d4ed8; }
+.btn-blue { background-color: #2563eb; }
 .btn-green { background-color: #16a34a; }
-.btn-orange { background-color: #d97706; }
 .btn-red { background-color: #dc2626; }
 
 .nav-bar {
@@ -100,22 +104,23 @@ input[type="text"] {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  border-top: 1px solid #d1d5db;
+  border-top: 1px solid #e5e7eb;
   z-index: 1000;
 }
 
 .nav-btn {
   border: none;
   background: none;
-  font-size: 11px;
-  color: #4b5563;
+  font-size: 12px;
+  color: #6b7280;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-family: 'Noto Sans Tamil', sans-serif;
 }
 
 .nav-btn.active {
-  color: #1d4ed8;
+  color: #2563eb;
   font-weight: bold;
 }
