@@ -35,8 +35,6 @@ function getDateTime() {
 // தமிழ் பேச்சுவழக்கு எண்களை ஆங்கில எண்களாக மாற்றும் பங்க்ஷன்
 function parseTamilNumbers(text) {
   let str = text;
-
-  // தமிழ் எழுத்து எண்கள்
   str = str.replace(/இருபதாயிரம்|இருபது ஆயிரம்|20 ஆயிரம்/gi, '20000');
   str = str.replace(/முப்பத்தாயிரம்|முப்பது ஆயிரம்|30 ஆயிரம்/gi, '30000');
   str = str.replace(/நாற்பதாயிரம்|நாற்பது ஆயிரம்|40 ஆயிரம்/gi, '40000');
@@ -49,7 +47,6 @@ function parseTamilNumbers(text) {
   str = str.replace(/ஆயிரம்|1 ஆயிரம்/gi, '1000');
   str = str.replace(/ஐந்நூறு|அந்நூறு|500/gi, '500');
   str = str.replace(/நூறு|100/gi, '100');
-
   return str;
 }
 
@@ -107,6 +104,7 @@ function deleteLastEntry() {
   lastAction = null;
 }
 
+// குரல் பதிவு - பேசி முடித்ததும் தானாகவே அனுப்புமாறு மாற்றப்பட்டுள்ளது
 function startVoice() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     alert("குரல் பதிவு வசதி உங்கள் உலாவியில் இல்லை.");
@@ -122,8 +120,15 @@ function startVoice() {
   recognition.onresult = function(event) {
     const text = event.results[0][0].transcript;
     const input = document.getElementById('userInput');
-    if (input) input.value = text;
-    if (status) status.innerText = "🎤 தயார் (தேவைப்பட்டால் திருத்தி 'அனுப்பு' அழுத்தவும்)";
+    if (input) {
+      input.value = text;
+      if (status) status.innerText = "🎤 பதிவு செய்யப்பட்டது, அனுப்பப்படுகிறது...";
+      // பேசி முடித்ததும் தானாகவே அனுப்புகிறது
+      setTimeout(() => {
+        sendMsg();
+        if (status) status.innerText = "🎤 தயார்";
+      }, 500);
+    }
   };
 
   recognition.onerror = function() {
@@ -146,7 +151,6 @@ function processNLP(rawText) {
   const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணம்|வீட்டுப் பணம்|வீட்டு பணத்தில்)/i.test(rawText);
   const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு|தந்தார்கள்|தந்தாங்க|வாங்கியது)/i.test(rawText);
 
-  // 1. கேள்வி கேட்டு பதில் வரும் நிலை
   if (pendingExpense) {
     let affectedRecords = [];
     if (isSalary || rawText === '1' || /(சம்பளம்|சம்பளத்தில்|சம்பளப் பணம்)/i.test(rawText)) {
@@ -180,7 +184,6 @@ function processNLP(rawText) {
     }
   }
 
-  // 2. தொகை கண்டறிதல்
   let amt = extractAmount(rawText);
   if (!amt) {
     db.notes.push({ text: rawText, datetime });
@@ -190,7 +193,6 @@ function processNLP(rawText) {
     return;
   }
 
-  // 3. வரவு (பணம் வந்தது) பதிவு செய்தல்
   if (isIncome) {
     let records = [];
     if (isHome) {
@@ -207,7 +209,6 @@ function processNLP(rawText) {
     return;
   }
 
-  // 4. செலவு பதிவு செய்தல்
   let records = [];
   if (isKollai) {
     if (isSalary) {
