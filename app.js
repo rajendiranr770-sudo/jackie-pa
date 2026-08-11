@@ -14,6 +14,7 @@ function saveData() {
   renderAll();
 }
 
+// பக்கங்களை மாற்றும் பழைய ஃபங்க்ஷன்
 function showSec(secId, btnElement) {
   const sections = document.querySelectorAll('.section');
   sections.forEach(sec => sec.classList.remove('active'));
@@ -134,11 +135,12 @@ function processNLP(rawText) {
   const parsedText = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லைல|கொல்லையில்|கொல்லையில|கொல்லையிலிருந்து)/i.test(parsedText);
-  const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்|சம்பளப் பணத்தில்|சம்பள பணத்துல|சம்பள குளத்தில்|சம்பளக் குளத்தில்)/i.test(parsedText);
-  const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணத்தில்|வீட்டுப் பணத்தில்|வீட்டு பணத்துல|வீட்டுல)/i.test(parsedText);
+  const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லைல|கொல்லையில்|கொல்லையில)/i.test(parsedText);
+  const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணம்|சம்பளப் பணம்|சம்பள பணத்தில்|சம்பள குளத்தில்)/i.test(parsedText);
+  const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணம்|வீட்டுப் பணம்|வீட்டு பணத்தில்)/i.test(parsedText);
+  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு|தந்தார்கள்|தந்தாங்க|வாங்கியது)/i.test(parsedText);
 
-  // 1. கேள்விக் கேட்டு பதில் வரும் நிலை
+  // 1. கேள்வி கேட்டு பதில் வரும் நிலை
   if (pendingExpense) {
     let affectedRecords = [];
     if (isSalary || parsedText === '1' || /(சம்பளம்|சம்பளத்தில்|சம்பளப் பணம்)/i.test(parsedText)) {
@@ -182,7 +184,24 @@ function processNLP(rawText) {
     return;
   }
 
-  // 3. கொல்லை + சம்பளம்/வீடு ஒன்றாகப் பேசப்பட்டால்
+  // 3. வரவு (பணம் வந்தது) பதிவு செய்தல்
+  if (isIncome) {
+    let records = [];
+    if (isHome) {
+      db.home.push({ desc: rawText, amt, type: 'in', datetime });
+      records.push({ cat: 'home', index: db.home.length - 1 });
+      addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 🏠`, false);
+    } else {
+      db.salary.push({ desc: rawText, amt, type: 'in', datetime });
+      records.push({ cat: 'salary', index: db.salary.length - 1 });
+      addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
+    }
+    lastAction = { desc: rawText, records };
+    saveData();
+    return;
+  }
+
+  // 4. செலவு பதிவு செய்தல்
   let records = [];
   if (isKollai) {
     if (isSalary) {
@@ -191,28 +210,18 @@ function processNLP(rawText) {
       db.salary.push({ desc: rawText, amt, type: 'out', datetime });
       records.push({ cat: 'salary', index: db.salary.length - 1 });
       addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, சம்பளக் கணக்கில் மைனஸ் செய்யப்பட்டது! 💼🌱`, false);
-      lastAction = { desc: rawText, records };
-      saveData();
-      return;
     } else if (isHome) {
       db.kollai.push({ desc: rawText, amt, datetime });
       records.push({ cat: 'kollai', index: db.kollai.length - 1 });
       db.home.push({ desc: rawText, amt, type: 'out', datetime });
       records.push({ cat: 'home', index: db.home.length - 1 });
       addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, வீட்டுக் கணக்கில் மைனஸ் செய்யப்பட்டது! 🏠🌱`, false);
-      lastAction = { desc: rawText, records };
-      saveData();
-      return;
     } else {
-      // எதிலிருந்து கழிக்க வேண்டும் என்று கேட்கும் முன் எதிலும் பதியாது
       pendingExpense = { desc: rawText, amt, isKollai: true };
       addChat(`பாலாஜி சார், ₹${amt} கொல்லைச் செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
       return;
     }
-  }
-
-  // 4. சாதாரண சம்பளம் / வீட்டு கணக்கு
-  if (isHome) {
+  } else if (isHome) {
     db.home.push({ desc: rawText, amt, type: 'out', datetime });
     records.push({ cat: 'home', index: db.home.length - 1 });
     addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 🏠`, false);
@@ -281,7 +290,7 @@ function renderAll() {
   db.salary.forEach((item, i) => {
     if (item.type === 'in') balSal += item.amt;
     else balSal -= item.amt;
-    htmlSal += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; background:#fff; padding:6px; border-radius:6px;">
+    htmlSal += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; background:#fff; padding:8px; border-radius:6px;">
       <span>${item.desc} <small style="color:gray;">(${item.datetime})</small></span>
       <span style="color:${item.type==='in'?'green':'red'}; font-weight:bold;">
         ${item.type==='in'?'+':'-'}₹${item.amt} 
@@ -297,7 +306,7 @@ function renderAll() {
   db.home.forEach((item, i) => {
     if (item.type === 'in') balHome += item.amt;
     else balHome -= item.amt;
-    htmlHome += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; background:#fff; padding:6px; border-radius:6px;">
+    htmlHome += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; background:#fff; padding:8px; border-radius:6px;">
       <span>${item.desc} <small style="color:gray;">(${item.datetime})</small></span>
       <span style="color:${item.type==='in'?'green':'red'}; font-weight:bold;">
         ${item.type==='in'?'+':'-'}₹${item.amt} 
@@ -312,7 +321,7 @@ function renderAll() {
   let totalKollai = 0, htmlKollai = '';
   db.kollai.forEach((item, i) => {
     totalKollai += item.amt;
-    htmlKollai += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; background:#fff; padding:6px; border-radius:6px;">
+    htmlKollai += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; background:#fff; padding:8px; border-radius:6px;">
       <span>${item.desc} <small style="color:gray;">(${item.datetime})</small></span>
       <span style="color:red; font-weight:bold;">
         -₹${item.amt} 
