@@ -1,144 +1,79 @@
-@import url('https://fonts.googleapis.com/css2?family=Hind+Madurai:wght@400;600;700&display=swap');
-
-* { 
-  box-sizing: border-box; 
-  margin: 0; 
-  padding: 0; 
-  font-family: 'Hind Madurai', sans-serif; 
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 10px;
+  padding-bottom: 70px;
+  background-color: #f1f5f9;
 }
 
-body { 
-  background: #eef2f6; 
-  padding-bottom: 110px !important; /* அடியில் உள்ள பட்டன்களுக்கு போதுமான இடைவெளி */
-  color: #1e293b; 
+.section {
+  display: none; /* மற்ற பக்கங்களை மறைத்து வைக்கிறது */
 }
 
-.header {
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  color: #fff; 
-  text-align: center; 
-  padding: 18px;
-  font-weight: 700; 
-  font-size: 22px; 
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+.section.active {
+  display: block; /* நீங்கள் சொடுக்கும் பக்கம் மட்டும் தெரியும் */
 }
 
 .card {
-  background: #ffffff; 
-  margin: 15px auto; 
-  padding: 20px; 
-  max-width: 500px;
-  border-radius: 18px; 
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06); 
-  border: 1px solid #cbd5e1;
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.input-box {
-  width: 100%; 
-  padding: 12px 15px; 
-  margin: 8px 0; 
-  border: 2px solid #cbd5e1;
-  border-radius: 12px; 
-  font-size: 15px; 
-  font-weight: 600; 
-  outline: none; 
-  transition: 0.3s;
-}
-.input-box:focus { 
-  border-color: #2563eb; 
-  background: #f8fafc; 
-}
-
-/* பிரீமியம் நவீன பட்டன்கள் */
-.btn {
-  width: 100%; 
-  padding: 14px; 
-  border: none; 
-  border-radius: 12px; 
-  cursor: pointer;
-  font-weight: 700; 
-  font-size: 15px; 
-  margin-top: 8px; 
-  display: flex;
-  align-items: center; 
-  justify-content: center; 
-  gap: 8px; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-}
-.btn:active { 
-  transform: scale(0.97); 
-}
-.btn-blue { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
-.btn-green { background: linear-gradient(135deg, #10b981, #059669); color: white; }
-.btn-red { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
-
-/* வட்டி கார்டு ஐட்டம்கள் (Vatti Item Card) */
-.vatti-card {
-  background: #f8fafc; 
-  border: 1.5px solid #e2e8f0; 
-  padding: 14px;
-  border-radius: 14px; 
-  margin-bottom: 12px; 
-  position: relative;
-}
-.vatti-title { 
-  font-weight: 700; 
-  font-size: 17px; 
-  color: #1e3a8a; 
-  display: flex; 
-  justify-content: space-between; 
-}
-.vatti-details { 
-  font-size: 14px; 
-  color: #475569; 
-  margin-top: 6px; 
-  line-height: 1.5; 
-}
-.vatti-total { 
-  font-weight: 700; 
-  font-size: 16px; 
-  color: #15803d; 
-  margin-top: 6px; 
-}
-
-/* Bottom Nav - சரிசெய்யப்பட்ட பகுதி */
-.bottom-nav {
-  position: fixed; 
-  bottom: 0; 
-  left: 0; 
-  right: 0; 
-  background: #ffffff;
-  display: flex; 
-  justify-content: space-around; 
+.chat-box {
+  height: 250px;
+  overflow-y: auto;
+  background: white;
+  border-radius: 12px;
   padding: 10px;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.15); 
-  border-top: 1px solid #e2e8f0; 
-  z-index: 99999 !important; /* மிக உயர்ந்த அடுக்கிற்கு மாற்றப்பட்டது */
-  pointer-events: auto !important; /* தொடுதல் சரியாக இயங்க */
+  margin-bottom: 10px;
+}
+
+.msg {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 80%;
+}
+
+.msg.bot { background: #e2e8f0; align-self: flex-start; }
+.msg.user { background: #2563eb; color: white; margin-left: auto; text-align: right; }
+
+.nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 6px 0;
+  border-top: 1px solid #cbd5e1;
 }
 
 .nav-btn {
-  flex: 1; 
-  margin: 0 4px; 
-  padding: 10px; 
-  background: #f1f5f9; 
   border: none;
-  border-radius: 12px; 
-  font-size: 12px; 
-  font-weight: 700; 
+  background: none;
+  font-size: 11px;
   color: #64748b;
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  gap: 4px; 
   cursor: pointer;
-  z-index: 100000 !important; /* பட்டன் தொடுதல் பதிவாக */
-  pointer-events: auto !important;
-  -webkit-tap-highlight-color: transparent;
 }
 
-.nav-btn.active { 
-  background: linear-gradient(135deg, #2563eb, #1d4ed8); 
-  color: #ffffff; 
+.nav-btn.active {
+  color: #2563eb;
+  font-weight: bold;
 }
+
+.btn {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-blue { background: #2563eb; color: white; }
+.btn-green { background: #16a34a; color: white; }
+.btn-red { background: #dc2626; color: white; }
