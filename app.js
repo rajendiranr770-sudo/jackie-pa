@@ -46,16 +46,10 @@ function parseTamilNumbers(text) {
 }
 
 function extractAmount(text) {
-  // 'டீ', 'டி' போன்ற சொற்கள் எண்களாக மாறாமல் தடுக்க சுத்தம் செய்தல்
   let cleanText = text.replace(/,/g, '');
-  
-  // எண்களை மட்டும் பிரித்தெடுத்தல்
   let matches = cleanText.match(/\d+/g);
   if (!matches) return null;
-  
   let numbers = matches.map(Number);
-  
-  // மிகப்பெரிய எண்ணை தொகையாக எடுத்தல்
   return Math.max(...numbers);
 }
 
@@ -117,10 +111,10 @@ function processNLP(rawText) {
   const parsedText = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // அனைத்து விதமான தமிழ் பேச்சு வழக்கு விகுதிகளையும் கண்டறியும் விதிகள்
+  // அனைத்து விதமான தமிழ் விகுதிச் சொற்களையும் கச்சிதமாகப் பிரித்தெடுக்கும் விதிகள்
+  const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லைல|கொல்லையில்|கொல்லையில|கொல்லையிலிருந்து|கொல்லையில இருந்து)/i.test(parsedText);
   const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்|சம்பளப் பணத்தில்|சம்பள பணத்துல|சம்பளப் பணத்துல|சம்பளத்துல|சம்பளத்திலிருந்து|சம்பளத்தில இருந்து)/i.test(parsedText);
   const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணத்தில்|வீட்டுப் பணத்தில்|வீட்டு பணத்துல|வீட்டுப் பணத்துல|வீட்டுல|வீட்டிலிருந்து|வீட்டில இருந்து)/i.test(parsedText);
-  const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லையிலிருந்து|கொல்லையில இருந்து)/i.test(parsedText);
   const isVatti = /(வட்டி|பைசா)/i.test(parsedText);
   const isReminder = /(ஞாபகப்படுத்து|ஞாபகம்|நினைவூட்டு|ரிமைண்டர்|மணிக்கு)/i.test(parsedText);
 
@@ -188,6 +182,7 @@ function processNLP(rawText) {
   // 5. வரவு / செலவு மற்றும் கொல்லை கணக்கு
   const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு|தந்தார்கள்|தந்தாங்க)/i.test(parsedText);
 
+  // முதலில் கொல்லைச் செலவைச் சரிபார்த்தல் (First Priority)
   if (isKollai) {
     db.kollai.push({ desc: rawText, amt, datetime });
     if (isHome) {
