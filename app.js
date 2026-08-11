@@ -8,6 +8,7 @@ let db = JSON.parse(localStorage.getItem('jokky_db')) || {
 };
 
 let pendingExpense = null;
+let lastAction = null;
 
 function saveData() {
   localStorage.setItem('jokky_db', JSON.stringify(db));
@@ -32,8 +33,15 @@ function getDateTime() {
   return now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// தமிழ் எண்களைத் துல்லியமாக மாற்றுதல்
 function parseTamilNumbers(text) {
   let parsed = text;
+  
+  // "ஆயிரத்து 500", "ஆயிரத்து 200" போன்ற கூட்டுச் சொற்களுக்கான பிரத்யேக மாற்றம்
+  parsed = parsed.replace(/ஆயிரத்து\s*(\d+)/gi, (match, p1) => {
+    return (1000 + parseInt(p1)).toString();
+  });
+
   parsed = parsed.replace(/இருபதாயிரம்|20 ஆயிரம்/gi, '20000')
                 .replace(/பத்தாயிரம்|10 ஆயிரம்/gi, '10000')
                 .replace(/ஐம்பதாயிரம்|50 ஆயிரம்/gi, '50000')
@@ -42,6 +50,7 @@ function parseTamilNumbers(text) {
                 .replace(/மூன்றாயிரம்|3 ஆயிரம்/gi, '3000')
                 .replace(/இரண்டாயிரம்|2 ஆயிரம்/gi, '2000')
                 .replace(/ஆயிரம்|1 ஆயிரம்/gi, '1000');
+
   return parsed;
 }
 
@@ -81,6 +90,25 @@ function clearChat() {
   }
 }
 
+// முந்தைய பதிவை நீக்கும் வசதி (Undo Function)
+function deleteLastEntry() {
+  if (!lastAction || !lastAction.records || lastAction.records.length === 0) {
+    addChat("பாலாஜி சார், நீக்குவதற்கு முந்தைய பதிவுகள் எதுவும் இல்லை!", false);
+    return;
+  }
+
+  lastAction.records.forEach(rec => {
+    if (db[rec.cat] && db[rec.cat].length > rec.index) {
+      db[rec.cat].splice(rec.index, 1);
+    }
+  });
+
+  saveData();
+  addChat(`கடைசியாகப் பதிவு செய்த "${lastAction.desc}" கணக்கு நீக்கப்பட்டது! 🗑️`, false);
+  lastAction = null;
+}
+
+// குரல் பதிவு - பேசியவுடன் பெட்டியில் மட்டும் வரும் (நேரடியாக அனுப்பிவிடாது)
 function startVoice() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     alert("குரல் பதிவு வசதி உங்கள் உலாவியில் இல்லை.");
@@ -95,9 +123,12 @@ function startVoice() {
 
   recognition.onresult = function(event) {
     const text = event.results[0][0].transcript;
-    document.getElementById('userInput').value = text;
-    if (status) status.innerText = "🎤 தயார்";
-    sendMsg();
+    const input = document.getElementById('userInput');
+    if (input) {
+      // பேசுவது நேராக டெக்ஸ்ட் பாக்ஸில் விழும் (நீங்களே திருத்திக் கொள்ள Bounding/Editing வசதி)
+      input.value = text;
+    }
+    if (status) status.innerText = "🎤 தயார் (தேவைப்பட்டால் திருத்தி 'அனுப்பு' அழுத்தவும்)";
   };
 
   recognition.onerror = function() {
@@ -108,30 +139,47 @@ function startVoice() {
 }
 
 function processNLP(rawText) {
+  if (/^(நீக்கு|முந்தைய பதிவை நீக்கு|கடைசி பதிவை நீக்கு|அழி)$/i.test(rawText.trim())) {
+    deleteLastEntry();
+    return;
+  }
+
   const parsedText = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // அனைத்து விதமான தமிழ் விகுதிச் சொற்களையும் கச்சிதமாகப் பிரித்தெடுக்கும் விதிகள்
   const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லைல|கொல்லையில்|கொல்லையில|கொல்லையிலிருந்து|கொல்லையில இருந்து)/i.test(parsedText);
   const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்|சம்பளப் பணத்தில்|சம்பள பணத்துல|சம்பளப் பணத்துல|சம்பளத்துல|சம்பளத்திலிருந்து|சம்பளத்தில இருந்து)/i.test(parsedText);
   const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணத்தில்|வீட்டுப் பணத்தில்|வீட்டு பணத்துல|வீட்டுப் பணத்துல|வீட்டுல|வீட்டிலிருந்து|வீட்டில இருந்து)/i.test(parsedText);
   const isVatti = /(வட்டி|பைசா)/i.test(parsedText);
   const isReminder = /(ஞாபகப்படுத்து|ஞாபகம்|நினைவூட்டு|ரிமைண்டர்|மணிக்கு)/i.test(parsedText);
 
-  // 1. நிலுவை பதில் (Pending Logic)
+  // 1. நிலுவை பதில்
   if (pendingExpense) {
+    let affectedRecords = [];
     if (isSalary || parsedText === '1') {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
-      if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
-      
+      affectedRecords.push({ cat: 'salary', index: db.salary.length - 1 });
+
+      if (pendingExpense.isKollai) {
+        db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
+        affectedRecords.push({ cat: 'kollai', index: db.kollai.length - 1 });
+      }
+
+      lastAction = { desc: pendingExpense.desc, records: affectedRecords };
       addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} சம்பளக் கணக்கில் மைனஸ் செய்யப்பட்டது! 💼`, false);
       pendingExpense = null;
       saveData();
       return;
     } else if (isHome || parsedText === '2') {
       db.home.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
-      if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
-      
+      affectedRecords.push({ cat: 'home', index: db.home.length - 1 });
+
+      if (pendingExpense.isKollai) {
+        db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
+        affectedRecords.push({ cat: 'kollai', index: db.kollai.length - 1 });
+      }
+
+      lastAction = { desc: pendingExpense.desc, records: affectedRecords };
       addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} வீட்டுக் கணக்கில் மைனஸ் செய்யப்பட்டது! 🏠`, false);
       pendingExpense = null;
       saveData();
@@ -142,6 +190,7 @@ function processNLP(rawText) {
   // 2. ரிமைண்டர் / நினைவூட்டல்
   if (isReminder && !isVatti && !/(செலவு|வரவு|ரூபாய்|வாங்கியது|கொடுத்தேன்|கொடுத்தார்கள்|தந்தார்கள்)/i.test(parsedText)) {
     db.notes.push({ text: rawText, datetime });
+    lastAction = { desc: rawText, records: [{ cat: 'notes', index: db.notes.length - 1 }] };
     saveData();
     addChat(`சரி பாலாஜி சார், நினைவூட்டல் குறிப்பாகச் சேமிக்கப்பட்டது: "${rawText}" ⏰📝`, false);
     return;
@@ -162,6 +211,7 @@ function processNLP(rawText) {
 
       let todayStr = new Date().toLocaleDateString('en-GB');
       db.vatti.push({ name, amt, rate, date: todayStr, datetime });
+      lastAction = { desc: `${name} வட்டி கணக்கு`, records: [{ cat: 'vatti', index: db.vatti.length - 1 }] };
       saveData();
       addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார்.\n• அசல்: ₹${amt}\n• வட்டி: ${rate}%\n• தேதி: ${todayStr}`, false);
       return;
@@ -171,9 +221,9 @@ function processNLP(rawText) {
   // 4. தொகையைக் கண்டறிதல்
   let amt = extractAmount(parsedText);
 
-  // தொகை இல்லை என்றால் நோட்பேட்
   if (!amt) {
     db.notes.push({ text: rawText, datetime });
+    lastAction = { desc: rawText, records: [{ cat: 'notes', index: db.notes.length - 1 }] };
     saveData();
     addChat(`நோட்பேடில் குறிப்பு எடுக்கப்பட்டது! 📝`, false);
     return;
@@ -181,20 +231,25 @@ function processNLP(rawText) {
 
   // 5. வரவு / செலவு மற்றும் கொல்லை கணக்கு
   const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு|தந்தார்கள்|தந்தாங்க)/i.test(parsedText);
+  let records = [];
 
-  // முதலில் கொல்லைச் செலவைச் சரிபார்த்தல் (First Priority)
   if (isKollai) {
     db.kollai.push({ desc: rawText, amt, datetime });
+    records.push({ cat: 'kollai', index: db.kollai.length - 1 });
+
     if (isHome) {
       db.home.push({ desc: rawText, amt, type: 'out', datetime });
+      records.push({ cat: 'home', index: db.home.length - 1 });
       addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, வீட்டுக் கணக்கில் மைனஸ் செய்யப்பட்டது! 🏠🌱`, false);
     } else if (isSalary) {
       db.salary.push({ desc: rawText, amt, type: 'out', datetime });
+      records.push({ cat: 'salary', index: db.salary.length - 1 });
       addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லைச் செலவாகப் பதிவாகி, சம்பளக் கணக்கில் மைனஸ் செய்யப்பட்டது! 💼🌱`, false);
     } else {
       pendingExpense = { desc: rawText, amt, isKollai: true };
       addChat(`பாலாஜி சார், ₹${amt} கொல்லைச் செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
     }
+    lastAction = { desc: rawText, records };
     saveData();
     return;
   }
@@ -202,28 +257,57 @@ function processNLP(rawText) {
   if (isIncome) {
     if (isHome) {
       db.home.push({ desc: rawText, amt, type: 'in', datetime });
+      records.push({ cat: 'home', index: db.home.length - 1 });
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 🏠`, false);
     } else {
       db.salary.push({ desc: rawText, amt, type: 'in', datetime });
+      records.push({ cat: 'salary', index: db.salary.length - 1 });
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
     }
   } else {
     if (isHome) {
       db.home.push({ desc: rawText, amt, type: 'out', datetime });
+      records.push({ cat: 'home', index: db.home.length - 1 });
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 🏠`, false);
     } else if (isSalary) {
       db.salary.push({ desc: rawText, amt, type: 'out', datetime });
+      records.push({ cat: 'salary', index: db.salary.length - 1 });
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 💼`, false);
     } else {
       pendingExpense = { desc: rawText, amt, isKollai: false };
       addChat(`பாலாஜி சார், ₹${amt} செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
     }
   }
+  lastAction = { desc: rawText, records };
   saveData();
 }
 
 function deleteItem(cat, index) {
   db[cat].splice(index, 1);
+  saveData();
+}
+
+// பதிவுகளைத் திருத்தும் வசதி (Edit Functionality)
+function editItem(cat, index) {
+  let item = db[cat][index];
+  let currentText = cat === 'vatti' ? item.name : (cat === 'notes' ? item.text : item.desc);
+  let currentAmt = item.amt || 0;
+
+  let newText = prompt("விவரத்தை மாற்றவும்:", currentText);
+  if (newText === null) return; // Cancel செய்யப்பட்டது
+
+  if (cat === 'vatti') {
+    item.name = newText;
+    let newAmt = prompt("அசல் தொகையை மாற்றவும்:", currentAmt);
+    if (newAmt !== null) item.amt = Number(newAmt);
+  } else if (cat === 'notes') {
+    item.text = newText;
+  } else {
+    item.desc = newText;
+    let newAmt = prompt("தொகையை மாற்றவும்:", currentAmt);
+    if (newAmt !== null) item.amt = Number(newAmt);
+  }
+
   saveData();
 }
 
@@ -255,7 +339,11 @@ function renderAll() {
     else balSal -= item.amt;
     htmlSal += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;">
       <span>${item.desc} (${item.datetime})</span>
-      <span style="color:${item.type==='in'?'green':'red'}; font-weight:bold;">${item.type==='in'?'+':'-'}₹${item.amt} <button onclick="deleteItem('salary',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button></span>
+      <span style="color:${item.type==='in'?'green':'red'}; font-weight:bold;">
+        ${item.type==='in'?'+':'-'}₹${item.amt} 
+        <button onclick="editItem('salary',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
+        <button onclick="deleteItem('salary',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button>
+      </span>
     </div>`;
   });
   const elBalSal = document.getElementById('bal-salary');
@@ -270,7 +358,11 @@ function renderAll() {
     else balHome -= item.amt;
     htmlHome += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;">
       <span>${item.desc} (${item.datetime})</span>
-      <span style="color:${item.type==='in'?'green':'red'}; font-weight:bold;">${item.type==='in'?'+':'-'}₹${item.amt} <button onclick="deleteItem('home',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button></span>
+      <span style="color:${item.type==='in'?'green':'red'}; font-weight:bold;">
+        ${item.type==='in'?'+':'-'}₹${item.amt} 
+        <button onclick="editItem('home',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
+        <button onclick="deleteItem('home',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button>
+      </span>
     </div>`;
   });
   const elBalHome = document.getElementById('bal-home');
@@ -284,7 +376,11 @@ function renderAll() {
     totalKollai += item.amt;
     htmlKollai += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;">
       <span>${item.desc} (${item.datetime})</span>
-      <span style="color:red; font-weight:bold;">-₹${item.amt} <button onclick="deleteItem('kollai',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button></span>
+      <span style="color:red; font-weight:bold;">
+        -₹${item.amt} 
+        <button onclick="editItem('kollai',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
+        <button onclick="deleteItem('kollai',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button>
+      </span>
     </div>`;
   });
   const elTotKollai = document.getElementById('total-kollai');
@@ -298,7 +394,10 @@ function renderAll() {
     htmlVatti += `<div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:10px; margin-bottom:8px;">
       <div style="font-weight:bold; display:flex; justify-content:space-between;">
         <span>${item.name}</span>
-        <button onclick="deleteItem('vatti',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button>
+        <div>
+          <button onclick="editItem('vatti',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
+          <button onclick="deleteItem('vatti',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button>
+        </div>
       </div>
       <div style="font-size:13px; color:#475569; margin-top:4px;">
         அசல்: ₹${item.amt} | வட்டி: ${item.rate}% | தேதி: ${item.date}<br>
@@ -317,7 +416,10 @@ function renderAll() {
   db.notes.forEach((item, i) => {
     htmlNotes += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; background:#f8fafc; padding:8px; border-radius:8px;">
       <span>${item.text} <small style="color:gray;">(${item.datetime})</small></span>
-      <button onclick="deleteItem('notes',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button>
+      <div>
+        <button onclick="editItem('notes',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
+        <button onclick="deleteItem('notes',${i})" style="border:none; background:none; color:gray; cursor:pointer;">❌</button>
+      </div>
     </div>`;
   });
   const elHistNotes = document.getElementById('hist-notes');
