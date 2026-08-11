@@ -49,13 +49,13 @@ function extractAmount(text) {
   // 'டீ', 'டி' போன்ற சொற்கள் எண்களாக மாறாமல் தடுக்க சுத்தம் செய்தல்
   let cleanText = text.replace(/,/g, '');
   
-  // 1000, 50000 போன்ற தெளிவான எண்களை மட்டும் எடுத்தல்
+  // எண்களை மட்டும் பிரித்தெடுத்தல்
   let matches = cleanText.match(/\d+/g);
   if (!matches) return null;
   
   let numbers = matches.map(Number);
   
-  // மிகப்பெரிய எண்ணை தொகையாக எடுத்தல் (வட்டி விகிதம் தவிர்த்து)
+  // மிகப்பெரிய எண்ணை தொகையாக எடுத்தல்
   return Math.max(...numbers);
 }
 
@@ -117,10 +117,10 @@ function processNLP(rawText) {
   const parsedText = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // பேச்சு வழக்கு சொற்கள் (Colloquial matching)
-  const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்|சம்பளப் பணத்தில்|சம்பள பணத்துல|சம்பளப் பணத்துல|சம்பளத்துல)/i.test(parsedText);
-  const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணத்தில்|வீட்டுப் பணத்தில்|வீட்டு பணத்துல|வீட்டுப் பணத்துல|வீட்டுல)/i.test(parsedText);
-  const isKollai = /(கொல்லை|கொல்லைக்கு)/i.test(parsedText);
+  // அனைத்து விதமான தமிழ் பேச்சு வழக்கு விகுதிகளையும் கண்டறியும் விதிகள்
+  const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்|சம்பளப் பணத்தில்|சம்பள பணத்துல|சம்பளப் பணத்துல|சம்பளத்துல|சம்பளத்திலிருந்து|சம்பளத்தில இருந்து)/i.test(parsedText);
+  const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணத்தில்|வீட்டுப் பணத்தில்|வீட்டு பணத்துல|வீட்டுப் பணத்துல|வீட்டுல|வீட்டிலிருந்து|வீட்டில இருந்து)/i.test(parsedText);
+  const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லையிலிருந்து|கொல்லையில இருந்து)/i.test(parsedText);
   const isVatti = /(வட்டி|பைசா)/i.test(parsedText);
   const isReminder = /(ஞாபகப்படுத்து|ஞாபகம்|நினைவூட்டு|ரிமைண்டர்|மணிக்கு)/i.test(parsedText);
 
@@ -145,15 +145,15 @@ function processNLP(rawText) {
     }
   }
 
-  // 2. ரிமைண்டர் / நினைவூட்டல் (Reminders without financial words)
-  if (isReminder && !isVatti && !/(செலவு|வரவு|ரூபாய்|வாங்கியது|கொடுத்தேன்)/i.test(parsedText)) {
+  // 2. ரிமைண்டர் / நினைவூட்டல்
+  if (isReminder && !isVatti && !/(செலவு|வரவு|ரூபாய்|வாங்கியது|கொடுத்தேன்|கொடுத்தார்கள்|தந்தார்கள்)/i.test(parsedText)) {
     db.notes.push({ text: rawText, datetime });
     saveData();
     addChat(`சரி பாலாஜி சார், நினைவூட்டல் குறிப்பாகச் சேமிக்கப்பட்டது: "${rawText}" ⏰📝`, false);
     return;
   }
 
-  // 3. வட்டி கணக்கு (Vatti Logic)
+  // 3. வட்டி கணக்கு
   if (isVatti) {
     let amt = extractAmount(parsedText);
     if (amt) {
@@ -186,7 +186,7 @@ function processNLP(rawText) {
   }
 
   // 5. வரவு / செலவு மற்றும் கொல்லை கணக்கு
-  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு)/i.test(parsedText);
+  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு|தந்தார்கள்|தந்தாங்க)/i.test(parsedText);
 
   if (isKollai) {
     db.kollai.push({ desc: rawText, amt, datetime });
