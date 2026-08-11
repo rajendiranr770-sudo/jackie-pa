@@ -14,7 +14,6 @@ function saveData() {
   renderAll();
 }
 
-// பக்கங்களை மாற்றும் பழைய ஃபங்க்ஷன்
 function showSec(secId, btnElement) {
   const sections = document.querySelectorAll('.section');
   sections.forEach(sec => sec.classList.remove('active'));
@@ -33,22 +32,30 @@ function getDateTime() {
   return now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// தமிழ் பேச்சுவழக்கு எண்களை ஆங்கில எண்களாக மாற்றும் பங்க்ஷன்
 function parseTamilNumbers(text) {
-  let parsed = text;
-  parsed = parsed.replace(/ஆயிரத்து\s*(\d+)/gi, (match, p1) => (1000 + parseInt(p1)).toString());
-  parsed = parsed.replace(/இருபதாயிரம்|20 ஆயிரம்/gi, '20000')
-                .replace(/பத்தாயிரம்|10 ஆயிரம்/gi, '10000')
-                .replace(/ஐம்பதாயிரம்|50 ஆயிரம்/gi, '50000')
-                .replace(/ஐயாயிரம்|அஞ்சாயிரம்|5 ஆயிரம்/gi, '5000')
-                .replace(/நாலாயிரம்|4 ஆயிரம்/gi, '4000')
-                .replace(/மூன்றாயிரம்|3 ஆயிரம்/gi, '3000')
-                .replace(/இரண்டாயிரம்|2 ஆயிரம்/gi, '2000')
-                .replace(/ஆயிரம்|1 ஆயிரம்/gi, '1000');
-  return parsed;
+  let str = text;
+
+  // தமிழ் எழுத்து எண்கள்
+  str = str.replace(/இருபதாயிரம்|இருபது ஆயிரம்|20 ஆயிரம்/gi, '20000');
+  str = str.replace(/முப்பத்தாயிரம்|முப்பது ஆயிரம்|30 ஆயிரம்/gi, '30000');
+  str = str.replace(/நாற்பதாயிரம்|நாற்பது ஆயிரம்|40 ஆயிரம்/gi, '40000');
+  str = str.replace(/ஐம்பதாயிரம்|ஐம்பது ஆயிரம்|50 ஆயிரம்/gi, '50000');
+  str = str.replace(/பத்தாயிரம்|பத்து ஆயிரம்|10 ஆயிரம்/gi, '10000');
+  str = str.replace(/ஐயாயிரம்|அஞ்சாயிரம்|5 ஆயிரம்/gi, '5000');
+  str = str.replace(/நாலாயிரம்|4 ஆயிரம்/gi, '4000');
+  str = str.replace(/மூன்றாயிரம்|3 ஆயிரம்/gi, '3000');
+  str = str.replace(/இரண்டாயிரம்|ரெண்டாயிரம்|2 ஆயிரம்/gi, '2000');
+  str = str.replace(/ஆயிரம்|1 ஆயிரம்/gi, '1000');
+  str = str.replace(/ஐந்நூறு|அந்நூறு|500/gi, '500');
+  str = str.replace(/நூறு|100/gi, '100');
+
+  return str;
 }
 
 function extractAmount(text) {
-  let cleanText = text.replace(/,/g, '');
+  let cleanText = parseTamilNumbers(text);
+  cleanText = cleanText.replace(/,/g, '');
   let matches = cleanText.match(/\d+/g);
   if (!matches) return null;
   let numbers = matches.map(Number);
@@ -132,18 +139,17 @@ function processNLP(rawText) {
     return;
   }
 
-  const parsedText = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லைல|கொல்லையில்|கொல்லையில)/i.test(parsedText);
-  const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணம்|சம்பளப் பணம்|சம்பள பணத்தில்|சம்பள குளத்தில்)/i.test(parsedText);
-  const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணம்|வீட்டுப் பணம்|வீட்டு பணத்தில்)/i.test(parsedText);
-  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு|தந்தார்கள்|தந்தாங்க|வாங்கியது)/i.test(parsedText);
+  const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லைல|கொல்லையில்|கொல்லையில)/i.test(rawText);
+  const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணம்|சம்பளப் பணம்|சம்பள பணத்தில்)/i.test(rawText);
+  const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணம்|வீட்டுப் பணம்|வீட்டு பணத்தில்)/i.test(rawText);
+  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு|தந்தார்கள்|தந்தாங்க|வாங்கியது)/i.test(rawText);
 
   // 1. கேள்வி கேட்டு பதில் வரும் நிலை
   if (pendingExpense) {
     let affectedRecords = [];
-    if (isSalary || parsedText === '1' || /(சம்பளம்|சம்பளத்தில்|சம்பளப் பணம்)/i.test(parsedText)) {
+    if (isSalary || rawText === '1' || /(சம்பளம்|சம்பளத்தில்|சம்பளப் பணம்)/i.test(rawText)) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
       affectedRecords.push({ cat: 'salary', index: db.salary.length - 1 });
 
@@ -157,7 +163,7 @@ function processNLP(rawText) {
       pendingExpense = null;
       saveData();
       return;
-    } else if (isHome || parsedText === '2' || /(வீடு|வீட்டுப் பணம்|வீட்டுல)/i.test(parsedText)) {
+    } else if (isHome || rawText === '2' || /(வீடு|வீட்டுப் பணம்|வீட்டுல)/i.test(rawText)) {
       db.home.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
       affectedRecords.push({ cat: 'home', index: db.home.length - 1 });
 
@@ -175,7 +181,7 @@ function processNLP(rawText) {
   }
 
   // 2. தொகை கண்டறிதல்
-  let amt = extractAmount(parsedText);
+  let amt = extractAmount(rawText);
   if (!amt) {
     db.notes.push({ text: rawText, datetime });
     lastAction = { desc: rawText, records: [{ cat: 'notes', index: db.notes.length - 1 }] };
