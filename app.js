@@ -108,11 +108,10 @@ function addManualNote() {
   noteInput.value = '';
 }
 
-// தமிழ் வார்த்தைகளை துல்லியமாக எண்களாக மாற்றும் வசதி
+// தமிழ் வார்த்தைகளை எண்களாக மாற்றுதல்
 function parseTamilNumbers(text) {
   let str = text.toLowerCase();
   
-  //複合 எண்கள் (Compound numbers)
   str = str.replace(/ஒரு லட்ச|ஒரு லட்சம்|1 லட்சம்/gi, '100000');
   str = str.replace(/ஐம்பதாயிரம்|50 ஆயிரம்/gi, '50000');
   str = str.replace(/நாற்பதாயிரம்|40 ஆயிரம்/gi, '40000');
@@ -208,8 +207,8 @@ function processNLP(rawText) {
 
   const isKollai = /(கொல்லை)/i.test(rawText);
   const isSalary = /(சம்பளம்|சம்பள)/i.test(rawText);
-  const isHome = /(வீடு|வீட்டு|வீட்டுப்)/i.test(rawText);
-  const isIncome = /(வந்தது|வரவு|வந்தது)/i.test(rawText);
+  const isHome = /(வீடு|வீட்டு|வீட்டில்|வீட்டுப்)/i.test(rawText);
+  const isIncome = /(வந்தது|வரவு|கொடுத்தார்கள்|கொடுத்தாங்க|தந்தாங்க|வாங்குனேன்)/i.test(rawText);
 
   if (!amt) {
     db.notes.push({ text: rawText, datetime });
@@ -218,14 +217,14 @@ function processNLP(rawText) {
     return;
   }
 
-  // 2. வரவு கணக்கு (வீடு அல்லது சம்பளம் சரியாகப் பிரித்தல்)
+  // 2. வரவு கணக்கு
   if (isIncome) {
     if (isHome) {
       db.home.push({ desc: rawText, amt, type: 'in', datetime });
-      addChat(`சரி பாலாஜி சார், வீட்டுக் கணக்கில் ₹${amt} வரவாகச் சேர்க்கப்பட்டது! 🏠`, false);
+      addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 🏠`, false);
     } else {
       db.salary.push({ desc: rawText, amt, type: 'in', datetime });
-      addChat(`சரி பாலாஜி சார், சம்பளக் கணக்கில் ₹${amt} வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
+      addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
     }
     saveData();
     return;
@@ -247,21 +246,34 @@ function processNLP(rawText) {
   saveData();
 }
 
+// எடிட் மற்றும் டெலிட் வசதி
 function deleteItem(cat, index) {
-  db[cat].splice(index, 1);
-  saveData();
+  if (confirm("இந்த பதிவை நீக்க வேண்டுமா?")) {
+    db[cat].splice(index, 1);
+    saveData();
+  }
 }
 
 function editItem(cat, index) {
   let item = db[cat][index];
   let currentText = cat === 'vatti' ? item.name : (cat === 'notes' ? item.text : item.desc);
-  let newText = prompt("மாற்றவும்:", currentText);
-  if (newText !== null) {
-    if (cat === 'vatti') item.name = newText;
-    else if (cat === 'notes') item.text = newText;
-    else item.desc = newText;
-    saveData();
+  let currentAmt = item.amt || 0;
+
+  let newText = prompt("விவரத்தை மாற்றவும்:", currentText);
+  if (newText === null) return;
+
+  if (cat === 'vatti') {
+    item.name = newText;
+    let newAmt = prompt("தொகையை மாற்றவும்:", currentAmt);
+    if (newAmt !== null) item.amt = Number(newAmt);
+  } else if (cat === 'notes') {
+    item.text = newText;
+  } else {
+    item.desc = newText;
+    let newAmt = prompt("தொகையை மாற்றவும்:", currentAmt);
+    if (newAmt !== null) item.amt = Number(newAmt);
   }
+  saveData();
 }
 
 function calculateInterest(amt, rate, dateStr) {
@@ -287,12 +299,12 @@ function renderAll() {
   let balSal = 0, htmlSal = '';
   db.salary.forEach((item, i) => {
     if (item.type === 'in') balSal += item.amt; else balSal -= item.amt;
-    htmlSal += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+    htmlSal += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
       <span>${item.desc} <br><small style="color:gray;">(${item.datetime})</small></span>
       <span style="color:${item.type==='in'?'#16a34a':'#dc2626'}; font-weight:bold;">
         ${item.type==='in'?'+':'-'}₹${item.amt}
-        <button onclick="editItem('salary',${i})" style="border:none; background:none;">✏️</button>
-        <button onclick="deleteItem('salary',${i})" style="border:none; background:none;">❌</button>
+        <button onclick="editItem('salary',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">✏️</button>
+        <button onclick="deleteItem('salary',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">❌</button>
       </span>
     </div>`;
   });
@@ -302,12 +314,12 @@ function renderAll() {
   let balHome = 0, htmlHome = '';
   db.home.forEach((item, i) => {
     if (item.type === 'in') balHome += item.amt; else balHome -= item.amt;
-    htmlHome += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+    htmlHome += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
       <span>${item.desc} <br><small style="color:gray;">(${item.datetime})</small></span>
       <span style="color:${item.type==='in'?'#16a34a':'#dc2626'}; font-weight:bold;">
         ${item.type==='in'?'+':'-'}₹${item.amt}
-        <button onclick="editItem('home',${i})" style="border:none; background:none;">✏️</button>
-        <button onclick="deleteItem('home',${i})" style="border:none; background:none;">❌</button>
+        <button onclick="editItem('home',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">✏️</button>
+        <button onclick="deleteItem('home',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">❌</button>
       </span>
     </div>`;
   });
@@ -317,11 +329,11 @@ function renderAll() {
   let totalKollai = 0, htmlKollai = '';
   db.kollai.forEach((item, i) => {
     totalKollai += item.amt;
-    htmlKollai += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+    htmlKollai += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
       <span>${item.desc} <br><small style="color:gray;">(${item.datetime})</small></span>
       <span style="color:#dc2626; font-weight:bold;">-₹${item.amt} 
-        <button onclick="editItem('kollai',${i})" style="border:none; background:none;">✏️</button>
-        <button onclick="deleteItem('kollai',${i})" style="border:none; background:none;">❌</button>
+        <button onclick="editItem('kollai',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">✏️</button>
+        <button onclick="deleteItem('kollai',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">❌</button>
       </span>
     </div>`;
   });
@@ -335,8 +347,8 @@ function renderAll() {
       <div style="font-weight:bold; display:flex; justify-content:space-between;">
         <span>${item.name}</span>
         <div>
-          <button onclick="editItem('vatti',${i})" style="border:none; background:none;">✏️</button>
-          <button onclick="deleteItem('vatti',${i})" style="border:none; background:none;">❌</button>
+          <button onclick="editItem('vatti',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">✏️</button>
+          <button onclick="deleteItem('vatti',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">❌</button>
         </div>
       </div>
       <div style="font-size:13px; color:#4b5563; margin-top:4px;">
@@ -350,11 +362,11 @@ function renderAll() {
 
   let htmlNotes = '';
   db.notes.forEach((item, i) => {
-    htmlNotes += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+    htmlNotes += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
       <span>${item.text} <br><small style="color:gray;">(${item.datetime})</small></span>
       <div>
-        <button onclick="editItem('notes',${i})" style="border:none; background:none;">✏️</button>
-        <button onclick="deleteItem('notes',${i})" style="border:none; background:none;">❌</button>
+        <button onclick="editItem('notes',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">✏️</button>
+        <button onclick="deleteItem('notes',${i})" style="border:none; background:none; cursor:pointer; font-size:16px;">❌</button>
       </div>
     </div>`;
   });
@@ -364,3 +376,4 @@ function renderAll() {
 window.onload = function() {
   renderAll();
 };
+                                  
