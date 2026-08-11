@@ -31,30 +31,103 @@ function getDateTime() {
   return now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// மேனுவல் பதிவுகள் (Manual Entries Functions)
+function addManual(type, inOut) {
+  const descInput = document.getElementById(type === 'salary' ? 'salDesc' : 'homeDesc');
+  const amtInput = document.getElementById(type === 'salary' ? 'salAmt' : 'homeAmt');
+
+  const desc = descInput.value.trim();
+  const amt = Number(amtInput.value);
+
+  if (!desc || !amt) {
+    alert("தயவுசெய்து விவரம் மற்றும் தொகையை உள்ளிடவும்!");
+    return;
+  }
+
+  db[type].push({ desc, amt, type: inOut, datetime: getDateTime() });
+  saveData();
+
+  descInput.value = '';
+  amtInput.value = '';
+}
+
+function addManualKollai() {
+  const descInput = document.getElementById('kollaiDesc');
+  const amtInput = document.getElementById('kollaiAmt');
+
+  const desc = descInput.value.trim();
+  const amt = Number(amtInput.value);
+
+  if (!desc || !amt) {
+    alert("தயவுசெய்து விவரம் மற்றும் தொகையை உள்ளிடவும்!");
+    return;
+  }
+
+  db.kollai.push({ desc, amt, datetime: getDateTime() });
+  saveData();
+
+  descInput.value = '';
+  amtInput.value = '';
+}
+
+function addManualVatti() {
+  const name = document.getElementById('vattiName').value.trim();
+  const amt = Number(document.getElementById('vattiAmt').value);
+  const rate = Number(document.getElementById('vattiRate').value) || 2;
+  const dateInput = document.getElementById('vattiDate').value;
+
+  if (!name || !amt) {
+    alert("தயவுசெய்து பெயர் மற்றும் தொகையை உள்ளிடவும்!");
+    return;
+  }
+
+  let formattedDate = new Date().toLocaleDateString('en-GB');
+  if (dateInput) {
+    const parts = dateInput.split('-');
+    formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
+  db.vatti.push({ name, amt, rate, date: formattedDate });
+  saveData();
+
+  document.getElementById('vattiName').value = '';
+  document.getElementById('vattiAmt').value = '';
+  document.getElementById('vattiRate').value = '';
+  document.getElementById('vattiDate').value = '';
+}
+
+function addManualNote() {
+  const noteInput = document.getElementById('noteText');
+  const text = noteInput.value.trim();
+
+  if (!text) {
+    alert("தயவுசெய்து குறிப்பை டைப் செய்யவும்!");
+    return;
+  }
+
+  db.notes.push({ text, datetime: getDateTime() });
+  saveData();
+  noteInput.value = '';
+}
+
+// AI குரல் மற்றும் மேனுவல் பேச்சு செயலாக்கம்
 function parseTamilNumbers(text) {
   let str = text;
-  str = str.replace(/இருபதாயிரம்|இருபது ஆயிரம்|20 ஆயிரம்/gi, '20000');
-  str = str.replace(/முப்பத்தாயிரம்|முப்பது ஆயிரம்|30 ஆயிரம்/gi, '30000');
-  str = str.replace(/நாற்பதாயிரம்|நாற்பது ஆயிரம்|40 ஆயிரம்/gi, '40000');
-  str = str.replace(/ஐம்பதாயிரம்|ஐம்பது ஆயிரம்|50 ஆயிரம்/gi, '50000');
-  str = str.replace(/பத்தாயிரம்|பத்து ஆயிரம்|10 ஆயிரம்/gi, '10000');
-  str = str.replace(/ஐயாயிரம்|அஞ்சாயிரம்|5 ஆயிரம்/gi, '5000');
-  str = str.replace(/நாலாயிரம்|4 ஆயிரம்/gi, '4000');
-  str = str.replace(/மூன்றாயிரம்|3 ஆயிரம்/gi, '3000');
-  str = str.replace(/இரண்டாயிரம்|ரெண்டாயிரம்|2 ஆயிரம்/gi, '2000');
+  str = str.replace(/இருபதாயிரம்|20 ஆயிரம்/gi, '20000');
+  str = str.replace(/முப்பத்தாயிரம்|30 ஆயிரம்/gi, '30000');
+  str = str.replace(/நாற்பதாயிரம்|40 ஆயிரம்/gi, '40000');
+  str = str.replace(/ஐம்பதாயிரம்|50 ஆயிரம்/gi, '50000');
+  str = str.replace(/பத்தாயிரம்|10 ஆயிரம்/gi, '10000');
+  str = str.replace(/ஐயாயிரம்|5 ஆயிரம்/gi, '5000');
   str = str.replace(/ஆயிரம்|1 ஆயிரம்/gi, '1000');
-  str = str.replace(/ஐந்நூறு|அந்நூறு|500/gi, '500');
-  str = str.replace(/நூறு|100/gi, '100');
   return str;
 }
 
 function extractAmount(text) {
-  let cleanText = parseTamilNumbers(text);
-  cleanText = cleanText.replace(/,/g, '');
+  let cleanText = parseTamilNumbers(text).replace(/,/g, '');
   let matches = cleanText.match(/\d+/g);
   if (!matches) return null;
-  let numbers = matches.map(Number);
-  return Math.max(...numbers);
+  return Math.max(...matches.map(Number));
 }
 
 function addChat(msg, isUser = false) {
@@ -80,9 +153,7 @@ function sendMsg() {
 
 function clearChat() {
   const chatBox = document.getElementById('chatBox');
-  if (chatBox) {
-    chatBox.innerHTML = '<div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>';
-  }
+  if (chatBox) chatBox.innerHTML = '<div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>';
 }
 
 function startVoice() {
@@ -102,18 +173,12 @@ function startVoice() {
     const input = document.getElementById('userInput');
     if (input) {
       input.value = text;
-      if (status) status.innerText = "🎤 பதிவு செய்யப்பட்டது...";
       setTimeout(() => {
         sendMsg();
         if (status) status.innerText = "🎤 தயார்";
       }, 400);
     }
   };
-
-  recognition.onerror = function() {
-    if (status) status.innerText = "🎤 தயார்";
-  };
-
   recognition.start();
 }
 
@@ -121,49 +186,22 @@ function processNLP(rawText) {
   const datetime = getDateTime();
   const amt = extractAmount(rawText);
 
-  // 1. வட்டி கணக்கு எனில்
   if (/வட்டி|வட்டிக்கு/i.test(rawText)) {
-    let rateMatch = rawText.match(/(\d+|\bமூணு\b|\bஇரண்டு\b|\bஒன்னு\b)\s*(பைசா|ரூபாய்|%)/i);
-    let rate = 2; // Default rate
+    let rate = 2;
     if (rawText.includes('மூணு')) rate = 3;
-    else if (rawText.includes('ரெண்டு') || rawText.includes('இரண்டு')) rate = 2;
     else if (rawText.includes('ஒன்னு')) rate = 1;
 
-    let name = rawText.replace(/வாங்கி இருக்கான்|வாங்கியிருக்கான்|வாங்கி இருக்கேன்|வட்டிக்கு/gi, '').trim();
-
-    db.vatti.push({
-      name: name || rawText,
-      amt: amt || 0,
-      rate: rate,
-      date: new Date().toLocaleDateString('en-GB')
-    });
+    let name = rawText.replace(/வாங்கி இருக்கான்|வாங்கியிருக்கான்|வட்டிக்கு/gi, '').trim();
+    db.vatti.push({ name: name || rawText, amt: amt || 0, rate, date: new Date().toLocaleDateString('en-GB') });
     saveData();
-    addChat(`சரி பாலாஜி சார், வட்டிக் கணக்கில் சேர்க்கப்பட்டது! 🪙 (அசல்: ₹${amt || 0})`, false);
+    addChat(`சரி பாலாஜி சார், வட்டிக் கணக்கில் சேர்க்கப்பட்டது! 🪙`, false);
     return;
   }
 
-  const isKollai = /(கொல்லை|கொல்லைக்கு|கொல்லைல|கொல்லையில்)/i.test(rawText);
-  const isSalary = /(சம்பளம்|சம்பளத்தில்|சம்பள பணம்)/i.test(rawText);
-  const isHome = /(வீடு|வீட்டில்|வீட்டு|வீட்டு பணம்)/i.test(rawText);
-  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கிடைத்தது|வரவு)/i.test(rawText);
-
-  if (pendingExpense) {
-    if (isSalary || rawText === '1' || /சம்பளம்/i.test(rawText)) {
-      db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
-      if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
-      addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} சம்பளக் கணக்கில் கழிக்கப்பட்டது! 💼`, false);
-      pendingExpense = null;
-      saveData();
-      return;
-    } else if (isHome || rawText === '2' || /வீடு/i.test(rawText)) {
-      db.home.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
-      if (pendingExpense.isKollai) db.kollai.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, datetime });
-      addChat(`சரி பாலாஜி சார், ₹${pendingExpense.amt} வீட்டுக் கணக்கில் கழிக்கப்பட்டது! 🏠`, false);
-      pendingExpense = null;
-      saveData();
-      return;
-    }
-  }
+  const isKollai = /(கொல்லை)/i.test(rawText);
+  const isSalary = /(சம்பளம்)/i.test(rawText);
+  const isHome = /(வீடு)/i.test(rawText);
+  const isIncome = /(வந்தது|வரவு)/i.test(rawText);
 
   if (!amt) {
     db.notes.push({ text: rawText, datetime });
@@ -173,41 +211,24 @@ function processNLP(rawText) {
   }
 
   if (isIncome) {
-    if (isHome) {
-      db.home.push({ desc: rawText, amt, type: 'in', datetime });
-      addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 🏠`, false);
-    } else {
-      db.salary.push({ desc: rawText, amt, type: 'in', datetime });
-      addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
-    }
+    if (isHome) db.home.push({ desc: rawText, amt, type: 'in', datetime });
+    else db.salary.push({ desc: rawText, amt, type: 'in', datetime });
     saveData();
+    addChat(`சரி பாலாஜி சார், ₹${amt} வரவாகச் சேர்க்கப்பட்டது!`, false);
     return;
   }
 
   if (isKollai) {
-    if (isSalary) {
-      db.kollai.push({ desc: rawText, amt, datetime });
-      db.salary.push({ desc: rawText, amt, type: 'out', datetime });
-      addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லை செலவு சம்பளத்தில் கழிக்கப்பட்டது! 💼🌱`, false);
-    } else if (isHome) {
-      db.kollai.push({ desc: rawText, amt, datetime });
-      db.home.push({ desc: rawText, amt, type: 'out', datetime });
-      addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லை செலவு வீட்டுக் கணக்கில் கழிக்கப்பட்டது! 🏠🌱`, false);
-    } else {
-      pendingExpense = { desc: rawText, amt, isKollai: true };
-      addChat(`பாலாஜி சார், ₹${amt} செலவை "சம்பளம்"-இல் கழிக்கவா அல்லது "வீடு"-இல் கழிக்கவா?`, false);
-      return;
-    }
+    db.kollai.push({ desc: rawText, amt, datetime });
+    if (isHome) db.home.push({ desc: rawText, amt, type: 'out', datetime });
+    else db.salary.push({ desc: rawText, amt, type: 'out', datetime });
+    addChat(`சரி பாலாஜி சார், ₹${amt} கொல்லை செலவாகப் பதிவு செய்யப்பட்டது!`, false);
   } else if (isHome) {
     db.home.push({ desc: rawText, amt, type: 'out', datetime });
     addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் கழிக்கப்பட்டது! 🏠`, false);
-  } else if (isSalary) {
+  } else {
     db.salary.push({ desc: rawText, amt, type: 'out', datetime });
     addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் கழிக்கப்பட்டது! 💼`, false);
-  } else {
-    pendingExpense = { desc: rawText, amt, isKollai: false };
-    addChat(`பாலாஜி சார், ₹${amt} செலவை "சம்பளப் பணம்"-இல் கழிக்கவா அல்லது "வீட்டுப் பணம்"-இல் கழிக்கவா?`, false);
-    return;
   }
   saveData();
 }
@@ -220,23 +241,13 @@ function deleteItem(cat, index) {
 function editItem(cat, index) {
   let item = db[cat][index];
   let currentText = cat === 'vatti' ? item.name : (cat === 'notes' ? item.text : item.desc);
-  let currentAmt = item.amt || 0;
-
-  let newText = prompt("விவரத்தை மாற்றவும்:", currentText);
-  if (newText === null) return;
-
-  if (cat === 'vatti') {
-    item.name = newText;
-    let newAmt = prompt("தொகை:", currentAmt);
-    if (newAmt !== null) item.amt = Number(newAmt);
-  } else if (cat === 'notes') {
-    item.text = newText;
-  } else {
-    item.desc = newText;
-    let newAmt = prompt("தொகை:", currentAmt);
-    if (newAmt !== null) item.amt = Number(newAmt);
+  let newText = prompt("மாற்றவும்:", currentText);
+  if (newText !== null) {
+    if (cat === 'vatti') item.name = newText;
+    else if (cat === 'notes') item.text = newText;
+    else item.desc = newText;
+    saveData();
   }
-  saveData();
 }
 
 function calculateInterest(amt, rate, dateStr) {
@@ -261,14 +272,13 @@ function calculateInterest(amt, rate, dateStr) {
 function renderAll() {
   let balSal = 0, htmlSal = '';
   db.salary.forEach((item, i) => {
-    if (item.type === 'in') balSal += item.amt;
-    else balSal -= item.amt;
-    htmlSal += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:15px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+    if (item.type === 'in') balSal += item.amt; else balSal -= item.amt;
+    htmlSal += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
       <span>${item.desc} <br><small style="color:gray;">(${item.datetime})</small></span>
       <span style="color:${item.type==='in'?'#16a34a':'#dc2626'}; font-weight:bold;">
-        ${item.type==='in'?'+':'-'}₹${item.amt} 
-        <button onclick="editItem('salary',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
-        <button onclick="deleteItem('salary',${i})" style="border:none; background:none; cursor:pointer;">❌</button>
+        ${item.type==='in'?'+':'-'}₹${item.amt}
+        <button onclick="editItem('salary',${i})" style="border:none; background:none;">✏️</button>
+        <button onclick="deleteItem('salary',${i})" style="border:none; background:none;">❌</button>
       </span>
     </div>`;
   });
@@ -277,14 +287,13 @@ function renderAll() {
 
   let balHome = 0, htmlHome = '';
   db.home.forEach((item, i) => {
-    if (item.type === 'in') balHome += item.amt;
-    else balHome -= item.amt;
-    htmlHome += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:15px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+    if (item.type === 'in') balHome += item.amt; else balHome -= item.amt;
+    htmlHome += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
       <span>${item.desc} <br><small style="color:gray;">(${item.datetime})</small></span>
       <span style="color:${item.type==='in'?'#16a34a':'#dc2626'}; font-weight:bold;">
-        ${item.type==='in'?'+':'-'}₹${item.amt} 
-        <button onclick="editItem('home',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
-        <button onclick="deleteItem('home',${i})" style="border:none; background:none; cursor:pointer;">❌</button>
+        ${item.type==='in'?'+':'-'}₹${item.amt}
+        <button onclick="editItem('home',${i})" style="border:none; background:none;">✏️</button>
+        <button onclick="deleteItem('home',${i})" style="border:none; background:none;">❌</button>
       </span>
     </div>`;
   });
@@ -294,12 +303,11 @@ function renderAll() {
   let totalKollai = 0, htmlKollai = '';
   db.kollai.forEach((item, i) => {
     totalKollai += item.amt;
-    htmlKollai += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:15px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+    htmlKollai += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
       <span>${item.desc} <br><small style="color:gray;">(${item.datetime})</small></span>
-      <span style="color:#dc2626; font-weight:bold;">
-        -₹${item.amt} 
-        <button onclick="editItem('kollai',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
-        <button onclick="deleteItem('kollai',${i})" style="border:none; background:none; cursor:pointer;">❌</button>
+      <span style="color:#dc2626; font-weight:bold;">-₹${item.amt} 
+        <button onclick="editItem('kollai',${i})" style="border:none; background:none;">✏️</button>
+        <button onclick="deleteItem('kollai',${i})" style="border:none; background:none;">❌</button>
       </span>
     </div>`;
   });
@@ -310,31 +318,29 @@ function renderAll() {
   db.vatti.forEach((item, i) => {
     let calc = calculateInterest(item.amt, item.rate, item.date);
     htmlVatti += `<div style="background:#fff; border:1px solid #e5e7eb; padding:12px; border-radius:10px; margin-bottom:8px;">
-      <div style="font-weight:bold; display:flex; justify-content:space-between; font-size:16px;">
+      <div style="font-weight:bold; display:flex; justify-content:space-between;">
         <span>${item.name}</span>
         <div>
-          <button onclick="editItem('vatti',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
-          <button onclick="deleteItem('vatti',${i})" style="border:none; background:none; cursor:pointer;">❌</button>
+          <button onclick="editItem('vatti',${i})" style="border:none; background:none;">✏️</button>
+          <button onclick="deleteItem('vatti',${i})" style="border:none; background:none;">❌</button>
         </div>
       </div>
-      <div style="font-size:14px; color:#4b5563; margin-top:4px;">
+      <div style="font-size:13px; color:#4b5563; margin-top:4px;">
         அசல்: ₹${item.amt} | வட்டி: ${item.rate}% | தேதி: ${item.date}<br>
         காலம்: ${calc.months} மாதம், ${calc.days} நாள் | வட்டி: ₹${calc.interest}
       </div>
-      <div style="font-weight:bold; color:#16a34a; margin-top:4px; font-size:15px;">
-        மொத்தம்: ₹${calc.total}
-      </div>
+      <div style="font-weight:bold; color:#16a34a; margin-top:4px;">மொத்தம்: ₹${calc.total}</div>
     </div>`;
   });
   if (document.getElementById('vattiList')) document.getElementById('vattiList').innerHTML = htmlVatti;
 
   let htmlNotes = '';
   db.notes.forEach((item, i) => {
-    htmlNotes += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:15px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
+    htmlNotes += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e5e7eb;">
       <span>${item.text} <br><small style="color:gray;">(${item.datetime})</small></span>
       <div>
-        <button onclick="editItem('notes',${i})" style="border:none; background:none; cursor:pointer;">✏️</button>
-        <button onclick="deleteItem('notes',${i})" style="border:none; background:none; cursor:pointer;">❌</button>
+        <button onclick="editItem('notes',${i})" style="border:none; background:none;">✏️</button>
+        <button onclick="deleteItem('notes',${i})" style="border:none; background:none;">❌</button>
       </div>
     </div>`;
   });
