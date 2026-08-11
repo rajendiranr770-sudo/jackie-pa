@@ -1,4 +1,4 @@
-// தரவுத்தளம் (LocalStorage) Initialization
+// LocalStorage Initialization
 let db = JSON.parse(localStorage.getItem('jokky_db')) || {
   salary: [],
   home: [],
@@ -9,47 +9,45 @@ let db = JSON.parse(localStorage.getItem('jokky_db')) || {
 
 let pendingExpense = null;
 
-// தரவைச் சேமிக்க
 function saveData() {
   localStorage.setItem('jokky_db', JSON.stringify(db));
   renderAll();
 }
 
-// திரைகளை மாற்றுவதற்கான Function (Fix)
 function showSec(secId, btnElement) {
   const sections = document.querySelectorAll('.section');
   sections.forEach(sec => sec.classList.remove('active'));
 
   const targetSec = document.getElementById(secId);
-  if (targetSec) {
-    targetSec.classList.add('active');
-  }
+  if (targetSec) targetSec.classList.add('active');
 
   const buttons = document.querySelectorAll('.nav-btn');
   buttons.forEach(btn => btn.classList.remove('active'));
 
-  if (btnElement) {
-    btnElement.classList.add('active');
-  }
+  if (btnElement) btnElement.classList.add('active');
 }
 
-// தேதியும் நேரமும் பெற
 function getDateTime() {
   const now = new Date();
   return now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// தமிழ் எண்களை ஆங்கில எண்களாக மாற்ற
+// தமிழ் எழுத்து எண்களை ஆங்கில எண்களாக மாற்றும் வசதி
 function parseTamilNumbers(text) {
-  const tamilNums = { 'ஒன்று': 1, 'இரண்டு': 2, 'மூன்று': 3, 'நான்கு': 4, 'ஐந்து': 5, 'ஆறு': 6, 'ஏழு': 7, 'எட்டு': 8, 'ஒன்பது': 9, 'பத்து': 10, 'ஆயிரம்': 1000, 'ஐந்தாயிரம்': 5000, 'பத்தாயிரம்': 10000 };
   let parsed = text;
-  for (let key in tamilNums) {
-    parsed = parsed.replace(new RegExp(key, 'g'), tamilNums[key]);
+  const numMap = {
+    'ஐயாயிரம்': '5000', 'அஞ்சாயிரம்': '5000', 'பத்தாயிரம்': '10000',
+    'ஆயிரம்': '1000', 'ஒரு ஆயிரம்': '1000', 'இருநூறு': '200', 'முந்நூறு': '300',
+    'நானூறு': '400', 'ஐந்நூறு': '500', 'ஆறுநூறு': '600', 'ஏழுநூறு': '700',
+    'எண்ணூறு': '800', 'தொள்ளாயிரம்': '900', 'நூறு': '100', 'ஐம்பது': '50'
+  };
+
+  for (let key in numMap) {
+    parsed = parsed.replace(new RegExp(key, 'g'), numMap[key]);
   }
   return parsed;
 }
 
-// சாட்டில் மெசேஜ் சேர்க்க
 function addChat(msg, isUser = false) {
   const chatBox = document.getElementById('chatBox');
   const div = document.createElement('div');
@@ -59,7 +57,6 @@ function addChat(msg, isUser = false) {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// அனுப்பு பட்டன்
 function sendMsg() {
   const input = document.getElementById('userInput');
   const text = input.value.trim();
@@ -70,15 +67,13 @@ function sendMsg() {
   processNLP(text);
 }
 
-// சாட் நீக்க
 function clearChat() {
   document.getElementById('chatBox').innerHTML = '<div class="msg bot">வணக்கம் பாலாஜி சார்! என்ன கணக்கு பதிவு செய்ய வேண்டும்?</div>';
 }
 
-// குரல் பதிவு (Voice Search)
 function startVoice() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    alert("உங்கள் உலாவியில் குரல் பதிவு வசதி இல்லை.");
+    alert("குரல் பதிவு வசதி உங்கள் உலாவியில் இல்லை.");
     return;
   }
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -96,18 +91,18 @@ function startVoice() {
   };
 
   recognition.onerror = function() {
-    status.innerText = "🎤 தயார் (பிழை ஏற்பட்டது)";
+    status.innerText = "🎤 தயார் (பிழை)";
   };
 
   recognition.start();
 }
 
-// AI NLP பகுப்பாய்வு (NLP Logic Fixes)
+// அனைத்து பிரச்சனைகளையும் சரிசெய்த AI NLP Logic
 function processNLP(rawText) {
   const parsedText = parseTamilNumbers(rawText);
   const datetime = getDateTime();
 
-  // நிலுவையில் உள்ள செலவுத் தேர்வு (Pending Selection)
+  // 1. நிலுவை தேர்வு (Pending Selection)
   if (pendingExpense) {
     if (/(சம்பளம்|சம்பளத்தில்|1)/.test(parsedText)) {
       db.salary.push({ desc: pendingExpense.desc, amt: pendingExpense.amt, type: 'out', datetime });
@@ -124,44 +119,38 @@ function processNLP(rawText) {
     }
   }
 
-  // 1. கேள்விகள் மற்றும் பட்டியல்கள் (Questions & List Requests)
-  if (/(காட்டு|பட்டியல்|யாரெல்லாம்|எவ்வளவு|யாருக்கெல்லாம்)/.test(parsedText) && parsedText.includes('வட்டி')) {
-    if (db.vatti.length === 0) {
-      addChat(`பாலாஜி சார், வட்டி கணக்கில் பதிவுகள் எதுவும் இல்லை.`, false);
-    } else {
-      let listStr = db.vatti.map(v => `• ${v.name}: ₹${v.amt} (${v.rate}%)`).join('\n');
-      addChat(`பாலாஜி சார்! வட்டிக்குக் கொடுத்தவர்கள் பட்டியல்:\n${listStr}`, false);
-    }
-    return;
-  }
-
-  // 2. வட்டி கணக்குகள் (Vatti Entry Fix)
+  // 2. வட்டி கணக்கு முன்னுரிமை (Vatti Detection Fix)
   if (parsedText.includes('வட்டி') || parsedText.includes('பைசா')) {
-    let amtMatch = parsedText.match(/\d+/g);
+    let numbers = parsedText.match(/\d+/g);
     let amt = null;
-    if (amtMatch) {
-      // பெரிய தொகையை அசலாக எடுக்க
-      amt = Math.max(...amtMatch.map(Number));
+    let rate = 3; // Default 3%
+
+    if (numbers && numbers.length > 0) {
+      let nums = numbers.map(Number);
+      amt = Math.max(...nums); // பெரிய தொகை அசல்
+      
+      let smallNums = nums.filter(n => n < 20);
+      if (smallNums.length > 0) rate = smallNums[0]; // சிறிய எண் வட்டி %
     }
 
-    // பெயரைக் கண்டறிதல்
+    // பெயர் கண்டறிதல்
     let name = "நபர்";
-    let words = rawText.split(' ');
-    for (let w of words) {
-      if (!/(மூணு|ஒரு|இரண்டு|வட்டி|பைசா|பணம்|கொடுத்து|இருக்கேன்|சேகருக்கு|க்கு)/.test(w) && w.length > 2) {
-        name = w;
-        break;
-      } else if (w.includes('க்கு')) {
-        name = w.replace('க்கு', '');
-        break;
+    let match = rawText.match(/([a-zA-Aஅ-ஹ்]+)(க்கு|விடம்|இடம்)/);
+    if (match && !/(வட்டி|பைசா|பணம்)/.test(match[1])) {
+      name = match[1];
+    } else {
+      let words = rawText.split(' ');
+      for (let w of words) {
+        if (!/(மூணு|ஒரு|இரண்டு|வட்டி|பைசா|பணம்|கொடுத்து|இருக்கேன்|க்கு)/.test(w) && w.length > 2) {
+          name = w;
+          break;
+        }
       }
     }
 
-    let rateMatch = parsedText.match(/(\d+)\s*(பைசா|வட்டி|%)/);
-    let rate = rateMatch ? parseInt(rateMatch[1]) : 3;
     let todayStr = new Date().toLocaleDateString('en-GB');
 
-    if (amt && amt >= 100) {
+    if (amt) {
       db.vatti.push({ name, amt, rate, date: todayStr, datetime });
       saveData();
       addChat(`சரி பாலாஜி சார்! ${name} வட்டி கணக்கில் சேர்க்கப்பட்டார்.\n• அசல்: ₹${amt}\n• வட்டி: ${rate}%\n• கடன் தேதி: ${todayStr}`, false);
@@ -191,9 +180,10 @@ function processNLP(rawText) {
   }
 
   const amt = parseInt(numMatch[0]);
-  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கிடைத்தது|சேர்ந்தது|வரவு)/.test(parsedText);
+  
+  // 4. வரவா அல்லது செலவா? (Income Detection Fix)
+  const isIncome = /(வந்தது|வந்திருக்கு|கொடுத்தாங்க|கொடுத்தார்கள்|கிடைத்தது|சேர்ந்தது|வரவு)/.test(parsedText);
 
-  // 4. வரவு கணக்குகள் (Income Logic Fix)
   if (isIncome) {
     if (/(வீடு|வீட்டில்|வீட்டு)/.test(parsedText)) {
       db.home.push({ desc: rawText, amt, type: 'in', datetime });
@@ -205,13 +195,13 @@ function processNLP(rawText) {
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் வரவாகச் சேர்க்கப்பட்டது! 💼`, false);
     }
   } 
-  // 5. செலவு கணக்குகள் (Expense Logic)
+  // 5. நேரடி செலவுகள் (Direct Expense Fix)
   else {
-    if (/(சம்பளம்|சம்பளத்தில்)/.test(parsedText)) {
+    if (/(சம்பளம்|சம்பளத்தில்|சம்பள பணத்தில்)/.test(parsedText)) {
       db.salary.push({ desc: rawText, amt, type: 'out', datetime });
       saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} சம்பளக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 💼`, false);
-    } else if (/(வீடு|வீட்டு)/.test(parsedText)) {
+    } else if (/(வீடு|வீட்டு|வீட்டு பணத்தில்)/.test(parsedText)) {
       db.home.push({ desc: rawText, amt, type: 'out', datetime });
       saveData();
       addChat(`சரி பாலாஜி சார், ₹${amt} வீட்டுக் கணக்கில் செலவாகப் பதிவு செய்யப்பட்டது! 🏠`, false);
@@ -222,7 +212,6 @@ function processNLP(rawText) {
   }
 }
 
-// மேனுவல் சேர்ப்பு மற்றும் கணக்கீடுகள் (Manual Functions)
 function addManual(cat, type) {
   const desc = document.getElementById(`m-${cat}-desc`).value.trim();
   const amt = parseFloat(document.getElementById(`m-${cat}-amt`).value);
@@ -275,7 +264,6 @@ function deleteItem(cat, index) {
   saveData();
 }
 
-// வட்டி கணக்கீடு
 function calculateInterest(amt, rate, dateStr) {
   const parts = dateStr.split('/');
   if (parts.length !== 3) return { months: 0, days: 0, interest: 0, total: amt };
@@ -296,9 +284,7 @@ function calculateInterest(amt, rate, dateStr) {
   return { months, days, interest: totalInterest, total: amt + totalInterest };
 }
 
-// UI-இல் அனைத்துப் பட்டியல்களையும் காட்ட
 function renderAll() {
-  // 1. சம்பளம்
   let balSal = 0;
   let htmlSal = '';
   db.salary.forEach((item, i) => {
@@ -312,7 +298,6 @@ function renderAll() {
   document.getElementById('bal-salary').innerText = balSal;
   document.getElementById('hist-salary').innerHTML = htmlSal;
 
-  // 2. வீடு
   let balHome = 0;
   let htmlHome = '';
   db.home.forEach((item, i) => {
@@ -326,7 +311,6 @@ function renderAll() {
   document.getElementById('bal-home').innerText = balHome;
   document.getElementById('hist-home').innerHTML = htmlHome;
 
-  // 3. கொள்ளை
   let totalKollai = 0;
   let htmlKollai = '';
   db.kollai.forEach((item, i) => {
@@ -339,7 +323,6 @@ function renderAll() {
   document.getElementById('total-kollai').innerText = totalKollai;
   document.getElementById('hist-kollai').innerHTML = htmlKollai;
 
-  // 4. வட்டி
   let htmlVatti = '';
   db.vatti.forEach((item, i) => {
     let calc = calculateInterest(item.amt, item.rate, item.date);
@@ -360,7 +343,6 @@ function renderAll() {
   });
   document.getElementById('vattiList').innerHTML = htmlVatti;
 
-  // 5. நோட்பேட்
   let htmlNotes = '';
   db.notes.forEach((item, i) => {
     htmlNotes += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; background:#f8fafc; padding:8px; border-radius:8px;">
@@ -371,5 +353,5 @@ function renderAll() {
   document.getElementById('hist-notes').innerHTML = htmlNotes;
 }
 
-// தொடக்கத்தில் ரன் செய்ய
 renderAll();
+    
