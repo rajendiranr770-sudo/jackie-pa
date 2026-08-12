@@ -12,7 +12,7 @@
     <section class="dashboard-dark">
         <div class="grid-card"><span class="card-title">சம்பளம்</span><span class="card-value" id="salary-val">₹0</span></div>
         <div class="grid-card"><span class="card-title">வீடு</span><span class="card-value" id="home-val">₹0</span></div>
-        <div class="grid-card"><span class="card-title">கொல்லை</span><span class="card-value" id="kollai-val">₹0</span></div>
+        <div class="grid-card"><span class="card-title">கொல்லை செலவு</span><span class="card-value" id="kollai-val">₹0</span></div>
         <div class="grid-card"><span class="card-title">MK செலவு</span><span class="card-value" id="mk-val">₹0</span></div>
         <div class="grid-card"><span class="card-title">SK செலவு</span><span class="card-value" id="sk-val">₹0</span></div>
         <div class="grid-card"><span class="card-title">வட்டி பிசினஸ்</span><span class="card-value" id="vatti-val">₹0</span></div>
@@ -30,18 +30,71 @@
     </div>
 
     <main class="content-area">
-        <!-- Tabs Views -->
-        <section id="ai-tab" class="tab-content active"><div id="ai-list"></div></section>
-        <section id="salary-tab" class="tab-content"><div id="salary-list"></div></section>
-        <section id="home-tab" class="tab-content"><div id="home-list"></div></section>
-        <section id="kollai-tab" class="tab-content"><div id="kollai-list"></div></section>
-        <section id="mk-tab" class="tab-content"><div id="mk-list"></div></section>
-        <section id="sk-tab" class="tab-content"><div id="sk-list"></div></section>
+        <!-- AI Chat Tab View -->
+        <section id="ai-tab" class="tab-content active">
+            <div id="ai-list"></div>
+        </section>
+
+        <!-- Category Manual Tabs -->
+        <section id="salary-tab" class="tab-content">
+            <div class="manual-form">
+                <h3>💼 சம்பளக் கணக்கு சேர்க்க</h3>
+                <input type="text" id="salary-desc" placeholder="விவரம் (எ.கா: ஆகஸ்ட் மாத சம்பளம்)">
+                <input type="number" id="salary-amt" placeholder="தொகை (₹)">
+                <input type="datetime-local" id="salary-date">
+                <button onclick="addManualEntry('சம்பளம்', 'salary-desc', 'salary-amt', 'salary-date')">சேர்</button>
+            </div>
+            <div id="salary-list"></div>
+        </section>
+
+        <section id="home-tab" class="tab-content">
+            <div class="manual-form">
+                <h3>🏠 வீட்டு கணக்கு சேர்க்க</h3>
+                <input type="text" id="home-desc" placeholder="விவரம்">
+                <input type="number" id="home-amt" placeholder="தொகை (₹)">
+                <input type="datetime-local" id="home-date">
+                <button onclick="addManualEntry('வீடு', 'home-desc', 'home-amt', 'home-date')">சேர்</button>
+            </div>
+            <div id="home-list"></div>
+        </section>
+
+        <section id="kollai-tab" class="tab-content">
+            <div class="manual-form">
+                <h3>🌱 கொல்லை செலவு சேர்க்க</h3>
+                <input type="text" id="kollai-desc" placeholder="விவரம் (எ.கா: உரம் போட்டது)">
+                <input type="number" id="kollai-amt" placeholder="தொகை (₹)">
+                <input type="datetime-local" id="kollai-date">
+                <button onclick="addManualEntry('கொல்லை', 'kollai-desc', 'kollai-amt', 'kollai-date')">சேர்</button>
+            </div>
+            <div id="kollai-list"></div>
+        </section>
+
+        <section id="mk-tab" class="tab-content">
+            <div class="manual-form">
+                <h3>🛍️ MK செலவு சேர்க்க</h3>
+                <input type="text" id="mk-desc" placeholder="விவரம்">
+                <input type="number" id="mk-amt" placeholder="தொகை (₹)">
+                <input type="datetime-local" id="mk-date">
+                <button onclick="addManualEntry('MK செலவு', 'mk-desc', 'mk-amt', 'mk-date')">சேர்</button>
+            </div>
+            <div id="mk-list"></div>
+        </section>
+
+        <section id="sk-tab" class="tab-content">
+            <div class="manual-form">
+                <h3>🛒 SK செலவு சேர்க்க</h3>
+                <input type="text" id="sk-desc" placeholder="விவரம்">
+                <input type="number" id="sk-amt" placeholder="தொகை (₹)">
+                <input type="datetime-local" id="sk-date">
+                <button onclick="addManualEntry('SK செலவு', 'sk-desc', 'sk-amt', 'sk-date')">சேர்</button>
+            </div>
+            <div id="sk-list"></div>
+        </section>
 
         <!-- Advanced Vatti / Loan Tab -->
         <section id="vatti-tab" class="tab-content">
             <div class="vatti-form-card">
-                <h3 id="form-title">வட்டி கடன் சேர்க்க</h3>
+                <h3 id="form-title">💰 வட்டி கடன் சேர்க்க</h3>
                 <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சேகர்)">
                 
                 <div id="loans-container">
@@ -49,10 +102,11 @@
                         <span>கடன் 1:</span>
                         <input type="number" class="vatti-amount" placeholder="அசல் தொகை (₹)">
                         <input type="number" class="vatti-rate" placeholder="வட்டி % / பைசா">
+                        <input type="datetime-local" class="vatti-date">
                     </div>
                 </div>
 
-                <button class="btn-add-loan" onclick="addLoanInputRow()">➕ இரண்டாவது கடன் சேர்க்க (Add Loan)</button>
+                <button class="btn-add-loan" onclick="addLoanInputRow()">➕ இரண்டாவது கடன் சேர்க்க</button>
                 <button class="btn-save-vatti" onclick="saveVattiAccount()">கணக்கில் சேர்</button>
             </div>
 
@@ -76,7 +130,7 @@
             <label>தொகை:</label>
             <input type="number" id="edit-amount">
             <label>தேதி & நேரம்:</label>
-            <input type="text" id="edit-date">
+            <input type="datetime-local" id="edit-date">
             <div class="modal-actions">
                 <button onclick="saveEdit()" class="btn-save">சேமி</button>
                 <button onclick="closeEditModal()" class="btn-cancel">ரத்து</button>
