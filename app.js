@@ -58,7 +58,7 @@ function processNewTransaction(text, manualCategory = null, manualSource = null,
     saveState();
 }
 
-// Delete Transaction Function
+// Delete Transaction
 function deleteTx(id) {
     transactions = transactions.filter(t => t.id !== id);
     saveState();
