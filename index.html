@@ -21,19 +21,22 @@
     <!-- Navigation Tabs -->
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('ai-tab', this)">🤖 AI சாட்</button>
-        <button class="tab-btn" onclick="switchTab('vatti-tab', this)">💰 வட்டி கணக்கு</button>
         <button class="tab-btn" onclick="switchTab('salary-tab', this)">💼 சம்பளம்</button>
         <button class="tab-btn" onclick="switchTab('home-tab', this)">🏠 வீடு</button>
         <button class="tab-btn" onclick="switchTab('kollai-tab', this)">🌱 கொல்லை</button>
         <button class="tab-btn" onclick="switchTab('mk-tab', this)">🛍️ MK</button>
         <button class="tab-btn" onclick="switchTab('sk-tab', this)">🛒 SK</button>
+        <button class="tab-btn" onclick="switchTab('vatti-tab', this)">💰 வட்டி கணக்கு</button>
     </div>
 
     <main class="content-area">
-        <!-- AI / All Logs Tab -->
-        <section id="ai-tab" class="tab-content active">
-            <div id="ai-list"></div>
-        </section>
+        <!-- Tabs Views -->
+        <section id="ai-tab" class="tab-content active"><div id="ai-list"></div></section>
+        <section id="salary-tab" class="tab-content"><div id="salary-list"></div></section>
+        <section id="home-tab" class="tab-content"><div id="home-list"></div></section>
+        <section id="kollai-tab" class="tab-content"><div id="kollai-list"></div></section>
+        <section id="mk-tab" class="tab-content"><div id="mk-list"></div></section>
+        <section id="sk-tab" class="tab-content"><div id="sk-list"></div></section>
 
         <!-- Advanced Vatti / Loan Tab -->
         <section id="vatti-tab" class="tab-content">
@@ -55,29 +58,25 @@
 
             <div id="vatti-person-list"></div>
         </section>
-
-        <!-- Other Tabs -->
-        <section id="salary-tab" class="tab-content"><div id="salary-list"></div></section>
-        <section id="home-tab" class="tab-content"><div id="home-list"></div></section>
-        <section id="kollai-tab" class="tab-content"><div id="kollai-list"></div></section>
-        <section id="mk-tab" class="tab-content"><div id="mk-list"></div></section>
-        <section id="sk-tab" class="tab-content"><div id="sk-list"></div></section>
     </main>
 
     <!-- Bottom AI Input Bar -->
     <div class="bottom-chat-bar">
-        <input type="text" id="userInput" placeholder="எ.கா: சம்பளம் 20000 அல்லது MK செலவு 500...">
+        <input type="text" id="userInput" placeholder="எ.கா: கொள்ளைக்கு மருந்து அடிச்ச கூலி 500...">
         <button class="btn-send" onclick="handleManualInput()">அனுப்பு</button>
         <button class="btn-voice" onclick="startVoiceRecognition()">🎙️ பேசு</button>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- Edit Modal Pop-up -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h3>பதிவை எடிட் செய்ய</h3>
-            <input type="text" id="edit-text" placeholder="விவரம்">
-            <input type="number" id="edit-amount" placeholder="தொகை">
-            <input type="text" id="edit-date" placeholder="தேதி & நேரம்">
+            <label>விவரம்:</label>
+            <input type="text" id="edit-text">
+            <label>தொகை:</label>
+            <input type="number" id="edit-amount">
+            <label>தேதி & நேரம்:</label>
+            <input type="text" id="edit-date">
             <div class="modal-actions">
                 <button onclick="saveEdit()" class="btn-save">சேமி</button>
                 <button onclick="closeEditModal()" class="btn-cancel">ரத்து</button>
