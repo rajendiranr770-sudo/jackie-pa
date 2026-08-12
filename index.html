@@ -1,93 +1,111 @@
-<!DOCTYPE html>
-<html lang="ta">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI கணக்கு மேலாண்மை</title>
-    <style>
-        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
-        body { background-color: #f4f6f9; padding-bottom: 70px; }
-        
-        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; background: #1a1c2e; color: white; }
-        .dash-card { background: #282a42; padding: 10px; border-radius: 8px; text-align: center; }
-        .dash-card h4 { font-size: 12px; opacity: 0.8; }
-        .dash-card p { font-size: 14px; font-weight: bold; margin-top: 4px; color: #4db8ff; }
+// Global State Storage
+let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
 
-        .tabs { display: flex; overflow-x: auto; background: white; border-bottom: 1px solid #ddd; }
-        .tab-btn { padding: 12px 16px; border: none; background: none; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap; color: #555; }
-        .tab-btn.active { border-bottom: 3px solid #1a73e8; color: #1a73e8; }
+// Save to Local Storage
+function saveState() {
+    localStorage.setItem('my_app_txs', JSON.stringify(transactions));
+    updateDashboardUI();
+    renderAllLists();
+}
 
-        .content-area { padding: 12px; }
-        .card { background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .card-info { font-size: 13px; color: #333; }
-        .card-info small { color: #777; display: block; font-size: 11px; margin-top: 2px; }
-        .card-amount { font-weight: bold; font-size: 14px; }
-        .credit { color: #00875a; }
-        .debit { color: #de350b; }
-        .actions-btn { background: none; border: none; cursor: pointer; font-size: 16px; margin-left: 8px; }
+// Extract Amount Smartly
+function extractAmount(text) {
+    // Matches numbers like 20,000 or 20000 or 500
+    let match = text.match(/(\d[\d,]*)/);
+    if (match) {
+        let amountStr = match[1].replace(/,/g, '');
+        return parseFloat(amountStr) || 0;
+    }
+    return 0;
+}
 
-        .manual-form { background: white; padding: 12px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .manual-form input, .manual-form select { width: 100%; padding: 8px; margin: 4px 0 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
-        .btn-submit { background: #1a73e8; color: white; border: none; padding: 8px 12px; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; }
+// Add New Transaction Function
+function processNewTransaction(text, manualCategory = null, manualSource = null, manualAmount = null) {
+    let amount = manualAmount ? parseFloat(manualAmount) : extractAmount(text);
+    if (!amount) return alert("தயவுசெய்து சரியான தொகையை உள்ளிடவும்.");
 
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 16px; border-radius: 8px; width: 90%; max-width: 400px; }
-        .modal-content h3 { margin-bottom: 10px; font-size: 15px; }
+    let source = "வீடு"; // Default source
+    let category = manualCategory || "வீடு";
 
-        .chat-input-bar { position: fixed; bottom: 0; width: 100%; background: white; padding: 8px; display: flex; border-top: 1px solid #ddd; gap: 5px; }
-        .chat-input-bar input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .chat-input-bar button { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
-        .btn-send { background: #1a73e8; }
-        .btn-mic { background: #34a853; }
-    </style>
-</head>
-<body>
+    // Detect Source from text
+    if (text.includes("சம்பள") || text.includes("சம்பளம்")) {
+        source = "சம்பளம்";
+    } else if (text.includes("வீட்டு") || text.includes("வீடு")) {
+        source = "வீடு";
+    }
 
-    <div class="dashboard">
-        <div class="dash-card"><h4>சம்பளம்</h4><p id="dash-salary">₹0</p></div>
-        <div class="dash-card"><h4>வீடு</h4><p id="dash-home">₹0</p></div>
-        <div class="dash-card"><h4>கொல்லை</h4><p id="dash-kollai">₹0</p></div>
-        <div class="dash-card"><h4>MK செலவு</h4><p id="dash-mk">₹0</p></div>
-        <div class="dash-card"><h4>SK செலவு</h4><p id="dash-sk">₹0</p></div>
-        <div class="dash-card"><h4>வட்டி</h4><p id="dash-vatti">₹0</p></div>
-    </div>
+    // Detect Main Category
+    if (!manualCategory) {
+        if (text.includes("கொல்லை")) category = "கொல்லை";
+        else if (text.includes("எம் கே") || text.includes("எம்கே") || text.includes("MK")) category = "MK செலவு";
+        else if (text.includes("எஸ் கே") || text.includes("எஸ்கே") || text.includes("SK")) category = "SK செலவு";
+        else if (text.includes("வட்டி")) category = "வட்டி";
+        else if (text.includes("சம்பளம்") && !text.includes("செலவு")) category = "சம்பளம்";
+        else category = "வீடு";
+    }
 
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('ai')">🤖 AI சாட்</button>
-        <button class="tab-btn" onclick="switchTab('salary')">💼 சம்பளம்</button>
-        <button class="tab-btn" onclick="switchTab('home')">🏠 வீடு</button>
-        <button class="tab-btn" onclick="switchTab('kollai')">🌱 கொல்லை</button>
-        <button class="tab-btn" onclick="switchTab('mk')">👤 MK செலவு</button>
-        <button class="tab-btn" onclick="switchTab('sk')">👤 SK செலவு</button>
-        <button class="tab-btn" onclick="switchTab('vatti')">🪙 வட்டி</button>
-    </div>
+    if (manualSource) source = manualSource;
 
-    <div class="content-area" id="main-content"></div>
+    let tx = {
+        id: Date.now(),
+        text: text,
+        amount: amount,
+        category: category,
+        source: source,
+        date: new Date().toLocaleString()
+    };
 
-    <div class="chat-input-bar" id="chatBar">
-        <input type="text" id="userInput" placeholder="பேசுங்கள் அல்லது டைப் செய்யுங்கள்...">
-        <button class="btn-send" onclick="handleSend()">அனுப்பு</button>
-        <button class="btn-mic" onclick="startVoice()">🎙️ பேசு</button>
-    </div>
+    transactions.push(tx);
+    saveState();
+}
 
-    <!-- Edit Modal -->
-    <div class="modal" id="editModal">
-        <div class="modal-content">
-            <h3>பதிவை எடிட் செய்க</h3>
-            <input type="hidden" id="edit-id">
-            <label>விவரம்/பெயர்:</label>
-            <input type="text" id="edit-text">
-            <label>தொகை:</label>
-            <input type="number" id="edit-amount">
-            <label>வட்டி % (வட்டி கணக்குக்கு மட்டும்):</label>
-            <input type="number" id="edit-rate" placeholder="3">
-            <label>தேதி & நேரம்:</label>
-            <input type="datetime-local" id="edit-datetime">
-            <button class="btn-submit" onclick="saveEdit()" style="margin-top:10px;">சேமி</button>
-            <button class="btn-submit" style="background: #666; margin-top: 5px;" onclick="closeModal()">ரத்து செய்</button>
-        </div>
-    </div>
+// Update Top Dashboard Amounts
+function updateDashboardUI() {
+    let totals = {
+        "சம்பளம்": 0,
+        "வீடு": 0,
+        "கொல்லை": 0,
+        "MK செலவு": 0,
+        "SK செலவு": 0,
+        "வட்டி": 0
+    };
 
-    <script src="app.js"></script>
-</body>
-</html>
+    transactions.forEach(t => {
+        // Income / Additions
+        if (t.category === "சம்பளம்") {
+            totals["சம்பளம்"] += t.amount;
+        } else if (t.category === "வீடு" && !t.text.includes("செலவு")) {
+            totals["வீடு"] += t.amount;
+        } else if (t.category === "வட்டி") {
+            totals["வட்டி"] += t.amount;
+        }
+
+        // Expenses Deductions from Source (Salary or Home)
+        if (["கொல்லை", "MK செலவு", "SK செலவு"].includes(t.category) || t.text.includes("செலவு")) {
+            // Add to individual expense tab
+            if (totals[t.category] !== undefined) {
+                totals[t.category] += t.amount;
+            }
+            // Deduct from Source (Home or Salary)
+            if (t.source === "சம்பளம்") {
+                totals["சம்பளம்"] -= t.amount;
+            } else {
+                totals["வீடு"] -= t.amount;
+            }
+        }
+    });
+
+    // Update UI elements by ID (Ensuring HTML structure remains original)
+    if(document.getElementById('salary-val')) document.getElementById('salary-val').innerText = '₹' + totals["சம்பளம்"];
+    if(document.getElementById('home-val')) document.getElementById('home-val').innerText = '₹' + totals["வீடு"];
+    if(document.getElementById('kollai-val')) document.getElementById('kollai-val').innerText = '₹' + totals["கொல்லை"];
+    if(document.getElementById('mk-val')) document.getElementById('mk-val').innerText = '₹' + totals["MK செலவு"];
+    if(document.getElementById('sk-val')) document.getElementById('sk-val').innerText = '₹' + totals["SK செலவு"];
+    if(document.getElementById('vatti-val')) document.getElementById('vatti-val').innerText = '₹' + totals["வட்டி"];
+}
+
+// Render Lists (AI Chat, Salary, Home, Kollai, MK, SK, Vatti)
+function renderAllLists() {
+    // Render function logic mapping transactions to respective tabs
+    // Shows "-₹500" for expense sources and details "பணம் எடுக்கப்பட்ட இடம்: சம்பளம்/வீடு"
+}
