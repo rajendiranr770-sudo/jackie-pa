@@ -22,8 +22,19 @@ function updateDashboard() {
 
 function switchTab(tab) {
     currentTab = tab;
+    
+    // Tab active highlight change
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+
+    // Hide chat bar in other tabs, show only in AI tab
+    const chatBar = document.getElementById('chatBar');
+    if (chatBar) {
+        chatBar.style.display = (currentTab === 'ai') ? 'flex' : 'none';
+    }
+
     renderContent();
 }
 
@@ -31,7 +42,7 @@ function renderContent() {
     const container = document.getElementById('main-content');
     container.innerHTML = '';
 
-    // Render Manual Entry Form for Tab
+    // Render Manual Entry Form for non-AI Tabs
     if (currentTab !== 'ai') {
         container.innerHTML += `
             <div class="manual-form">
@@ -45,7 +56,7 @@ function renderContent() {
         `;
     }
 
-    // Filter Logs
+    // Filter Logs based on active tab
     const filteredLogs = currentTab === 'ai' ? appData.logs : appData.logs.filter(l => l.category === currentTab);
 
     filteredLogs.forEach(log => {
@@ -144,6 +155,20 @@ function closeModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
+// Dummy functions to prevent errors when clicking send/mic
+function handleSend() {
+    const input = document.getElementById('userInput');
+    if (input.value.trim() !== '') {
+        alert('டைப் செய்த தகவல்: ' + input.value);
+        input.value = '';
+    }
+}
+
+function startVoice() {
+    alert('குரல் பதிவு இன்னும் இணைக்கப்படவில்லை.');
+}
+
 // Initial Load
 updateDashboard();
 renderContent();
+                          
