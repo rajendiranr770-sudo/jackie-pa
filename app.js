@@ -124,22 +124,73 @@ function renderAllLists() {
         if (el) {
             el.innerHTML = containers[id].map(t => {
                 let isExpense = ["கொல்லை", "MK செலவு", "SK செலவு"].includes(t.category) || t.text.includes("செலவு");
-                let amountClass = isExpense ? "color: red;" : "color: green;";
+                let amountClass = isExpense ? "amount-expense" : "amount-income";
                 let prefix = isExpense ? "-₹" : "+₹";
                 
                 return `
-                    <div class="card" style="margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <strong>${t.text}</strong>
-                            <span style="${amountClass}">${prefix}${t.amount}</span>
+                    <div class="tx-card">
+                        <div class="tx-header">
+                            <span>${t.text}</span>
+                            <span class="${amountClass}">${prefix}${t.amount}</span>
                         </div>
-                        <small style="color: #666;">${t.date}</small><br>
-                        <small style="color: #666;">பணம் எடுக்கப்பட்ட இடம்: ${t.source}</small>
-                        <button onclick="deleteTx(${t.id})" style="float: right; border: none; background: transparent; cursor: pointer;">🗑️</button>
+                        <div class="tx-details">
+                            <div>
+                                <div>${t.date}</div>
+                                <div>பணம் எடுக்கப்பட்ட இடம்: ${t.source}</div>
+                            </div>
+                            <button class="btn-delete" onclick="deleteTx(${t.id})">🗑️</button>
+                        </div>
                     </div>
                 `;
             }).join('');
         }
+    }
+}
+
+// Switch Navigation Tabs
+function switchTab(tabId, element) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    element.classList.add('active');
+}
+
+// Handle Send Button Input
+function handleManualInput() {
+    let input = document.getElementById('userInput');
+    if (input && input.value.trim() !== '') {
+        processNewTransaction(input.value.trim());
+        input.value = '';
+    }
+}
+
+// Voice Recognition Support
+function startVoiceRecognition() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ta-IN';
+
+        recognition.onstart = function() {
+            document.getElementById('userInput').placeholder = "பேசுங்கள்...";
+        };
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            document.getElementById('userInput').value = transcript;
+            processNewTransaction(transcript);
+            document.getElementById('userInput').placeholder = "எ.கா: சம்பளம் 20000...";
+        };
+
+        recognition.onerror = function() {
+            alert("குரல் பதிவில் பிரச்சனை உள்ளது. மீண்டும் முயற்சிக்கவும்.");
+            document.getElementById('userInput').placeholder = "எ.கா: சம்பளம் 20000...";
+        };
+
+        recognition.start();
+    } else {
+        alert("உங்கள் பிரவுசரில் Voice Recognition வசதி இல்லை.");
     }
 }
 
