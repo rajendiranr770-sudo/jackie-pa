@@ -9,100 +9,83 @@
 </head>
 <body>
 
-    <!-- Header Section -->
-    <header class="app-header">
-        <h1>செலவு கணக்கு (Expense Tracker)</h1>
-    </header>
-
-    <!-- Top Dashboard Overview Cards -->
-    <section class="dashboard">
-        <div class="card income-card">
-            <h3>சம்பளம்</h3>
-            <p id="salary-val">₹0</p>
+    <!-- Top Dark Theme Overview Grid -->
+    <section class="dashboard-dark">
+        <div class="grid-card">
+            <span class="card-title">சம்பளம்</span>
+            <span class="card-value" id="salary-val">₹0</span>
         </div>
-        <div class="card home-card">
-            <h3>வீடு</h3>
-            <p id="home-val">₹0</p>
+        <div class="grid-card">
+            <span class="card-title">வீடு</span>
+            <span class="card-value" id="home-val">₹0</span>
         </div>
-        <div class="card expense-card">
-            <h3>கொல்லை</h3>
-            <p id="kollai-val">₹0</p>
+        <div class="grid-card">
+            <span class="card-title">கொல்லை</span>
+            <span class="card-value" id="kollai-val">₹0</span>
         </div>
-        <div class="card expense-card">
-            <h3>MK செலவு</h3>
-            <p id="mk-val">₹0</p>
+        <div class="grid-card">
+            <span class="card-title">MK செலவு</span>
+            <span class="card-value" id="mk-val">₹0</span>
         </div>
-        <div class="card expense-card">
-            <h3>SK செலவு</h3>
-            <p id="sk-val">₹0</p>
+        <div class="grid-card">
+            <span class="card-title">SK செலவு</span>
+            <span class="card-value" id="sk-val">₹0</span>
         </div>
-        <div class="card vatti-card">
-            <h3>வட்டி</h3>
-            <p id="vatti-val">₹0</p>
+        <div class="grid-card">
+            <span class="card-title">வட்டி</span>
+            <span class="card-value" id="vatti-val">₹0</span>
         </div>
     </section>
 
-    <!-- Quick Voice / Text Input Form -->
-    <section class="input-section">
-        <div class="input-box">
-            <input type="text" id="userInput" placeholder="எ.கா: சம்பளம் 20000 அல்லது MK செலவு 500...">
-            <button onclick="handleManualInput()">சேர்</button>
-        </div>
-    </section>
+    <!-- Navigation Scroll Tabs -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('ai-tab', this)">🤖 AI சாட்</button>
+        <button class="tab-btn" onclick="switchTab('salary-tab', this)">💼 சம்பளம்</button>
+        <button class="tab-btn" onclick="switchTab('home-tab', this)">🏠 வீடு</button>
+        <button class="tab-btn" onclick="switchTab('kollai-tab', this)">🌱 கொல்லை</button>
+        <button class="tab-btn" onclick="switchTab('mk-tab', this)">🛍️ MK செலவு</button>
+        <button class="tab-btn" onclick="switchTab('sk-tab', this)">🛒 SK செலவு</button>
+        <button class="tab-btn" onclick="switchTab('vatti-tab', this)">💰 வட்டி</button>
+    </div>
 
-    <!-- Transactions List Section -->
-    <main class="lists-container">
-        <!-- AI Chat / All Transactions -->
-        <section class="tab-content">
-            <h2>அனைத்து பதிவுகள் (All Logs)</h2>
+    <!-- Main Content Tab Views -->
+    <main class="content-area">
+        <section id="ai-tab" class="tab-content active">
             <div id="ai-list" class="transaction-list"></div>
         </section>
 
-        <!-- Category Wise Lists -->
-        <section class="tab-content">
-            <h2>சம்பளம் பற்றிய விவரங்கள்</h2>
+        <section id="salary-tab" class="tab-content">
             <div id="salary-list" class="transaction-list"></div>
         </section>
 
-        <section class="tab-content">
-            <h2>வீட்டுச் செலவு / வரவு</h2>
+        <section id="home-tab" class="tab-content">
             <div id="home-list" class="transaction-list"></div>
         </section>
 
-        <section class="tab-content">
-            <h2>கொல்லைச் செலவுகள்</h2>
+        <section id="kollai-tab" class="tab-content">
             <div id="kollai-list" class="transaction-list"></div>
         </section>
 
-        <section class="tab-content">
-            <h2>MK செலவுகள்</h2>
+        <section id="mk-tab" class="tab-content">
             <div id="mk-list" class="transaction-list"></div>
         </section>
 
-        <section class="tab-content">
-            <h2>SK செலவுகள்</h2>
+        <section id="sk-tab" class="tab-content">
             <div id="sk-list" class="transaction-list"></div>
         </section>
 
-        <section class="tab-content">
-            <h2>வட்டி விவரங்கள்</h2>
+        <section id="vatti-tab" class="tab-content">
             <div id="vatti-list" class="transaction-list"></div>
         </section>
     </main>
 
-    <!-- Input Trigger Handler -->
-    <script>
-        function handleManualInput() {
-            let input = document.getElementById('userInput');
-            if (input && input.value.trim() !== '') {
-                processNewTransaction(input.value.trim());
-                input.value = '';
-            }
-        }
-    </script>
+    <!-- Bottom AI Chat Input Bar -->
+    <div class="bottom-chat-bar">
+        <input type="text" id="userInput" placeholder="எ.கா: சம்பளம் 20000 அல்லது MK செலவு 500...">
+        <button class="btn-send" onclick="handleManualInput()">அனுப்பு</button>
+        <button class="btn-voice" onclick="startVoiceRecognition()">🎙️ பேசு</button>
+    </div>
 
-    <!-- App Logic Script File Integration -->
     <script src="app.js"></script>
-
 </body>
 </html>
