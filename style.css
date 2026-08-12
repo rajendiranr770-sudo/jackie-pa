@@ -1,173 +1,50 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;700&display=swap');
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: 'Noto Sans Tamil', sans-serif;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans Tamil', sans-serif; }
+body { background-color: #f4f6f8; padding-bottom: 80px; }
 
-body {
-  background-color: #f4f6f8;
-  color: #1a202c;
-  padding-bottom: 80px;
-}
+/* Dashboard */
+.dashboard-dark { background-color: #1e2538; padding: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grid-card { background-color: #2a344d; border-radius: 8px; padding: 10px 6px; text-align: center; color: white; }
+.card-title { font-size: 11px; color: #cbd5e1; display: block; }
+.card-value { font-size: 14px; font-weight: 700; color: #38bdf8; }
 
-/* Dark Theme Dashboard Header */
-.dashboard-dark {
-  background-color: #1e2538;
-  padding: 12px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
+/* Nav Tabs */
+.nav-tabs { display: flex; background: white; border-bottom: 1px solid #e2e8f0; overflow-x: auto; white-space: nowrap; }
+.tab-btn { padding: 12px; border: none; background: transparent; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; }
+.tab-btn.active { color: #2563eb; border-bottom: 3px solid #2563eb; }
 
-.grid-card {
-  background-color: #2a344d;
-  border-radius: 8px;
-  padding: 12px 8px;
-  text-align: center;
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
+.content-area { padding: 12px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
-.card-title {
-  font-size: 13px;
-  color: #cbd5e1;
-  margin-bottom: 4px;
-}
+/* Cards & Actions */
+.tx-card { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
+.tx-header { display: flex; justify-content: space-between; font-weight: 600; }
+.tx-details { font-size: 12px; color: #64748b; margin-top: 6px; display: flex; justify-content: space-between; }
 
-.card-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #38bdf8;
-}
+/* Vatti Loan Styling */
+.vatti-form-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px; }
+.vatti-form-card input { width: 100%; padding: 8px; margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 6px; }
+.loan-input-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.btn-add-loan { background: #f1f5f9; color: #2563eb; border: 1px dashed #2563eb; width: 100%; padding: 8px; margin-top: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-save-vatti { background: #16a34a; color: white; border: none; width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; font-weight: 600; cursor: pointer; }
 
-/* Scrollable Horizontal Navigation Tabs */
-.nav-tabs {
-  display: flex;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  overflow-x: auto;
-  white-space: nowrap;
-  scroll-behavior: smooth;
-}
+.person-vatti-card { background: #ffffff; border: 2px solid #38bdf8; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.person-title { font-size: 16px; font-weight: 700; color: #1e2538; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px; }
+.loan-box { background: #f8fafc; padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+.total-loan-box { background: #1e2538; color: #38bdf8; padding: 8px; border-radius: 6px; text-align: center; font-weight: 700; margin-top: 8px; }
 
-.nav-tabs::-webkit-scrollbar {
-  display: none;
-}
+/* Bottom Bar */
+.bottom-chat-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 8px; display: flex; gap: 6px; border-top: 1px solid #e2e8f0; }
+.bottom-chat-bar input { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+.btn-send { background: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 6px; }
+.btn-voice { background: #16a34a; color: white; border: none; padding: 8px 12px; border-radius: 6px; }
 
-.tab-btn {
-  padding: 12px 16px;
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-}
-
-.tab-btn.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
-}
-
-/* Content Area */
-.content-area {
-  padding: 12px;
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-/* Card Style for Items */
-.tx-card {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #e2e8f0;
-}
-
-.tx-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.amount-income {
-  color: #16a34a;
-}
-
-.amount-expense {
-  color: #dc2626;
-}
-
-.tx-details {
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.btn-delete {
-  background: transparent;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-/* Bottom AI Chat Bar */
-.bottom-chat-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #ffffff;
-  padding: 10px;
-  display: flex;
-  gap: 8px;
-  border-top: 1px solid #e2e8f0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-}
-
-.bottom-chat-bar input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-}
-
-.btn-send {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-voice {
-  background: #16a34a;
-  color: white;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
+/* Modal */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+.modal-content { background: white; padding: 16px; border-radius: 8px; width: 90%; max-width: 400px; }
+.modal-content input { width: 100%; padding: 8px; margin: 6px 0; border: 1px solid #ccc; border-radius: 6px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 8px; }
+.btn-save { background: #16a34a; color: white; border: none; padding: 8px; flex: 1; border-radius: 6px; }
+.btn-cancel { background: #dc2626; color: white; border: none; padding: 8px; flex: 1; border-radius: 6px; }
