@@ -35,93 +35,113 @@
             <div id="ai-list"></div>
         </section>
 
-        <!-- Category Manual Tabs -->
+        <!-- Salary Tab -->
         <section id="salary-tab" class="tab-content">
-            <div class="manual-form">
-                <h3>💼 சம்பளக் கணக்கு சேர்க்க</h3>
-                <input type="text" id="salary-desc" placeholder="விவரம் (எ.கா: ஆகஸ்ட் மாத சம்பளம்)">
+            <div class="card-form-box">
+                <h3>💼 மேனுவல் பதிவு (SALARY)</h3>
+                <input type="text" id="salary-desc" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="salary-amt" placeholder="தொகை (₹)">
+                <select id="salary-type">
+                    <option value="income">வரவு (+)</option>
+                    <option value="expense">செலவு (-)</option>
+                </select>
                 <input type="datetime-local" id="salary-date">
-                <button onclick="addManualEntry('சம்பளம்', 'salary-desc', 'salary-amt', 'salary-date')">சேர்</button>
+                <button class="btn-primary" onclick="addManualEntry('சம்பளம்', 'salary-desc', 'salary-amt', 'salary-type', 'salary-date')">சேர்</button>
             </div>
             <div id="salary-list"></div>
         </section>
 
+        <!-- Home Tab -->
         <section id="home-tab" class="tab-content">
-            <div class="manual-form">
-                <h3>🏠 வீட்டு கணக்கு சேர்க்க</h3>
-                <input type="text" id="home-desc" placeholder="விவரம்">
+            <div class="card-form-box">
+                <h3>🏠 மேனுவல் பதிவு (HOME)</h3>
+                <input type="text" id="home-desc" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="home-amt" placeholder="தொகை (₹)">
+                <select id="home-type">
+                    <option value="income">வரவு (+)</option>
+                    <option value="expense">செலவு (-)</option>
+                </select>
                 <input type="datetime-local" id="home-date">
-                <button onclick="addManualEntry('வீடு', 'home-desc', 'home-amt', 'home-date')">சேர்</button>
+                <button class="btn-primary" onclick="addManualEntry('வீடு', 'home-desc', 'home-amt', 'home-type', 'home-date')">சேர்</button>
             </div>
             <div id="home-list"></div>
         </section>
 
+        <!-- Kollai Tab -->
         <section id="kollai-tab" class="tab-content">
-            <div class="manual-form">
-                <h3>🌱 கொல்லை செலவு சேர்க்க</h3>
-                <input type="text" id="kollai-desc" placeholder="விவரம் (எ.கா: உரம் போட்டது)">
+            <div class="card-form-box">
+                <h3>🌱 மேனுவல் பதிவு (KOLLAI)</h3>
+                <input type="text" id="kollai-desc" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="kollai-amt" placeholder="தொகை (₹)">
+                <select id="kollai-source">
+                    <option value="வீடு">வீட்டு பணம்</option>
+                    <option value="சம்பளம்">சம்பள பணம்</option>
+                </select>
                 <input type="datetime-local" id="kollai-date">
-                <button onclick="addManualEntry('கொல்லை', 'kollai-desc', 'kollai-amt', 'kollai-date')">சேர்</button>
+                <button class="btn-primary" onclick="addExpenseManual('கொல்லை', 'kollai-desc', 'kollai-amt', 'kollai-source', 'kollai-date')">சேர்</button>
             </div>
             <div id="kollai-list"></div>
         </section>
 
+        <!-- MK Tab -->
         <section id="mk-tab" class="tab-content">
-            <div class="manual-form">
-                <h3>🛍️ MK செலவு சேர்க்க</h3>
-                <input type="text" id="mk-desc" placeholder="விவரம்">
+            <div class="card-form-box">
+                <h3>🛍️ மேனுவல் பதிவு (MK)</h3>
+                <input type="text" id="mk-desc" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="mk-amt" placeholder="தொகை (₹)">
+                <select id="mk-source">
+                    <option value="வீடு">வீட்டு பணம்</option>
+                    <option value="சம்பளம்">சம்பள பணம்</option>
+                </select>
                 <input type="datetime-local" id="mk-date">
-                <button onclick="addManualEntry('MK செலவு', 'mk-desc', 'mk-amt', 'mk-date')">சேர்</button>
+                <button class="btn-primary" onclick="addExpenseManual('MK செலவு', 'mk-desc', 'mk-amt', 'mk-source', 'mk-date')">சேர்</button>
             </div>
             <div id="mk-list"></div>
         </section>
 
+        <!-- SK Tab -->
         <section id="sk-tab" class="tab-content">
-            <div class="manual-form">
-                <h3>🛒 SK செலவு சேர்க்க</h3>
-                <input type="text" id="sk-desc" placeholder="விவரம்">
+            <div class="card-form-box">
+                <h3>🛒 மேனுவல் பதிவு (SK)</h3>
+                <input type="text" id="sk-desc" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="sk-amt" placeholder="தொகை (₹)">
+                <select id="sk-source">
+                    <option value="வீடு">வீட்டு பணம்</option>
+                    <option value="சம்பளம்">சம்பள பணம்</option>
+                </select>
                 <input type="datetime-local" id="sk-date">
-                <button onclick="addManualEntry('SK செலவு', 'sk-desc', 'sk-amt', 'sk-date')">சேர்</button>
+                <button class="btn-primary" onclick="addExpenseManual('SK செலவு', 'sk-desc', 'sk-amt', 'sk-source', 'sk-date')">சேர்</button>
             </div>
             <div id="sk-list"></div>
         </section>
 
-        <!-- Advanced Vatti / Loan Tab -->
+        <!-- Vatti Tab -->
         <section id="vatti-tab" class="tab-content">
-            <div class="vatti-form-card">
+            <div class="card-form-box">
                 <h3 id="form-title">💰 வட்டி கடன் சேர்க்க</h3>
                 <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சேகர்)">
-                
                 <div id="loans-container">
                     <div class="loan-input-row">
-                        <span>கடன் 1:</span>
                         <input type="number" class="vatti-amount" placeholder="அசல் தொகை (₹)">
                         <input type="number" class="vatti-rate" placeholder="வட்டி % / பைசா">
                         <input type="datetime-local" class="vatti-date">
                     </div>
                 </div>
-
-                <button class="btn-add-loan" onclick="addLoanInputRow()">➕ இரண்டாவது கடன் சேர்க்க</button>
-                <button class="btn-save-vatti" onclick="saveVattiAccount()">கணக்கில் சேர்</button>
+                <button class="btn-secondary" onclick="addLoanInputRow()">➕ கூடுதல் கடன் சேர்க்க</button>
+                <button class="btn-primary" onclick="saveVattiAccount()">சேமி</button>
             </div>
-
             <div id="vatti-person-list"></div>
         </section>
     </main>
 
-    <!-- Bottom AI Input Bar -->
+    <!-- Bottom Chat Input Bar -->
     <div class="bottom-chat-bar">
         <input type="text" id="userInput" placeholder="எ.கா: சம்பள பணம் 20000 வந்தது...">
         <button class="btn-send" onclick="handleManualInput()">அனுப்பு</button>
         <button class="btn-voice" onclick="startVoiceRecognition()">🎙️ பேசு</button>
     </div>
 
-    <!-- Edit Modal Pop-up -->
+    <!-- Edit Modal -->
     <div id="editModal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>பதிவை எடிட் செய்ய</h3>
@@ -129,10 +149,8 @@
             <input type="text" id="edit-text">
             <label>தொகை:</label>
             <input type="number" id="edit-amount">
-            <label>தேதி & நேரம்:</label>
-            <input type="datetime-local" id="edit-date">
             <div class="modal-actions">
-                <button onclick="saveEdit()" class="btn-save">சேமி</button>
+                <button onclick="saveEdit()" class="btn-primary">சேமி</button>
                 <button onclick="closeEditModal()" class="btn-cancel">ரத்து</button>
             </div>
         </div>
