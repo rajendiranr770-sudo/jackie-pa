@@ -1,103 +1,173 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;700&display=swap');
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Noto Sans Tamil', sans-serif;
+}
 
 body {
-  font-family: 'Noto Sans Tamil', sans-serif;
-  margin: 0;
+  background-color: #f4f6f8;
+  color: #1a202c;
+  padding-bottom: 80px;
+}
+
+/* Dark Theme Dashboard Header */
+.dashboard-dark {
+  background-color: #1e2538;
   padding: 12px;
-  padding-bottom: 75px;
-  background-color: #f8fafc;
-  color: #1f2937;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
-.section { display: none; }
-.section.active { display: block; }
-
-.card {
-  background: white;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  margin-bottom: 15px;
-}
-
-.manual-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-input[type="text"], input[type="number"], input[type="date"] {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: 'Noto Sans Tamil', sans-serif;
-}
-
-.chat-box {
-  height: 260px;
-  overflow-y: auto;
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.msg {
-  padding: 8px 12px;
+.grid-card {
+  background-color: #2a344d;
   border-radius: 8px;
-  max-width: 85%;
-  font-size: 14px;
-}
-
-.msg.bot { background: #f3f4f6; color: #111827; align-self: flex-start; }
-.msg.user { background: #2563eb; color: white; align-self: flex-end; }
-
-.btn-grid { display: flex; gap: 6px; }
-
-.btn {
-  flex: 1;
-  padding: 10px 4px;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 13px;
-  color: white;
-  cursor: pointer;
+  padding: 12px 8px;
   text-align: center;
-  font-family: 'Noto Sans Tamil', sans-serif;
-}
-
-.btn-blue { background-color: #2563eb; }
-.btn-green { background-color: #16a34a; }
-.btn-red { background-color: #dc2626; }
-
-.nav-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: 60px;
-  background: #ffffff;
+  color: #ffffff;
   display: flex;
-  justify-content: space-around;
-  align-items: center;
-  border-top: 1px solid #e5e7eb;
-  z-index: 1000;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.nav-btn {
-  border: none; background: none;
-  font-size: 11px; color: #6b7280;
+.card-title {
+  font-size: 13px;
+  color: #cbd5e1;
+  margin-bottom: 4px;
+}
+
+.card-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+/* Scrollable Horizontal Navigation Tabs */
+.nav-tabs {
+  display: flex;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+  white-space: nowrap;
+  scroll-behavior: smooth;
+}
+
+.nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-btn {
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
   cursor: pointer;
-  display: flex; flex-direction: column; align-items: center;
-  font-family: 'Noto Sans Tamil', sans-serif;
+  border-bottom: 3px solid transparent;
 }
 
-.nav-btn.active { color: #2563eb; font-weight: bold; }
+.tab-btn.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+/* Content Area */
+.content-area {
+  padding: 12px;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Card Style for Items */
+.tx-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.tx-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.amount-income {
+  color: #16a34a;
+}
+
+.amount-expense {
+  color: #dc2626;
+}
+
+.tx-details {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-delete {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* Bottom AI Chat Bar */
+.bottom-chat-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+}
+
+.bottom-chat-bar input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+}
+
+.btn-send {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-voice {
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
