@@ -58,12 +58,14 @@
         <button class="tab-btn" onclick="switchTab('salary')">💼 சம்பளம்</button>
         <button class="tab-btn" onclick="switchTab('home')">🏠 வீடு</button>
         <button class="tab-btn" onclick="switchTab('kollai')">🌱 கொல்லை</button>
+        <button class="tab-btn" onclick="switchTab('mk')">👤 MK செலவு</button>
+        <button class="tab-btn" onclick="switchTab('sk')">👤 SK செலவு</button>
         <button class="tab-btn" onclick="switchTab('vatti')">🪙 வட்டி</button>
     </div>
 
     <div class="content-area" id="main-content"></div>
 
-    <div class="chat-input-bar">
+    <div class="chat-input-bar" id="chatBar">
         <input type="text" id="userInput" placeholder="பேசுங்கள் அல்லது டைப் செய்யுங்கள்...">
         <button class="btn-send" onclick="handleSend()">அனுப்பு</button>
         <button class="btn-mic" onclick="startVoice()">🎙️ பேசு</button>
@@ -82,7 +84,7 @@
             <input type="number" id="edit-rate" placeholder="3">
             <label>தேதி & நேரம்:</label>
             <input type="datetime-local" id="edit-datetime">
-            <button class="btn-submit" onclick="saveEdit()">சேமி</button>
+            <button class="btn-submit" onclick="saveEdit()" style="margin-top:10px;">சேமி</button>
             <button class="btn-submit" style="background: #666; margin-top: 5px;" onclick="closeModal()">ரத்து செய்</button>
         </div>
     </div>
