@@ -8,7 +8,7 @@
 </head>
 <body>
 
-    <!-- Top Dark Dashboard -->
+    <!-- Top Dashboard -->
     <section class="dashboard-dark">
         <div class="grid-card"><span class="card-title">சம்பளம்</span><span class="card-value" id="salary-val">₹0</span></div>
         <div class="grid-card"><span class="card-title">வீடு</span><span class="card-value" id="home-val">₹0</span></div>
@@ -30,7 +30,7 @@
     </div>
 
     <main class="content-area">
-        <!-- AI Chat Tab View -->
+        <!-- AI Chat Tab -->
         <section id="ai-tab" class="tab-content active">
             <div id="ai-list"></div>
         </section>
@@ -118,12 +118,12 @@
         <!-- Vatti Tab -->
         <section id="vatti-tab" class="tab-content">
             <div class="card-form-box">
-                <h3 id="form-title">💰 வட்டி கடன் சேர்க்க</h3>
+                <h3>💰 வட்டி கடன் சேர்க்க</h3>
                 <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சேகர்)">
                 <div id="loans-container">
                     <div class="loan-input-row">
                         <input type="number" class="vatti-amount" placeholder="அசல் தொகை (₹)">
-                        <input type="number" class="vatti-rate" placeholder="வட்டி % / பைசா">
+                        <input type="number" class="vatti-rate" placeholder="வட்டி % (மாதம்)">
                         <input type="datetime-local" class="vatti-date">
                     </div>
                 </div>
@@ -136,7 +136,7 @@
 
     <!-- Bottom Chat Input Bar -->
     <div class="bottom-chat-bar">
-        <input type="text" id="userInput" placeholder="எ.கா: சம்பள பணம் 20000 வந்தது...">
+        <input type="text" id="userInput" placeholder="எ.கா: எம்கே செலவு 500...">
         <button class="btn-send" onclick="handleManualInput()">அனுப்பு</button>
         <button class="btn-voice" onclick="startVoiceRecognition()">🎙️ பேசு</button>
     </div>
