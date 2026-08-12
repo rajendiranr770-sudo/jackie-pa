@@ -3,400 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI நிதி மேலாண்மை</title>
+    <title>AI கணக்கு மேலாண்மை</title>
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
-            --danger: #ef4444;
-            --success: #10b981;
-        }
+        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f9; padding-bottom: 70px; }
+        
+        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; background: #1a1c2e; color: white; }
+        .dash-card { background: #282a42; padding: 10px; border-radius: 8px; text-align: center; }
+        .dash-card h4 { font-size: 12px; opacity: 0.8; }
+        .dash-card p { font-size: 14px; font-weight: bold; margin-top: 4px; color: #4db8ff; }
 
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
+        .tabs { display: flex; overflow-x: auto; background: white; border-bottom: 1px solid #ddd; }
+        .tab-btn { padding: 12px 16px; border: none; background: none; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap; color: #555; }
+        .tab-btn.active { border-bottom: 3px solid #1a73e8; color: #1a73e8; }
 
-        /* Top Balance Dashboard Widget */
-        .dashboard {
-            background: #1e1b4b;
-            color: white;
-            padding: 12px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            font-size: 12px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+        .content-area { padding: 12px; }
+        .card { background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .card-info { font-size: 13px; color: #333; }
+        .card-info small { color: #777; display: block; font-size: 11px; margin-top: 2px; }
+        .card-amount { font-weight: bold; font-size: 14px; }
+        .credit { color: #00875a; }
+        .debit { color: #de350b; }
+        .actions-btn { background: none; border: none; cursor: pointer; font-size: 16px; margin-left: 8px; }
 
-        .dash-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 6px;
-            border-radius: 6px;
-        }
+        .manual-form { background: white; padding: 12px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .manual-form input, .manual-form select { width: 100%; padding: 8px; margin: 4px 0 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        .btn-submit { background: #1a73e8; color: white; border: none; padding: 8px 12px; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; }
 
-        .dash-item strong {
-            display: block;
-            font-size: 14px;
-            margin-top: 2px;
-            color: #38bdf8;
-        }
+        /* Modal Popup for Editing */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 16px; border-radius: 8px; width: 90%; max-width: 400px; }
+        .modal-content h3 { margin-bottom: 10px; font-size: 15px; }
 
-        /* Navigation Bar */
-        .nav-tabs {
-            display: flex;
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-            overflow-x: auto;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            background: none;
-            font-weight: bold;
-            color: #64748b;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .tab-btn.active {
-            color: var(--primary);
-            border-bottom: 2px solid var(--primary);
-        }
-
-        /* Main Container */
-        .container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            display: none;
-        }
-
-        .container.active {
-            display: block;
-        }
-
-        /* Chat UI */
-        .chat-box {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .msg {
-            max-width: 80%;
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-
-        .msg.user {
-            background: var(--primary);
-            color: white;
-            align-self: flex-end;
-        }
-
-        .msg.ai {
-            background: #e0e7ff;
-            color: #1e1b4b;
-            align-self: flex-start;
-        }
-
-        /* Chat Controls */
-        .input-area {
-            background: white;
-            padding: 10px;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .input-controls {
-            display: flex;
-            gap: 8px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            outline: none;
-        }
-
-        .btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-        }
-
-        .btn-send { background: var(--primary); }
-        .btn-mic { background: var(--success); }
-        .btn-clear { background: var(--danger); }
-
-        /* Expense List UI */
-        .list-card {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .amount-tag {
-            font-weight: bold;
-        }
-
-        .amount-tag.negative { color: var(--danger); }
-        .amount-tag.positive { color: var(--success); }
+        .chat-input-bar { position: fixed; bottom: 0; width: 100%; background: white; padding: 8px; display: flex; border-top: 1px solid #ddd; gap: 5px; }
+        .chat-input-bar input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .chat-input-bar button { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-send { background: #1a73e8; }
+        .btn-mic { background: #34a853; }
     </style>
 </head>
 <body>
 
-    <!-- Main Dashboard -->
     <div class="dashboard">
-        <div class="dash-item">சம்பளம் <strong id="bal-salary">₹0</strong></div>
-        <div class="dash-item">வீடு <strong id="bal-home">₹0</strong></div>
-        <div class="dash-item">கொல்லை <strong id="bal-kolllai">₹0</strong></div>
-        <div class="dash-item">MK செலவு <strong id="bal-mk">₹0</strong></div>
-        <div class="dash-item">SK செலவு <strong id="bal-sk">₹0</strong></div>
-        <div class="dash-item">வட்டி <strong id="bal-vatti">₹0</strong></div>
+        <div class="dash-card"><h4>சம்பளம்</h4><p id="dash-salary">₹0</p></div>
+        <div class="dash-card"><h4>வீடு</h4><p id="dash-home">₹0</p></div>
+        <div class="dash-card"><h4>கொல்லை</h4><p id="dash-kollai">₹0</p></div>
+        <div class="dash-card"><h4>MK செலவு</h4><p id="dash-mk">₹0</p></div>
+        <div class="dash-card"><h4>SK செலவு</h4><p id="dash-sk">₹0</p></div>
+        <div class="dash-card"><h4>வட்டி</h4><p id="dash-vatti">₹0</p></div>
     </div>
 
-    <!-- Navigation Tabs -->
-    <div class="nav-tabs">
+    <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('ai')">🤖 AI சாட்</button>
         <button class="tab-btn" onclick="switchTab('salary')">💼 சம்பளம்</button>
         <button class="tab-btn" onclick="switchTab('home')">🏠 வீடு</button>
-        <button class="tab-btn" onclick="switchTab('mk')">👩 MK</button>
-        <button class="tab-btn" onclick="switchTab('sk')">👩 SK</button>
         <button class="tab-btn" onclick="switchTab('kollai')">🌱 கொல்லை</button>
         <button class="tab-btn" onclick="switchTab('vatti')">🪙 வட்டி</button>
     </div>
 
-    <!-- AI Chat Section -->
-    <div id="tab-ai" class="container active">
-        <div class="chat-box" id="chat-messages">
-            <div class="msg ai">வணக்கம் பாலாஜி சார்! கணக்குப் பதிவுகளைத் தொடங்கப் பேசலாம் அல்லது டைப் செய்யலாம்.</div>
+    <div class="content-area" id="main-content"></div>
+
+    <div class="chat-input-bar">
+        <input type="text" id="userInput" placeholder="பேசுங்கள் அல்லது டைப் செய்யுங்கள்...">
+        <button class="btn-send" onclick="handleSend()">அனுப்பு</button>
+        <button class="btn-mic" onclick="startVoice()">🎙️ பேசு</button>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <h3>பதிவை எடிட் செய்க</h3>
+            <input type="hidden" id="edit-id">
+            <label>விவரம்/பெயர்:</label>
+            <input type="text" id="edit-text">
+            <label>தொகை:</label>
+            <input type="number" id="edit-amount">
+            <label>வட்டி % (வட்டி கணக்குக்கு மட்டும்):</label>
+            <input type="number" id="edit-rate" placeholder="3">
+            <label>தேதி & நேரம்:</label>
+            <input type="datetime-local" id="edit-datetime">
+            <button class="btn-submit" onclick="saveEdit()">சேமி</button>
+            <button class="btn-submit" style="background: #666; margin-top: 5px;" onclick="closeModal()">ரத்து செய்</button>
         </div>
     </div>
 
-    <!-- List Sections -->
-    <div id="tab-salary" class="container"><div id="list-salary"></div></div>
-    <div id="tab-home" class="container"><div id="list-home"></div></div>
-    <div id="tab-mk" class="container"><div id="list-mk"></div></div>
-    <div id="tab-sk" class="container"><div id="list-sk"></div></div>
-    <div id="tab-kollai" class="container"><div id="list-kollai"></div></div>
-    <div id="tab-vatti" class="container"><div id="list-vatti"></div></div>
-
-    <!-- Input Footer Controls -->
-    <div class="input-area">
-        <input type="text" id="user-input" placeholder="எ.கா: MK-க்கு 500 வீட்டுப் பணத்தில் உருளைக்கிழங்கு">
-        <div class="input-controls">
-            <button class="btn btn-send" onclick="handleSend()">அனுப்பு</button>
-            <button class="btn btn-mic" onclick="startSpeech()">🎤 பேசு</button>
-            <button class="btn btn-clear" onclick="document.getElementById('user-input').value=''">அழி</button>
-        </div>
-    </div>
-
-    <script>
-        // App Data State
-        let data = {
-            salary: 0,
-            home: 0,
-            kollai: 0,
-            mk: 0,
-            sk: 0,
-            vatti: 0,
-            logs: []
-        };
-
-        // Tab Switching
-        function switchTab(tabId) {
-            document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
-            document.getElementById('tab-' + tabId).classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        // Standard Numbers Parsing
-        function parseNumbers(str) {
-            const numMap = {'ஜம்பதாயிரம்': 50000, 'ஐயாயிரம்': 5000, 'ஆயிரம்': 1000, 'மூணு': 3, 'இரண்டு': 2, 'இரு': 2};
-            let text = str;
-            for (let key in numMap) {
-                text = text.replace(new RegExp(key, 'g'), numMap[key]);
-            }
-            const match = text.match(/\d+/g);
-            return match ? match.map(Number) : [];
-        }
-
-        // NLP Logic Engine
-        function processText(text) {
-            const nums = parseNumbers(text);
-            const amount = nums.length > 0 ? nums[0] : 0;
-            let response = "பதிவு செய்யப் பட்டது!";
-
-            // 1. Vatti Engine Fix (50000 3 paisa vatti)
-            if (text.includes("வட்டி")) {
-                let p = text.includes("50000") || text.includes("ஜம்பதாயிரம்") ? 50000 : amount;
-                let rate = text.includes("3") || text.includes("மூணு") ? 3 : 2;
-                data.vatti += p;
-                data.logs.push({ category: 'vatti', text: `வட்டி வழங்கியது: ₹${p} (${rate}%)`, amount: p, type: 'credit' });
-                response = `வட்டிக் கணக்கில் ₹${p} (${rate}% வட்டி) சேர்க்கப்பட்டது!`;
-            }
-            // 2. MK Expense Tracking (Cross-category logic)
-            else if (text.includes("MK") || text.includes("எம் கே")) {
-                data.mk += amount;
-                if (text.includes("வீட்டு") || text.includes("வீடு")) {
-                    data.home -= amount;
-                    data.logs.push({ category: 'home', text: `MK செலவு (வீட்டு பணம்): ${text}`, amount: -amount });
-                } else if (text.includes("சம்பள")) {
-                    data.salary -= amount;
-                    data.logs.push({ category: 'salary', text: `MK செலவு (சம்பள பணம்): ${text}`, amount: -amount });
-                }
-                data.logs.push({ category: 'mk', text: text, amount: amount, type: 'debit' });
-                response = `MK கணக்கில் ₹${amount} சேர்க்கப்பட்டு, உரிய கணக்கிலிருந்து கழிக்கப்பட்டது!`;
-            }
-            // 3. SK Expense Tracking
-            else if (text.includes("SK") || text.includes("எஸ் கே")) {
-                data.sk += amount;
-                if (text.includes("வீட்டு") || text.includes("வீடு")) {
-                    data.home -= amount;
-                    data.logs.push({ category: 'home', text: `SK செலவு (வீட்டு பணம்): ${text}`, amount: -amount });
-                } else if (text.includes("சம்பள")) {
-                    data.salary -= amount;
-                    data.logs.push({ category: 'salary', text: `SK செலவு (சம்பள பணம்): ${text}`, amount: -amount });
-                }
-                data.logs.push({ category: 'sk', text: text, amount: amount, type: 'debit' });
-                response = `SK கணக்கில் ₹${amount} சேர்க்கப்பட்டு, உரிய கணக்கிலிருந்து கழிக்கப்பட்டது!`;
-            }
-            // 4. Kollai Category
-            else if (text.includes("கொல்லை")) {
-                data.kollai += amount;
-                if (text.includes("வீட்டு")) {
-                    data.home -= amount;
-                    data.logs.push({ category: 'home', text: `கொல்லை செலவு: ${text}`, amount: -amount });
-                } else if (text.includes("சம்பள")) {
-                    data.salary -= amount;
-                    data.logs.push({ category: 'salary', text: `கொல்லை செலவு: ${text}`, amount: -amount });
-                }
-                data.logs.push({ category: 'kollai', text: text, amount: amount, type: 'debit' });
-                response = `கொல்லைச் செலவு ₹${amount} பதிவு செய்யப்பட்டது!`;
-            }
-            // 5. Salary Credit / Home Credit
-            else if (text.includes("சம்பளம் வந்தது") || text.includes("சம்பள பணம்")) {
-                data.salary += amount;
-                data.logs.push({ category: 'salary', text: text, amount: amount, type: 'credit' });
-                response = `சம்பளக் கணக்கில் ₹${amount} வரவு வைக்கப்பட்டது!`;
-            } 
-            else if (text.includes("வீட்டில்")) {
-                data.home += amount;
-                data.logs.push({ category: 'home', text: text, amount: amount, type: 'credit' });
-                response = `வீட்டு பணக் கணக்கில் ₹${amount} வரவு வைக்கப்பட்டது!`;
-            }
-            else {
-                response = "மன்னிக்கவும், விவரம் சரியாகப் புரியவில்லை. மீண்டும் முயற்சிக்கவும்.";
-            }
-
-            updateUI();
-            return response;
-        }
-
-        // Input Actions
-        function handleSend() {
-            const input = document.getElementById('user-input');
-            const val = input.value.trim();
-            if (!val) return;
-
-            addChatMessage(val, 'user');
-            const reply = processText(val);
-            setTimeout(() => addChatMessage(reply, 'ai'), 400);
-            input.value = '';
-        }
-
-        function addChatMessage(msg, sender) {
-            const box = document.getElementById('chat-messages');
-            const div = document.createElement('div');
-            div.className = `msg ${sender}`;
-            div.innerText = msg;
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        // Voice Recognition Engine
-        function startSpeech() {
-            if (!('webkitSpeechRecognition' in window)) {
-                alert("உங்கள் பிரவுசரில் குரல் பதிவு வசதி இல்லை.");
-                return;
-            }
-            const rec = new webkitSpeechRecognition();
-            rec.lang = 'ta-IN';
-            rec.onstart = () => { document.getElementById('user-input').placeholder = "பேசுங்கள்..."; };
-            rec.onresult = (e) => {
-                const text = e.results[0][0].transcript;
-                document.getElementById('user-input').value = text;
-                handleSend();
-            };
-            rec.start();
-        }
-
-        // Render Dashboard & Lists
-        function updateUI() {
-            document.getElementById('bal-salary').innerText = `₹${data.salary}`;
-            document.getElementById('bal-home').innerText = `₹${data.home}`;
-            document.getElementById('bal-kolllai').innerText = `₹${data.kollai}`;
-            document.getElementById('bal-mk').innerText = `₹${data.mk}`;
-            document.getElementById('bal-sk').innerText = `₹${data.sk}`;
-            document.getElementById('bal-vatti').innerText = `₹${data.vatti}`;
-
-            const categories = ['salary', 'home', 'mk', 'sk', 'kollai', 'vatti'];
-            categories.forEach(cat => {
-                const listEl = document.getElementById(`list-${cat}`);
-                listEl.innerHTML = '';
-                const items = data.logs.filter(l => l.category === cat);
-                
-                if(items.length === 0) {
-                    listEl.innerHTML = '<p style="text-align:center; color:#94a3b8;">பதிவுகள் எதுவும் இல்லை</p>';
-                    return;
-                }
-
-                items.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'list-card';
-                    const isNeg = item.amount < 0 || item.type === 'debit';
-                    card.innerHTML = `
-                        <div>${item.text}</div>
-                        <div class="amount-tag ${isNeg ? 'negative' : 'positive'}">
-                            ${isNeg ? '-' : '+'}₹${Math.abs(item.amount)}
-                        </div>
-                    `;
-                    listEl.appendChild(card);
-                });
-            });
-        }
-
-        updateUI();
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
