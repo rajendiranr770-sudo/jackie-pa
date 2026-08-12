@@ -41,7 +41,7 @@
         <!-- Advanced Vatti / Loan Tab -->
         <section id="vatti-tab" class="tab-content">
             <div class="vatti-form-card">
-                <h3>வட்டி கடன் சேர்க்க</h3>
+                <h3 id="form-title">வட்டி கடன் சேர்க்க</h3>
                 <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சேகர்)">
                 
                 <div id="loans-container">
@@ -62,13 +62,13 @@
 
     <!-- Bottom AI Input Bar -->
     <div class="bottom-chat-bar">
-        <input type="text" id="userInput" placeholder="எ.கா: கொள்ளைக்கு மருந்து அடிச்ச கூலி 500...">
+        <input type="text" id="userInput" placeholder="எ.கா: சம்பள பணம் 20000 வந்தது...">
         <button class="btn-send" onclick="handleManualInput()">அனுப்பு</button>
         <button class="btn-voice" onclick="startVoiceRecognition()">🎙️ பேசு</button>
     </div>
 
     <!-- Edit Modal Pop-up -->
-    <div id="editModal" class="modal">
+    <div id="editModal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>பதிவை எடிட் செய்ய</h3>
             <label>விவரம்:</label>
