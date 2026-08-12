@@ -4,162 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
-    <!-- உங்கள் பழைய HTML UI / CSS டிசைன் அமைப்புகள் அனைத்தும் இங்கே இருக்கும் -->
+    <!-- Header Section -->
+    <header class="app-header">
+        <h1>செலவு கணக்கு (Expense Tracker)</h1>
+    </header>
 
+    <!-- Top Dashboard Overview Cards -->
+    <section class="dashboard">
+        <div class="card income-card">
+            <h3>சம்பளம்</h3>
+            <p id="salary-val">₹0</p>
+        </div>
+        <div class="card home-card">
+            <h3>வீடு</h3>
+            <p id="home-val">₹0</p>
+        </div>
+        <div class="card expense-card">
+            <h3>கொல்லை</h3>
+            <p id="kollai-val">₹0</p>
+        </div>
+        <div class="card expense-card">
+            <h3>MK செலவு</h3>
+            <p id="mk-val">₹0</p>
+        </div>
+        <div class="card expense-card">
+            <h3>SK செலவு</h3>
+            <p id="sk-val">₹0</p>
+        </div>
+        <div class="card vatti-card">
+            <h3>வட்டி</h3>
+            <p id="vatti-val">₹0</p>
+        </div>
+    </section>
+
+    <!-- Quick Voice / Text Input Form -->
+    <section class="input-section">
+        <div class="input-box">
+            <input type="text" id="userInput" placeholder="எ.கா: சம்பளம் 20000 அல்லது MK செலவு 500...">
+            <button onclick="handleManualInput()">சேர்</button>
+        </div>
+    </section>
+
+    <!-- Transactions List Section -->
+    <main class="lists-container">
+        <!-- AI Chat / All Transactions -->
+        <section class="tab-content">
+            <h2>அனைத்து பதிவுகள் (All Logs)</h2>
+            <div id="ai-list" class="transaction-list"></div>
+        </section>
+
+        <!-- Category Wise Lists -->
+        <section class="tab-content">
+            <h2>சம்பளம் பற்றிய விவரங்கள்</h2>
+            <div id="salary-list" class="transaction-list"></div>
+        </section>
+
+        <section class="tab-content">
+            <h2>வீட்டுச் செலவு / வரவு</h2>
+            <div id="home-list" class="transaction-list"></div>
+        </section>
+
+        <section class="tab-content">
+            <h2>கொல்லைச் செலவுகள்</h2>
+            <div id="kollai-list" class="transaction-list"></div>
+        </section>
+
+        <section class="tab-content">
+            <h2>MK செலவுகள்</h2>
+            <div id="mk-list" class="transaction-list"></div>
+        </section>
+
+        <section class="tab-content">
+            <h2>SK செலவுகள்</h2>
+            <div id="sk-list" class="transaction-list"></div>
+        </section>
+
+        <section class="tab-content">
+            <h2>வட்டி விவரங்கள்</h2>
+            <div id="vatti-list" class="transaction-list"></div>
+        </section>
+    </main>
+
+    <!-- Input Trigger Handler -->
     <script>
-    // Global State Storage
-    let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
-
-    // Save to Local Storage
-    function saveState() {
-        localStorage.setItem('my_app_txs', JSON.stringify(transactions));
-        updateDashboardUI();
-        renderAllLists();
-    }
-
-    // Extract Amount Smartly (Handles commas like 20,000)
-    function extractAmount(text) {
-        let match = text.match(/(\d[\d,]*)/);
-        if (match) {
-            let amountStr = match[1].replace(/,/g, '');
-            return parseFloat(amountStr) || 0;
-        }
-        return 0;
-    }
-
-    // Add New Transaction Function
-    function processNewTransaction(text, manualCategory = null, manualSource = null, manualAmount = null) {
-        let amount = manualAmount ? parseFloat(manualAmount) : extractAmount(text);
-        if (!amount) return alert("தயவுசெய்து சரியான தொகையை உள்ளிடவும்.");
-
-        let source = "வீடு"; // Default source
-        let category = manualCategory || "வீடு";
-
-        // Detect Source from text
-        if (text.includes("சம்பள") || text.includes("சம்பளம்")) {
-            source = "சம்பளம்";
-        } else if (text.includes("வீட்டு") || text.includes("வீடு")) {
-            source = "வீடு";
-        }
-
-        // Detect Main Category
-        if (!manualCategory) {
-            if (text.includes("கொல்லை")) category = "கொல்லை";
-            else if (text.includes("எம் கே") || text.includes("எம்கே") || text.includes("MK")) category = "MK செலவு";
-            else if (text.includes("எஸ் கே") || text.includes("எஸ்கே") || text.includes("SK")) category = "SK செலவு";
-            else if (text.includes("வட்டி")) category = "வட்டி";
-            else if (text.includes("சம்பளம்") && !text.includes("செலவு")) category = "சம்பளம்";
-            else category = "வீடு";
-        }
-
-        if (manualSource) source = manualSource;
-
-        let tx = {
-            id: Date.now(),
-            text: text,
-            amount: amount,
-            category: category,
-            source: source,
-            date: new Date().toLocaleString()
-        };
-
-        transactions.push(tx);
-        saveState();
-    }
-
-    // Delete Transaction
-    function deleteTx(id) {
-        transactions = transactions.filter(t => t.id !== id);
-        saveState();
-    }
-
-    // Update Top Dashboard Amounts
-    function updateDashboardUI() {
-        let totals = {
-            "சம்பளம்": 0,
-            "வீடு": 0,
-            "கொல்லை": 0,
-            "MK செலவு": 0,
-            "SK செலவு": 0,
-            "வட்டி": 0
-        };
-
-        transactions.forEach(t => {
-            // Income / Additions
-            if (t.category === "சம்பளம்") {
-                totals["சம்பளம்"] += t.amount;
-            } else if (t.category === "வீடு" && !t.text.includes("செலவு")) {
-                totals["வீடு"] += t.amount;
-            } else if (t.category === "வட்டி") {
-                totals["வட்டி"] += t.amount;
-            }
-
-            // Expenses Deductions from Source (Salary or Home)
-            if (["கொல்லை", "MK செலவு", "SK செலவு"].includes(t.category) || t.text.includes("செலவு")) {
-                if (totals[t.category] !== undefined) {
-                    totals[t.category] += t.amount;
-                }
-                if (t.source === "சம்பளம்") {
-                    totals["சம்பளம்"] -= t.amount;
-                } else {
-                    totals["வீடு"] -= t.amount;
-                }
-            }
-        });
-
-        // Update UI elements by ID
-        if(document.getElementById('salary-val')) document.getElementById('salary-val').innerText = '₹' + totals["சம்பளம்"];
-        if(document.getElementById('home-val')) document.getElementById('home-val').innerText = '₹' + totals["வீடு"];
-        if(document.getElementById('kollai-val')) document.getElementById('kollai-val').innerText = '₹' + totals["கொல்லை"];
-        if(document.getElementById('mk-val')) document.getElementById('mk-val').innerText = '₹' + totals["MK செலவு"];
-        if(document.getElementById('sk-val')) document.getElementById('sk-val').innerText = '₹' + totals["SK செலவு"];
-        if(document.getElementById('vatti-val')) document.getElementById('vatti-val').innerText = '₹' + totals["வட்டி"];
-    }
-
-    // Render Lists for Tabs
-    function renderAllLists() {
-        const containers = {
-            'ai-list': transactions,
-            'salary-list': transactions.filter(t => t.category === 'சம்பளம்' || t.source === 'சம்பளம்'),
-            'home-list': transactions.filter(t => t.category === 'வீடு' || t.source === 'வீடு'),
-            'kollai-list': transactions.filter(t => t.category === 'கொல்லை'),
-            'mk-list': transactions.filter(t => t.category === 'MK செலவு'),
-            'sk-list': transactions.filter(t => t.category === 'SK செலவு'),
-            'vatti-list': transactions.filter(t => t.category === 'வட்டி')
-        };
-
-        for (let id in containers) {
-            let el = document.getElementById(id);
-            if (el) {
-                el.innerHTML = containers[id].map(t => {
-                    let isExpense = ["கொல்லை", "MK செலவு", "SK செலவு"].includes(t.category) || t.text.includes("செலவு");
-                    let amountClass = isExpense ? "color: red;" : "color: green;";
-                    let prefix = isExpense ? "-₹" : "+₹";
-                    
-                    return `
-                        <div class="card" style="margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <strong>${t.text}</strong>
-                                <span style="${amountClass}">${prefix}${t.amount}</span>
-                            </div>
-                            <small style="color: #666;">${t.date}</small><br>
-                            <small style="color: #666;">பணம் எடுக்கப்பட்ட இடம்: ${t.source}</small>
-                            <button onclick="deleteTx(${t.id})" style="float: right; border: none; background: transparent; cursor: pointer;">🗑️</button>
-                        </div>
-                    `;
-                }).join('');
+        function handleManualInput() {
+            let input = document.getElementById('userInput');
+            if (input && input.value.trim() !== '') {
+                processNewTransaction(input.value.trim());
+                input.value = '';
             }
         }
-    }
-
-    // Initialize on page load
-    document.addEventListener("DOMContentLoaded", function() {
-        updateDashboardUI();
-        renderAllLists();
-    });
     </script>
+
+    <!-- App Logic Script File Integration -->
+    <script src="app.js"></script>
+
 </body>
 </html>
