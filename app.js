@@ -15,25 +15,47 @@ function extractAmount(text) {
     return match ? parseFloat(match[1].replace(/,/g, '')) || 0 : 0;
 }
 
-// Fixed Transaction Process (Vatti is 100% SEPARATE)
+// Smart Processing for Kollai, Wages, and Expenses
 function processNewTransaction(text) {
     let amount = extractAmount(text);
     if (!amount) return alert("தயவுசெய்து சரியான தொகையை உள்ளிடவும்.");
 
-    let category = "வீடு";
+    let category = "வீடு"; 
     let source = "வீடு";
 
-    if (text.includes("கொல்லை")) category = "கொல்லை";
-    else if (text.includes("MK") || text.includes("எம் கே")) category = "MK செலவு";
-    else if (text.includes("SK") || text.includes("எஸ் கே")) category = "SK செலவு";
-    else if (text.includes("சம்பளம்")) { category = "சம்பளம்"; source = "சம்பளம்"; }
+    let t = text.toLowerCase();
 
-    let tx = { id: Date.now(), text: text, amount: amount, category: category, source: source, date: new Date().toLocaleString() };
+    // Check for Kollai & Agricultural Wage Keywords
+    if (t.includes("கொல்லை") || t.includes("கூலி") || t.includes("மருந்து") || 
+        t.includes("களை") || t.includes("வண்டி") || t.includes("ஆள்") || t.includes("தெளிச்ச")) {
+        category = "கொல்லை";
+    } else if (t.includes("mk") || t.includes("எம் கே") || t.includes("எம்கே")) {
+        category = "MK செலவு";
+    } else if (t.includes("sk") || t.includes("எஸ் கே") || t.includes("எஸ்கே")) {
+        category = "SK செலவு";
+    } else if (t.includes("சம்பளம்")) {
+        category = "சம்பளம்";
+        source = "சம்பளம்";
+    }
+
+    if (t.includes("சம்பளப் பணம்") || t.includes("சம்பளத்தில்")) {
+        source = "சம்பளம்";
+    }
+
+    let tx = { 
+        id: Date.now(), 
+        text: text, 
+        amount: amount, 
+        category: category, 
+        source: source, 
+        date: new Date().toLocaleString() 
+    };
+
     transactions.push(tx);
     saveState();
 }
 
-// Add Loan Input Row dynamically (+)
+// Add Loan Row
 function addLoanInputRow() {
     let container = document.getElementById('loans-container');
     let count = container.children.length + 1;
@@ -64,8 +86,7 @@ function saveVattiAccount() {
 
     if (loans.length === 0) return alert("குறைந்தது ஒரு கடனாவது பதிவு செய்யவும்.");
 
-    if (!vattiAccounts[name]) vattiAccounts[name] = [];
-    vattiAccounts[name] = loans; // Updates or appends to existing person
+    vattiAccounts[name] = loans; 
 
     document.getElementById('vatti-name').value = '';
     document.getElementById('loans-container').innerHTML = `
@@ -78,29 +99,74 @@ function saveVattiAccount() {
     saveState();
 }
 
-// Update Top Dashboard Amounts
+// Dashboard Calculation
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
 
     transactions.forEach(t => {
+        let isExpense = ["கொல்லை", "MK செலவு", "SK செலவு"].includes(t.category) || t.text.includes("செலவு") || t.text.includes("கூலி");
+
         if (t.category === "சம்பளம்") totals["சம்பளம்"] += t.amount;
-        else if (t.category === "வீடு") totals["வீடு"] += t.amount;
-        else if (totals[t.category] !== undefined) totals[t.category] += t.amount;
+        else if (t.category === "வீடு" && !isExpense) totals["வீடு"] += t.amount;
+
+        if (isExpense) {
+            if (totals[t.category] !== undefined) totals[t.category] += t.amount;
+            if (t.source === "சம்பளம்") totals["சம்பளம்"] -= t.amount;
+            else totals["வீடு"] -= t.amount;
+        }
     });
 
-    // Total Vatti Business Balance (Independent)
     let totalVattiPrincipal = 0;
     for (let name in vattiAccounts) {
         vattiAccounts[name].forEach(l => totalVattiPrincipal += l.amount);
     }
     totals["வட்டி"] = totalVattiPrincipal;
 
-    document.getElementById('salary-val').innerText = '₹' + totals["சம்பளம்"];
-    document.getElementById('home-val').innerText = '₹' + totals["வீடு"];
-    document.getElementById('kollai-val').innerText = '₹' + totals["கொல்லை"];
-    document.getElementById('mk-val').innerText = '₹' + totals["MK செலவு"];
-    document.getElementById('sk-val').innerText = '₹' + totals["SK செலவு"];
-    document.getElementById('vatti-val').innerText = '₹' + totals["வட்டி"];
+    if(document.getElementById('salary-val')) document.getElementById('salary-val').innerText = '₹' + totals["சம்பளம்"];
+    if(document.getElementById('home-val')) document.getElementById('home-val').innerText = '₹' + totals["வீடு"];
+    if(document.getElementById('kollai-val')) document.getElementById('kollai-val').innerText = '₹' + totals["கொல்லை"];
+    if(document.getElementById('mk-val')) document.getElementById('mk-val').innerText = '₹' + totals["MK செலவு"];
+    if(document.getElementById('sk-val')) document.getElementById('sk-val').innerText = '₹' + totals["SK செலவு"];
+    if(document.getElementById('vatti-val')) document.getElementById('vatti-val').innerText = '₹' + totals["வட்டி"];
+}
+
+// Render Tab Lists
+function renderAllLists() {
+    const filterMap = {
+        'ai-list': () => transactions,
+        'salary-list': () => transactions.filter(t => t.category === 'சம்பளம்' || t.source === 'சம்பளம்'),
+        'home-list': () => transactions.filter(t => t.category === 'வீடு' || t.source === 'வீடு'),
+        'kollai-list': () => transactions.filter(t => t.category === 'கொல்லை'),
+        'mk-list': () => transactions.filter(t => t.category === 'MK செலவு'),
+        'sk-list': () => transactions.filter(t => t.category === 'SK செலவு')
+    };
+
+    for (let id in filterMap) {
+        let el = document.getElementById(id);
+        if (el) {
+            let list = filterMap[id]();
+            el.innerHTML = list.map(t => {
+                let isExpense = ["கொல்லை", "MK செலவு", "SK செலவு"].includes(t.category) || t.text.includes("செலவு") || t.text.includes("கூலி");
+                let color = isExpense ? "color: red;" : "color: green;";
+                let prefix = isExpense ? "-₹" : "+₹";
+
+                return `
+                <div class="tx-card">
+                    <div class="tx-header">
+                        <span>${t.text}</span>
+                        <span style="${color}">${prefix}${t.amount}</span>
+                    </div>
+                    <div class="tx-details">
+                        <span>${t.date} | ${t.source}</span>
+                        <div>
+                            <button onclick="openEditModal(${t.id})" style="border:none; background:none; cursor:pointer;">✏️</button>
+                            <button onclick="deleteTx(${t.id})" style="border:none; background:none; cursor:pointer;">🗑️</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
 }
 
 // Render Vatti Cards
@@ -133,7 +199,7 @@ function renderVattiLists() {
     }
 }
 
-// Edit & Delete Handlers
+// Edit Modal Functions
 function openEditModal(id) {
     let tx = transactions.find(t => t.id === id);
     if (!tx) return;
@@ -167,22 +233,6 @@ function deleteVattiPerson(name) {
     saveState();
 }
 
-function renderAllLists() {
-    let el = document.getElementById('ai-list');
-    if (!el) return;
-    el.innerHTML = transactions.map(t => `
-        <div class="tx-card">
-            <div class="tx-header"><span>${t.text}</span><span>₹${t.amount}</span></div>
-            <div class="tx-details">
-                <span>${t.date}</span>
-                <div>
-                    <button onclick="openEditModal(${t.id})" style="border:none; background:none; cursor:pointer;">✏️ எடிட்</button>
-                    <button onclick="deleteTx(${t.id})" style="border:none; background:none; cursor:pointer;">🗑️ நீக்கு</button>
-                </div>
-            </div>
-        </div>`).join('');
-}
-
 function switchTab(tabId, element) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -195,6 +245,22 @@ function handleManualInput() {
     if (input && input.value.trim() !== '') {
         processNewTransaction(input.value.trim());
         input.value = '';
+    }
+}
+
+function startVoiceRecognition() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ta-IN';
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            document.getElementById('userInput').value = transcript;
+            processNewTransaction(transcript);
+        };
+        recognition.start();
+    } else {
+        alert("குரல் வசதி இந்த பிரவுசரில் இல்லை.");
     }
 }
 
