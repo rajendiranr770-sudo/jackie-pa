@@ -1,6 +1,7 @@
 let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
 let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
 let editingTxId = null;
+let editingVattiInfo = null; // { name, index }
 
 function saveState() {
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
@@ -36,7 +37,7 @@ function parseTamilAmount(text) {
     return baseNum;
 }
 
-// AI Engine - Auto Logic without Pop-up
+// Fixed Auto Logic for "தந்தார்கள்", "கொடுத்தார்கள்"
 function processNewTransaction(text) {
     let amount = parseTamilAmount(text);
     if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
@@ -51,7 +52,8 @@ function processNewTransaction(text) {
         category = "சம்பளம்";
     }
 
-    if (t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
+    // Check income words: தந்தார்கள், கொடுத்தார்கள், வந்தது, வரவு
+    if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
         isExpense = false;
     } else if (t.includes("வட்டி") || t.includes("பைசா") || t.includes("கடன்")) {
         category = "வட்டி";
@@ -76,7 +78,7 @@ function processNewTransaction(text) {
             loanNo: vattiAccounts[name].length + 1,
             amount: amount,
             rate: rate,
-            date: new Date().toISOString()
+            date: new Date().toLocaleString()
         });
 
         saveState();
@@ -133,7 +135,7 @@ function addExpenseManual(category, descId, amtId, sourceId, dateId) {
     saveState();
 }
 
-// Vatti Account Functions
+// Vatti Account Logic
 function addMoreLoanField() {
     let container = document.getElementById('vatti-inputs-container');
     let div = document.createElement('div');
@@ -149,6 +151,8 @@ function saveVattiAccount() {
     let name = document.getElementById('vatti-name').value.trim() || "பொது வட்டி";
     let amtInputs = document.querySelectorAll('.vatti-amt-input');
     let rateInputs = document.querySelectorAll('.vatti-rate-input');
+    let customDate = document.getElementById('vatti-date-input').value;
+    let formattedDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
 
     if (!vattiAccounts[name]) vattiAccounts[name] = [];
 
@@ -160,7 +164,7 @@ function saveVattiAccount() {
                 loanNo: vattiAccounts[name].length + 1,
                 amount: amt,
                 rate: rate,
-                date: new Date().toISOString()
+                date: formattedDate
             });
         }
     });
@@ -184,7 +188,7 @@ function addSingleLoanForPerson(name) {
         loanNo: vattiAccounts[name].length + 1,
         amount: parseFloat(amt),
         rate: parseFloat(rate) || 3,
-        date: new Date().toISOString()
+        date: new Date().toLocaleString()
     });
     saveState();
 }
@@ -269,7 +273,7 @@ function renderAllLists() {
     }
 }
 
-// Vatti Render - Matches Screenshot 2 Exactly
+// Render Vatti Accounts with Edit Feature
 function renderVattiLists() {
     let container = document.getElementById('vatti-person-list');
     if (!container) return;
@@ -286,9 +290,15 @@ function renderVattiLists() {
             totalInterest += interest;
 
             return `
-            <div style="background:#f8fafc; padding:8px 12px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; font-size:14px;">
-                <span><strong>கடன் ${idx+1}:</strong> அசல்: ₹${l.amount} | வட்டி: ₹${interest} (${l.rate}%)</span>
-                <button onclick="deleteVattiLoan('${name}', ${idx})" style="background:none; border:none; cursor:pointer; font-size:12px;">🗑️</button>
+            <div style="background:#f8fafc; padding:8px 12px; border-radius:6px; margin-bottom:6px; font-size:13px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><strong>கடன் ${idx+1}:</strong> அசல்: ₹${l.amount} | வட்டி: ₹${interest} (${l.rate}%)</span>
+                    <div>
+                        <button onclick="openVattiEditModal('${name}', ${idx})" style="background:none; border:none; cursor:pointer; font-size:12px;">✏️</button>
+                        <button onclick="deleteVattiLoan('${name}', ${idx})" style="background:none; border:none; cursor:pointer; font-size:12px;">🗑️</button>
+                    </div>
+                </div>
+                <div style="font-size:11px; color:#64748b; margin-top:3px;">📅 ${l.date || 'தேதி குறிப்பிடப்படவில்லை'}</div>
             </div>`;
         }).join('');
 
@@ -308,6 +318,36 @@ function renderVattiLists() {
             </div>
         </div>`;
     }
+}
+
+// Vatti Edit Functions
+function openVattiEditModal(name, index) {
+    editingVattiInfo = { name, index };
+    let loan = vattiAccounts[name][index];
+    document.getElementById('edit-vatti-amt').value = loan.amount;
+    document.getElementById('edit-vatti-rate').value = loan.rate;
+    document.getElementById('vattiEditModal').style.display = 'flex';
+}
+
+function closeVattiEditModal() {
+    document.getElementById('vattiEditModal').style.display = 'none';
+}
+
+function saveVattiEdit() {
+    if (editingVattiInfo) {
+        let { name, index } = editingVattiInfo;
+        let loan = vattiAccounts[name][index];
+        loan.amount = parseFloat(document.getElementById('edit-vatti-amt').value) || loan.amount;
+        loan.rate = parseFloat(document.getElementById('edit-vatti-rate').value) || loan.rate;
+        
+        let newDate = document.getElementById('edit-vatti-date').value;
+        if (newDate) {
+            loan.date = new Date(newDate).toLocaleString();
+        }
+
+        saveState();
+    }
+    closeVattiEditModal();
 }
 
 function deleteVattiLoan(name, index) {
@@ -339,6 +379,10 @@ function saveEdit() {
     if (tx) {
         tx.text = document.getElementById('edit-text').value;
         tx.amount = parseFloat(document.getElementById('edit-amount').value) || tx.amount;
+        let newDate = document.getElementById('edit-date').value;
+        if (newDate) {
+            tx.date = new Date(newDate).toLocaleString();
+        }
         saveState();
     }
     closeEditModal();
