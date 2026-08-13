@@ -59,7 +59,7 @@ function addExpenseManual(category, descId, amtId, sourceId, dateId) {
 
     let tx = {
         id: Date.now(),
-        text: `${desc} ${amt} ${source} பணத்தில்`,
+        text: `${desc} - ${amt} (${source} பணத்தில்)`,
         amount: amt,
         category: category,
         source: source,
@@ -73,21 +73,48 @@ function addExpenseManual(category, descId, amtId, sourceId, dateId) {
     saveState();
 }
 
-// AI Voice & Text Processing Engine
+// Fixed AI Text Processing Engine
 function processNewTransaction(text) {
     let amount = parseTamilAmount(text);
     if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
 
     let t = text.toLowerCase();
+    
+    // Default values
     let category = "வீடு"; 
-    let source = "வீடு"; // Default to Home source if unspecified
+    let source = "வீடு"; 
     let isExpense = true;
 
-    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்")) {
+    // Detect Source (பணம் எதிலிருந்து எடுக்கப்பட்டது)
+    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்") || t.includes("சம்பளத்திலிருந்து")) {
         source = "சம்பளம்";
+    } else {
+        source = "வீடு";
     }
 
-    if (t.includes("சம்பளம்") && (t.includes("வந்தது") || t.includes("வரவு") || t.includes("வாங்கிய"))) {
+    // Detect Category (எந்தப் பிரிவைச் சேர்ந்த செலவு/வரவு)
+    if (t.includes("வட்டி") || t.includes("பைசா") || t.includes("கடன்")) {
+        category = "வட்டி";
+        
+        // வட்டிக்கு கொடுத்த தொகையை தானாக Vatti Accounts இல் சேர்க்கும் பகுதி
+        let nameMatch = text.match(/^([a-zA-A-தமிழ்]+)\s*(இல்|க்கு|ிற்கு)?/);
+        let name = "பொது வட்டி";
+        if (t.includes("சேகருக்கு")) name = "சேகர்";
+        
+        if (!vattiAccounts[name]) vattiAccounts[name] = [];
+        vattiAccounts[name].push({
+            loanNo: vattiAccounts[name].length + 1,
+            amount: amount,
+            rate: 3, // default rate
+            date: new Date().toISOString()
+        });
+    } else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்")) {
+        category = "கொல்லை";
+    } else if (t.includes("mk") || t.includes("எம் கே") || t.includes("எம்கே")) {
+        category = "MK செலவு";
+    } else if (t.includes("sk") || t.includes("எஸ் கே") || t.includes("எஸ்கே")) {
+        category = "SK செலவு";
+    } else if (t.includes("சம்பளம்") && (t.includes("வந்தது") || t.includes("வரவு") || t.includes("வாங்கிய"))) {
         category = "சம்பளம்";
         source = "சம்பளம்";
         isExpense = false;
@@ -95,12 +122,8 @@ function processNewTransaction(text) {
         category = "வீடு";
         source = "வீடு";
         isExpense = false;
-    } else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்") || t.includes("எரிவு")) {
-        category = "கொல்லை";
-    } else if (t.includes("mk") || t.includes("எம் கே") || t.includes("எம்கே")) {
-        category = "MK செலவு";
-    } else if (t.includes("sk") || t.includes("எஸ் கே") || t.includes("எஸ்கே")) {
-        category = "SK செலவு";
+    } else {
+        category = "வீடு"; // பொதுவான வீட்டுச் செலவுகள்
     }
 
     let tx = {
@@ -180,7 +203,6 @@ function calculateDaysAndInterest(startDateStr, principal, monthlyRate) {
     let months = Math.floor(diffDays / 30);
     let remainingDays = diffDays % 30;
 
-    // Monthly interest logic
     let monthlyInterest = (principal * monthlyRate) / 100;
     let dailyInterest = monthlyInterest / 30;
     let totalInterest = Math.round((months * monthlyInterest) + (remainingDays * dailyInterest));
@@ -193,17 +215,27 @@ function calculateDaysAndInterest(startDateStr, principal, monthlyRate) {
     };
 }
 
+// Corrected Dashboard Logic
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
 
     transactions.forEach(t => {
         if (!t.isExpense) {
+            // Income logic
             if (t.category === "சம்பளம்") totals["சம்பளம்"] += t.amount;
-            else totals["வீடு"] += t.amount;
+            if (t.category === "வீடு") totals["வீடு"] += t.amount;
         } else {
-            totals[t.category] += t.amount;
-            if (t.source === "சம்பளம்") totals["சம்பளம்"] -= t.amount;
-            else totals["வீடு"] -= t.amount;
+            // Expense Logic
+            if (totals.hasOwnProperty(t.category)) {
+                totals[t.category] += t.amount;
+            }
+            
+            // Deduct expense from source
+            if (t.source === "சம்பளம்") {
+                totals["சம்பளம்"] -= t.amount;
+            } else {
+                totals["வீடு"] -= t.amount;
+            }
         }
     });
 
@@ -228,7 +260,7 @@ function renderAllLists() {
     const filterMap = {
         'ai-list': () => transactions,
         'salary-list': () => transactions.filter(t => t.category === 'சம்பளம்' || t.source === 'சம்பளம்'),
-        'home-list': () => transactions.filter(t => t.category === 'வீடு' || t.source === 'வீடு'),
+        'home-list': () => transactions.filter(t => t.category === 'வீடு' && t.source === 'வீடு'),
         'kollai-list': () => transactions.filter(t => t.category === 'கொல்லை'),
         'mk-list': () => transactions.filter(t => t.category === 'MK செலவு'),
         'sk-list': () => transactions.filter(t => t.category === 'SK செலவு')
