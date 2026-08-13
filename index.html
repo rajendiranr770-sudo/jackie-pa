@@ -8,25 +8,25 @@
 </head>
 <body>
 
-    <!-- Top Dashboard -->
+    <!-- Top Dashboard (Click to Auto-Scroll) -->
     <section class="dashboard-dark">
-        <div class="grid-card"><span class="card-title">சம்பளம்</span><span class="card-value" id="salary-val">₹0</span></div>
-        <div class="grid-card"><span class="card-title">வீடு</span><span class="card-value" id="home-val">₹0</span></div>
-        <div class="grid-card"><span class="card-title">கொல்லை செலவு</span><span class="card-value" id="kollai-val">₹0</span></div>
-        <div class="grid-card"><span class="card-title">MK செலவு</span><span class="card-value" id="mk-val">₹0</span></div>
-        <div class="grid-card"><span class="card-title">SK செலவு</span><span class="card-value" id="sk-val">₹0</span></div>
-        <div class="grid-card"><span class="card-title">வட்டி பிசினஸ்</span><span class="card-value" id="vatti-val">₹0</span></div>
+        <div class="grid-card" onclick="scrollToSection('salary-tab')"><span class="card-title">சம்பளம்</span><span class="card-value" id="salary-val">₹0</span></div>
+        <div class="grid-card" onclick="scrollToSection('home-tab')"><span class="card-title">வீடு</span><span class="card-value" id="home-val">₹0</span></div>
+        <div class="grid-card" onclick="scrollToSection('kollai-tab')"><span class="card-title">கொல்லை செலவு</span><span class="card-value" id="kollai-val">₹0</span></div>
+        <div class="grid-card" onclick="scrollToSection('mk-tab')"><span class="card-title">MK செலவு</span><span class="card-value" id="mk-val">₹0</span></div>
+        <div class="grid-card" onclick="scrollToSection('sk-tab')"><span class="card-title">SK செலவு</span><span class="card-value" id="sk-val">₹0</span></div>
+        <div class="grid-card" onclick="scrollToSection('vatti-tab')"><span class="card-title">வட்டி பிசினஸ்</span><span class="card-value" id="vatti-val">₹0</span></div>
     </section>
 
-    <!-- Navigation Tabs -->
+    <!-- Navigation Tabs (Click to Switch & Auto-Scroll) -->
     <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('ai-tab', this)">🤖 AI சாட்</button>
-        <button class="tab-btn" onclick="switchTab('salary-tab', this)">💼 சம்பளம்</button>
-        <button class="tab-btn" onclick="switchTab('home-tab', this)">🏠 வீடு</button>
-        <button class="tab-btn" onclick="switchTab('kollai-tab', this)">🌱 கொல்லை</button>
-        <button class="tab-btn" onclick="switchTab('mk-tab', this)">🛍️ MK</button>
-        <button class="tab-btn" onclick="switchTab('sk-tab', this)">🛒 SK</button>
-        <button class="tab-btn" onclick="switchTab('vatti-tab', this)">💰 வட்டி கணக்கு</button>
+        <button class="tab-btn active" onclick="switchTab('ai-tab', this); scrollToSection('ai-tab');">🤖 AI சாட்</button>
+        <button class="tab-btn" onclick="switchTab('salary-tab', this); scrollToSection('salary-tab');">💼 சம்பளம்</button>
+        <button class="tab-btn" onclick="switchTab('home-tab', this); scrollToSection('home-tab');">🏠 வீடு</button>
+        <button class="tab-btn" onclick="switchTab('kollai-tab', this); scrollToSection('kollai-tab');">🌱 கொல்லை</button>
+        <button class="tab-btn" onclick="switchTab('mk-tab', this); scrollToSection('mk-tab');">🛍️ MK</button>
+        <button class="tab-btn" onclick="switchTab('sk-tab', this); scrollToSection('sk-tab');">🛒 SK</button>
+        <button class="tab-btn" onclick="switchTab('vatti-tab', this); scrollToSection('vatti-tab');">💰 வட்டி கணக்கு</button>
     </div>
 
     <main class="content-area">
@@ -156,6 +156,27 @@
         </div>
     </div>
 
+    <!-- பணம் தேர்வு செய்யும் Pop-up Box (ஆ மூலத்தைக் குறிப்பிடாத போது தோன்றும்) -->
+    <div id="sourceModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
+        <div style="background:white; padding:20px; border-radius:12px; text-align:center; width:85%; max-width:320px; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);">
+            <h3 style="margin-bottom:15px; color:#333; font-size: 16px;">பணம் எதிலிருந்து எடுக்கப்பட்டது?</h3>
+            <button onclick="selectSource('சம்பளம்')" style="width:100%; padding:12px; margin-bottom:10px; background:#2563eb; color:white; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">1. 💼 சம்பளப் பணம்</button>
+            <button onclick="selectSource('வீடு')" style="width:100%; padding:12px; background:#16a34a; color:white; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">2. 🏠 வீட்டுப் பணம்</button>
+        </div>
+    </div>
+
     <script src="app.js"></script>
+    <script>
+        // தானாகவே குறிப்பிட்ட பகுதிக்கு நகரும் ஃபங்ஷன் (Auto-Scroll)
+        function scrollToSection(elementId) {
+            let element = document.getElementById(elementId);
+            if (element) {
+                element.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }
+        }
+    </script>
 </body>
 </html>
