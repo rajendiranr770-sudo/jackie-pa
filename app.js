@@ -1,7 +1,7 @@
 let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
 let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
 let editingTxId = null;
-let editingVattiInfo = null; // { name, index }
+let editingVattiInfo = null;
 
 function saveState() {
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
@@ -27,20 +27,46 @@ function scrollToSection(elementId) {
     }
 }
 
+// Full Tamil Words to Digits Converter
 function parseTamilAmount(text) {
-    let t = text.toLowerCase();
+    let t = text.toLowerCase().trim();
+
+    // Direct Digit Matching
     let numMatch = t.match(/(\d[\d,]*)/);
-    if (!numMatch) return 0;
-    let baseNum = parseFloat(numMatch[1].replace(/,/g, ''));
-    if (t.includes("ஆயிரம்") || t.includes("ayiram")) return baseNum * 1000;
-    if (t.includes("லட்சம்") || t.includes("lakh")) return baseNum * 100000;
-    return baseNum;
+    if (numMatch) {
+        let baseNum = parseFloat(numMatch[1].replace(/,/g, ''));
+        if (t.includes("ஆயிரம்") || t.includes("ayiram")) return baseNum * 1000;
+        if (t.includes("லட்சம்") || t.includes("lakh")) return baseNum * 100000;
+        return baseNum;
+    }
+
+    // Tamil Word Mappings
+    let wordMap = {
+        "ஒரு": 1, "ஒன்னு": 1, "இரண்டு": 2, "ரெண்டு": 2, "மூன்று": 3, "மூணு": 3, "நான்கு": 4, "நாலு": 4,
+        "ஐந்து": 5, "அஞ்சு": 5, "ஆறு": 6, "ஏழு": 7, "எட்டு": 8, "ஒன்பது": 9, "பத்து": 10,
+        "நூறு": 100, "இருநூறு": 200, "முன்னூறு": 300, "நானூறு": 400, "ஐந்நூறு": 500, "அந்நூறு": 500,
+        "ஆயிரம்": 1000, "ஆயிரத்து": 1000, "ஆயிர": 1000,
+        "இரண்டாயிரம்": 2000, "ரெண்டாயிரம்": 2000, "மூன்றாயிரம்": 3000, "மூணாயிரம்": 3000,
+        "நாலாயிரம்": 4000, "ஐயாயிரம்": 5000, "ஆறாயிரம்": 6000, "ஏழாயிரம்": 7000, "எட்டாயிரம்": 8000, "ஒன்பதாயிரம்": 9000,
+        "பத்தாயிரம்": 10000, "பதினைந்தாயிரம்": 15000, "பதினைஞ்சாயிரம்": 15000,
+        "இருபதாயிரம்": 20000, "முப்பதாயிரம்": 30000, "நாற்பதாயிரம்": 40000, "ஐம்பதாயிரம்": 50000,
+        "அறுபதாயிரம்": 60000, "எழுபதாயிரம்": 70000, "எண்பதாயிரம்": 80000, "தொன்னூறாயிரம்": 90000,
+        "ஒரு லட்சம்": 100000, "லட்சம்": 100000, "ரெண்டு லட்சம்": 200000, "ஐந்து லட்சம்": 500000
+    };
+
+    for (let word in wordMap) {
+        if (t.includes(word)) {
+            return wordMap[word];
+        }
+    }
+
+    return 0;
 }
 
-// Fixed Auto Logic for "தந்தார்கள்", "கொடுத்தார்கள்"
+// AI Engine Logic
 function processNewTransaction(text) {
     let amount = parseTamilAmount(text);
-    if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
+    if (!amount) return alert("சரியான தொகையை உள்ளிடவும் (எ.கா: 20000 அல்லது இருபதாயிரம்).");
 
     let t = text.toLowerCase();
     let category = "வீடு"; 
@@ -52,7 +78,6 @@ function processNewTransaction(text) {
         category = "சம்பளம்";
     }
 
-    // Check income words: தந்தார்கள், கொடுத்தார்கள், வந்தது, வரவு
     if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
         isExpense = false;
     } else if (t.includes("வட்டி") || t.includes("பைசா") || t.includes("கடன்")) {
@@ -135,7 +160,7 @@ function addExpenseManual(category, descId, amtId, sourceId, dateId) {
     saveState();
 }
 
-// Vatti Account Logic
+// Vatti Account Functions
 function addMoreLoanField() {
     let container = document.getElementById('vatti-inputs-container');
     let div = document.createElement('div');
@@ -179,18 +204,12 @@ function saveVattiAccount() {
     saveState();
 }
 
+// No Popup - Fills the Top Form Directly
 function addSingleLoanForPerson(name) {
-    let amt = prompt(`${name} அவர்களுக்கு கூடுதல் கடன் தொகை (₹):`);
-    if (!amt || parseFloat(amt) <= 0) return;
-    let rate = prompt(`வட்டி விகிதம் (%):`, "3");
-
-    vattiAccounts[name].push({
-        loanNo: vattiAccounts[name].length + 1,
-        amount: parseFloat(amt),
-        rate: parseFloat(rate) || 3,
-        date: new Date().toLocaleString()
-    });
-    saveState();
+    document.getElementById('vatti-name').value = name;
+    scrollToSection('vatti-form-box');
+    let amtInput = document.querySelector('.vatti-amt-input');
+    if (amtInput) amtInput.focus();
 }
 
 function calculateInterest(amount, rate) {
@@ -273,7 +292,6 @@ function renderAllLists() {
     }
 }
 
-// Render Vatti Accounts with Edit Feature
 function renderVattiLists() {
     let container = document.getElementById('vatti-person-list');
     if (!container) return;
@@ -320,7 +338,6 @@ function renderVattiLists() {
     }
 }
 
-// Vatti Edit Functions
 function openVattiEditModal(name, index) {
     editingVattiInfo = { name, index };
     let loan = vattiAccounts[name][index];
