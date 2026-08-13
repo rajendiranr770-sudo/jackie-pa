@@ -8,7 +8,7 @@
 </head>
 <body>
 
-    <!-- Top Dashboard (Click to Auto-Scroll) -->
+    <!-- Top Dashboard -->
     <section class="dashboard-dark">
         <div class="grid-card" onclick="scrollToSection('salary-tab')"><span class="card-title">சம்பளம்</span><span class="card-value" id="salary-val">₹0</span></div>
         <div class="grid-card" onclick="scrollToSection('home-tab')"><span class="card-title">வீடு</span><span class="card-value" id="home-val">₹0</span></div>
@@ -18,7 +18,7 @@
         <div class="grid-card" onclick="scrollToSection('vatti-tab')"><span class="card-title">வட்டி பிசினஸ்</span><span class="card-value" id="vatti-val">₹0</span></div>
     </section>
 
-    <!-- Navigation Tabs (Click to Switch & Auto-Scroll) -->
+    <!-- Navigation Tabs -->
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('ai-tab', this); scrollToSection('ai-tab');">🤖 AI சாட்</button>
         <button class="tab-btn" onclick="switchTab('salary-tab', this); scrollToSection('salary-tab');">💼 சம்பளம்</button>
@@ -115,20 +115,19 @@
             <div id="sk-list"></div>
         </section>
 
-        <!-- Vatti Tab -->
+        <!-- Vatti Tab (Old Layout Restored) -->
         <section id="vatti-tab" class="tab-content">
             <div class="card-form-box">
-                <h3>💰 வட்டி கடன் சேர்க்க</h3>
+                <h3>வட்டி கடன் சேர்க்க</h3>
                 <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சேகர்)">
-                <div id="loans-container">
-                    <div class="loan-input-row">
-                        <input type="number" class="vatti-amount" placeholder="அசல் தொகை (₹)">
-                        <input type="number" class="vatti-rate" placeholder="வட்டி % (மாதம்)">
-                        <input type="datetime-local" class="vatti-date">
+                <div id="vatti-inputs-container">
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="number" class="vatti-amt-input" placeholder="அசல் தொகை (₹)" style="flex:1;">
+                        <input type="number" class="vatti-rate-input" placeholder="வட்டி % / பைசா" style="flex:1;">
                     </div>
                 </div>
-                <button class="btn-secondary" onclick="addLoanInputRow()">➕ கூடுதல் கடன் சேர்க்க</button>
-                <button class="btn-primary" onclick="saveVattiAccount()">சேமி</button>
+                <button class="btn-secondary" onclick="addMoreLoanField()" style="width:100%; margin-bottom:8px; background:#f1f5f9; border:1px dashed #cbd5e1; color:#2563eb;">➕ இரண்டாவது கடன் சேர்க்க (Add Loan)</button>
+                <button class="btn-primary" onclick="saveVattiAccount()" style="width:100%; background:#16a34a; font-weight:bold;">கணக்கில் சேர்</button>
             </div>
             <div id="vatti-person-list"></div>
         </section>
@@ -136,12 +135,12 @@
 
     <!-- Bottom Chat Input Bar -->
     <div class="bottom-chat-bar">
-        <input type="text" id="userInput" placeholder="எ.கா: சேகருக்கு 50,000 மூணு பைசா...">
+        <input type="text" id="userInput" placeholder="எ.கா: சம்பள பணம் 200...">
         <button class="btn-send" onclick="handleManualInput()">அனுப்பு</button>
         <button class="btn-voice" onclick="startVoiceRecognition()">🎙️ பேசு</button>
     </div>
 
-    <!-- General Edit Modal -->
+    <!-- Edit Modal -->
     <div id="editModal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>பதிவை எடிட் செய்ய</h3>
@@ -149,38 +148,10 @@
             <input type="text" id="edit-text">
             <label>தொகை:</label>
             <input type="number" id="edit-amount">
-            <div class="modal-actions">
+            <div class="modal-actions" style="margin-top:10px;">
                 <button onclick="saveEdit()" class="btn-primary">சேமி</button>
                 <button onclick="closeEditModal()" class="btn-cancel">ரத்து</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Vatti Loan Edit Modal (வட்டி கணக்கு எடிட் செய்ய புதிய Modal) -->
-    <div id="vattiEditModal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <h3>வட்டி கடனை எடிட் செய்ய</h3>
-            <label>பெயர்:</label>
-            <input type="text" id="vatti-edit-name">
-            <label>அசல் தொகை (₹):</label>
-            <input type="number" id="vatti-edit-amount">
-            <label>வட்டி % (மாதம்):</label>
-            <input type="number" id="vatti-edit-rate">
-            <label>தேதி & நேரம்:</label>
-            <input type="datetime-local" id="vatti-edit-date">
-            <div class="modal-actions" style="margin-top:10px;">
-                <button onclick="saveVattiEdit()" class="btn-primary">சேமி</button>
-                <button onclick="closeVattiEditModal()" class="btn-cancel">ரத்து</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Source Pop-up Modal -->
-    <div id="sourceModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
-        <div style="background:white; padding:20px; border-radius:12px; text-align:center; width:85%; max-width:320px;">
-            <h3 style="margin-bottom:15px; color:#333; font-size: 16px;">பணம் எதிலிருந்து எடுக்கப்பட்டது?</h3>
-            <button onclick="selectSource('சம்பளம்')" style="width:100%; padding:12px; margin-bottom:10px; background:#2563eb; color:white; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">1. 💼 சம்பளப் பணம்</button>
-            <button onclick="selectSource('வீடு')" style="width:100%; padding:12px; background:#16a34a; color:white; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">2. 🏠 வீட்டுப் பணம்</button>
         </div>
     </div>
 
