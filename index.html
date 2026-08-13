@@ -136,12 +136,12 @@
 
     <!-- Bottom Chat Input Bar -->
     <div class="bottom-chat-bar">
-        <input type="text" id="userInput" placeholder="எ.கா: எம்கே செலவு 500...">
+        <input type="text" id="userInput" placeholder="எ.கா: சேகருக்கு 50,000 மூணு பைசா...">
         <button class="btn-send" onclick="handleManualInput()">அனுப்பு</button>
         <button class="btn-voice" onclick="startVoiceRecognition()">🎙️ பேசு</button>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- General Edit Modal -->
     <div id="editModal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>பதிவை எடிட் செய்ய</h3>
@@ -156,9 +156,28 @@
         </div>
     </div>
 
-    <!-- பணம் தேர்வு செய்யும் Pop-up Box (ஆ மூலத்தைக் குறிப்பிடாத போது தோன்றும்) -->
+    <!-- Vatti Loan Edit Modal (வட்டி கணக்கு எடிட் செய்ய புதிய Modal) -->
+    <div id="vattiEditModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3>வட்டி கடனை எடிட் செய்ய</h3>
+            <label>பெயர்:</label>
+            <input type="text" id="vatti-edit-name">
+            <label>அசல் தொகை (₹):</label>
+            <input type="number" id="vatti-edit-amount">
+            <label>வட்டி % (மாதம்):</label>
+            <input type="number" id="vatti-edit-rate">
+            <label>தேதி & நேரம்:</label>
+            <input type="datetime-local" id="vatti-edit-date">
+            <div class="modal-actions" style="margin-top:10px;">
+                <button onclick="saveVattiEdit()" class="btn-primary">சேமி</button>
+                <button onclick="closeVattiEditModal()" class="btn-cancel">ரத்து</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Source Pop-up Modal -->
     <div id="sourceModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
-        <div style="background:white; padding:20px; border-radius:12px; text-align:center; width:85%; max-width:320px; box-shadow: 0px 4px 15px rgba(0,0,0,0.2);">
+        <div style="background:white; padding:20px; border-radius:12px; text-align:center; width:85%; max-width:320px;">
             <h3 style="margin-bottom:15px; color:#333; font-size: 16px;">பணம் எதிலிருந்து எடுக்கப்பட்டது?</h3>
             <button onclick="selectSource('சம்பளம்')" style="width:100%; padding:12px; margin-bottom:10px; background:#2563eb; color:white; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">1. 💼 சம்பளப் பணம்</button>
             <button onclick="selectSource('வீடு')" style="width:100%; padding:12px; background:#16a34a; color:white; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">2. 🏠 வீட்டுப் பணம்</button>
@@ -166,17 +185,5 @@
     </div>
 
     <script src="app.js"></script>
-    <script>
-        // தானாகவே குறிப்பிட்ட பகுதிக்கு நகரும் ஃபங்ஷன் (Auto-Scroll)
-        function scrollToSection(elementId) {
-            let element = document.getElementById(elementId);
-            if (element) {
-                element.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start' 
-                });
-            }
-        }
-    </script>
 </body>
 </html>
