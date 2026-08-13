@@ -12,9 +12,9 @@ function saveState() {
 
 function parseTamilAmount(text) {
     let t = text.toLowerCase();
-    let numMatch = t.match(/(\d+)/);
+    let numMatch = t.match(/(\d[\d,]*)/);
     if (!numMatch) return 0;
-    let baseNum = parseFloat(numMatch[1]);
+    let baseNum = parseFloat(numMatch[1].replace(/,/g, ''));
     if (t.includes("ஆயிரம்") || t.includes("ayiram")) return baseNum * 1000;
     if (t.includes("லட்சம்") || t.includes("lakh")) return baseNum * 100000;
     return baseNum;
@@ -73,57 +73,53 @@ function addExpenseManual(category, descId, amtId, sourceId, dateId) {
     saveState();
 }
 
-// Fixed AI Text Processing Engine
+// AI Text Processing Engine (Updated Logic)
 function processNewTransaction(text) {
     let amount = parseTamilAmount(text);
     if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
 
     let t = text.toLowerCase();
     
-    // Default values
     let category = "வீடு"; 
     let source = "வீடு"; 
-    let isExpense = true;
+    let isExpense = true; // Default
 
-    // Detect Source (பணம் எதிலிருந்து எடுக்கப்பட்டது)
-    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்") || t.includes("சம்பளத்திலிருந்து")) {
+    // 1. Check Income keywords
+    if (t.includes("வந்தது") || t.includes("வரவு") || t.includes("வாங்கிய") || t.includes("கொடுத்தார்கள்") || t.includes("கிடைத்தது") || t.includes("சேர்ந்தது")) {
+        isExpense = false;
+    }
+
+    // 2. Detect Source (பணம் எதிலிருந்து எடுக்கப்பட்டது)
+    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்") || t.includes("சம்பளத்திலிருந்து") || t.includes("சம்பளம்")) {
         source = "சம்பளம்";
     } else {
         source = "வீடு";
     }
 
-    // Detect Category (எந்தப் பிரிவைச் சேர்ந்த செலவு/வரவு)
-    if (t.includes("வட்டி") || t.includes("பைசா") || t.includes("கடன்")) {
-        category = "வட்டி";
-        
-        // வட்டிக்கு கொடுத்த தொகையை தானாக Vatti Accounts இல் சேர்க்கும் பகுதி
-        let nameMatch = text.match(/^([a-zA-A-தமிழ்]+)\s*(இல்|க்கு|ிற்கு)?/);
-        let name = "பொது வட்டி";
-        if (t.includes("சேகருக்கு")) name = "சேகர்";
-        
-        if (!vattiAccounts[name]) vattiAccounts[name] = [];
-        vattiAccounts[name].push({
-            loanNo: vattiAccounts[name].length + 1,
-            amount: amount,
-            rate: 3, // default rate
-            date: new Date().toISOString()
-        });
-    } else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்")) {
+    // 3. Detect Category (எந்தப் பிரிவைச் சேர்ந்தது)
+    if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்")) {
         category = "கொல்லை";
     } else if (t.includes("mk") || t.includes("எம் கே") || t.includes("எம்கே")) {
         category = "MK செலவு";
     } else if (t.includes("sk") || t.includes("எஸ் கே") || t.includes("எஸ்கே")) {
         category = "SK செலவு";
-    } else if (t.includes("சம்பளம்") && (t.includes("வந்தது") || t.includes("வரவு") || t.includes("வாங்கிய"))) {
+    } else if (t.includes("வட்டி") || t.includes("பைசா") || t.includes("கடன்")) {
+        category = "வட்டி";
+        
+        let name = "பொது வட்டி";
+        if (t.includes("சேகர்")) name = "சேகர்";
+        
+        if (!vattiAccounts[name]) vattiAccounts[name] = [];
+        vattiAccounts[name].push({
+            loanNo: vattiAccounts[name].length + 1,
+            amount: amount,
+            rate: 3,
+            date: new Date().toISOString()
+        });
+    } else if (!isExpense && source === "சம்பளம்") {
         category = "சம்பளம்";
-        source = "சம்பளம்";
-        isExpense = false;
-    } else if (t.includes("வீடு") && (t.includes("வந்தது") || t.includes("வரவு"))) {
-        category = "வீடு";
-        source = "வீடு";
-        isExpense = false;
     } else {
-        category = "வீடு"; // பொதுவான வீட்டுச் செலவுகள்
+        category = "வீடு";
     }
 
     let tx = {
@@ -138,61 +134,6 @@ function processNewTransaction(text) {
 
     transactions.push(tx);
     saveState();
-}
-
-// Loan / Vatti Operations
-function addLoanInputRow() {
-    let container = document.getElementById('loans-container');
-    let div = document.createElement('div');
-    div.className = 'loan-input-row';
-    div.style.marginTop = "8px";
-    div.innerHTML = `
-        <input type="number" class="vatti-amount" placeholder="அசல் தொகை (₹)" style="width:30%; margin-right:2%;">
-        <input type="number" class="vatti-rate" placeholder="வட்டி %" style="width:30%; margin-right:2%;">
-        <input type="datetime-local" class="vatti-date" style="width:35%;">`;
-    container.appendChild(div);
-}
-
-function saveVattiAccount() {
-    let name = document.getElementById('vatti-name').value.trim();
-    if (!name) return alert("நபர் பெயரை உள்ளிடவும்.");
-
-    let amounts = document.querySelectorAll('.vatti-amount');
-    let rates = document.querySelectorAll('.vatti-rate');
-    let dates = document.querySelectorAll('.vatti-date');
-
-    let existingLoans = vattiAccounts[name] || [];
-    let startNo = existingLoans.length + 1;
-
-    amounts.forEach((elem, idx) => {
-        let amt = parseFloat(elem.value) || 0;
-        let rate = parseFloat(rates[idx].value) || 0;
-        let customDate = dates[idx].value ? new Date(dates[idx].value).toISOString() : new Date().toISOString();
-
-        if (amt > 0) {
-            existingLoans.push({
-                loanNo: startNo++,
-                amount: amt,
-                rate: rate,
-                date: customDate
-            });
-        }
-    });
-
-    vattiAccounts[name] = existingLoans;
-    document.getElementById('vatti-name').value = '';
-    document.getElementById('loans-container').innerHTML = `
-        <div class="loan-input-row">
-            <input type="number" class="vatti-amount" placeholder="அசல் தொகை (₹)">
-            <input type="number" class="vatti-rate" placeholder="வட்டி % (மாதம்)">
-            <input type="datetime-local" class="vatti-date">
-        </div>`;
-    saveState();
-}
-
-function selectPersonForLoan(name) {
-    document.getElementById('vatti-name').value = name;
-    switchTab('vatti-tab', document.querySelectorAll('.tab-btn')[6]);
 }
 
 function calculateDaysAndInterest(startDateStr, principal, monthlyRate) {
@@ -215,15 +156,18 @@ function calculateDaysAndInterest(startDateStr, principal, monthlyRate) {
     };
 }
 
-// Corrected Dashboard Logic
+// Updated Dashboard Calculation
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
 
     transactions.forEach(t => {
         if (!t.isExpense) {
-            // Income logic
-            if (t.category === "சம்பளம்") totals["சம்பளம்"] += t.amount;
-            if (t.category === "வீடு") totals["வீடு"] += t.amount;
+            // Income Logic
+            if (t.category === "சம்பளம்" || t.source === "சம்பளம்") {
+                totals["சம்பளம்"] += t.amount;
+            } else {
+                totals["வீடு"] += t.amount;
+            }
         } else {
             // Expense Logic
             if (totals.hasOwnProperty(t.category)) {
