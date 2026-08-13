@@ -2,7 +2,7 @@ let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
 let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
 let editingTxId = null;
 let editingVattiInfo = null;
-let pendingTxData = null; // To hold data waiting for pop-up source choice
+let pendingTxData = null;
 
 function saveState() {
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
@@ -28,7 +28,7 @@ function scrollToSection(elementId) {
     }
 }
 
-// Full Tamil Words to Digits Converter
+// Tamil Numbers to Digits Parsing
 function parseTamilAmount(text) {
     let t = text.toLowerCase().trim();
 
@@ -43,12 +43,11 @@ function parseTamilAmount(text) {
     let wordMap = {
         "ஒரு": 1, "ஒன்னு": 1, "இரண்டு": 2, "ரெண்டு": 2, "மூன்று": 3, "மூணு": 3, "நான்கு": 4, "நாலு": 4,
         "ஐந்து": 5, "அஞ்சு": 5, "ஆறு": 6, "ஏழு": 7, "எட்டு": 8, "ஒன்பது": 9, "பத்து": 10,
-        "நூறு": 100, "இருநூறு": 200, "முன்னூறு": 300, "நானூறு": 400, "ஐந்நூறு": 500, "அந்நூறு": 500,
+        "நூறு": 100, "இருநூறு": 200, "முன்னூறு": 300, "நானூறு": 400, "ஐந்நூறு": 500,
         "ஆயிரம்": 1000, "இரண்டாயிரம்": 2000, "ரெண்டாயிரம்": 2000, "மூன்றாயிரம்": 3000, "மூணாயிரம்": 3000,
         "நாலாயிரம்": 4000, "ஐயாயிரம்": 5000, "ஆறாயிரம்": 6000, "ஏழாயிரம்": 7000, "எட்டாயிரம்": 8000, "ஒன்பதாயிரம்": 9000,
-        "பத்தாயிரம்": 10000, "பதினைந்தாயிரம்": 15000, "பதினைஞ்சாயிரம்": 15000,
-        "இருபதாயிரம்": 20000, "முப்பதாயிரம்": 30000, "நாற்பதாயிரம்": 40000, "ஐம்பதாயிரம்": 50000,
-        "அறுபதாயிரம்": 60000, "எழுபதாயிரம்": 70000, "எண்பதாயிரம்": 80000, "தொன்னூறாயிரம்": 90000,
+        "பத்தாயிரம்": 10000, "பதினைந்தாயிரம்": 15000, "இருபதாயிரம்": 20000, "முப்பதாயிரம்": 30000,
+        "நாற்பதாயிரம்": 40000, "ஐம்பதாயிரம்": 50000, "அறுபதாயிரம்": 60000, "எழுபதாயிரம்": 70000, "எண்பதாயிரம்": 80000,
         "ஒரு லட்சம்": 100000, "லட்சம்": 100000
     };
 
@@ -100,7 +99,7 @@ function processNewTransaction(text) {
             loanNo: vattiAccounts[name].length + 1,
             amount: amount,
             rate: rate,
-            date: new Date().toLocaleDateString()
+            date: new Date().toISOString().split('T')[0]
         });
 
         saveState();
@@ -122,7 +121,6 @@ function processNewTransaction(text) {
         date: new Date().toLocaleString()
     };
 
-    // If source not specified for expense, trigger pop-up!
     if (isExpense && !source) {
         pendingTxData = txData;
         document.getElementById('sourceModalText').innerText = `"${text}" - இதற்கான தொகையை எந்த பணத்திலிருந்து கழிக்க வேண்டும்?`;
@@ -177,7 +175,6 @@ function addExpenseManual(category, descId, amtId, sourceId, dateId) {
     saveState();
 }
 
-// Vatti Account Functions
 function addMoreLoanField() {
     let container = document.getElementById('vatti-inputs-container');
     let div = document.createElement('div');
@@ -194,7 +191,7 @@ function saveVattiAccount() {
     let amtInputs = document.querySelectorAll('.vatti-amt-input');
     let rateInputs = document.querySelectorAll('.vatti-rate-input');
     let customDate = document.getElementById('vatti-date-input').value;
-    let formattedDate = customDate ? new Date(customDate).toLocaleDateString() : new Date().toLocaleDateString();
+    let formattedDate = customDate ? customDate.split('T')[0] : new Date().toISOString().split('T')[0];
 
     if (!vattiAccounts[name]) vattiAccounts[name] = [];
 
@@ -228,30 +225,35 @@ function addSingleLoanForPerson(name) {
     if (amtInput) amtInput.focus();
 }
 
-// Monthly Interest Calculation & Days calculation
-function calculateInterestDetails(loan) {
+// 🎯 ACCURATE ACCRUED INTEREST CALCULATOR
+function calculateAccruedInterest(loan) {
     let amount = loan.amount || 0;
     let rate = loan.rate || 3;
     
     // Monthly Interest
-    let monthlyInterest = Math.round((amount * rate) / 100);
+    let monthlyInterest = (amount * rate) / 100;
+    let dailyInterest = monthlyInterest / 30;
 
-    // Days / Months calculation
+    // Date Calculation
     let loanDate = new Date(loan.date);
     let today = new Date();
-    let diffTime = Math.abs(today - loanDate);
-    let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Difference in days
+    let diffTime = today.getTime() - loanDate.getTime();
+    let diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+    if (diffDays < 0 || isNaN(diffDays)) diffDays = 0;
+
     let months = Math.floor(diffDays / 30);
     let remainingDays = diffDays % 30;
 
     let timeText = `${diffDays} நாட்கள் (${months} மாதம் ${remainingDays} நாள்)`;
 
-    // Accrued Interest
-    let totalInterestAccrued = Math.round((monthlyInterest / 30) * diffDays);
-    if (diffDays === 0) totalInterestAccrued = monthlyInterest; // Default min 1 month view
+    // Total Interest for the entire elapsed time
+    let totalInterestAccrued = Math.round(diffDays * dailyInterest);
 
     return {
-        monthlyInterest,
+        monthlyInterest: Math.round(monthlyInterest),
+        diffDays,
         timeText,
         totalInterestAccrued,
         totalLoanAmount: amount + totalInterestAccrued
@@ -334,7 +336,7 @@ function renderAllLists() {
     }
 }
 
-// Perfect Match to your Screenshot Layout
+// 📊 Vatti Cards UI Matching Screen Design perfectly
 function renderVattiLists() {
     let container = document.getElementById('vatti-person-list');
     if (!container) return;
@@ -343,12 +345,12 @@ function renderVattiLists() {
     for (let name in vattiAccounts) {
         let loans = vattiAccounts[name];
         let totalPrincipal = 0;
-        let totalInterest = 0;
+        let totalAccruedInterest = 0;
 
         let loansHTML = loans.map((l, idx) => {
-            let details = calculateInterestDetails(l);
+            let details = calculateAccruedInterest(l);
             totalPrincipal += l.amount;
-            totalInterest += details.monthlyInterest;
+            totalAccruedInterest += details.totalInterestAccrued;
 
             return `
             <div style="background:#f8fafc; border-left:4px solid #2563eb; padding:10px 12px; border-radius:6px; margin-bottom:8px;">
@@ -365,7 +367,10 @@ function renderVattiLists() {
                     📅 தேதி: ${l.date} (${details.timeText})
                 </div>
                 <div style="font-size:14px; font-weight:bold; color:#d97706; margin-top:4px;">
-                    வட்டி தொகை: ₹${details.monthlyInterest}
+                    வட்டி தொகை: ₹${details.totalInterestAccrued} <span style="font-size:11px; font-weight:normal; color:#64748b;">(மாத வட்டி ₹${details.monthlyInterest})</span>
+                </div>
+                <div style="font-size:13px; font-weight:bold; color:#2563eb; margin-top:2px;">
+                    மொத்தம் (அசல்+வட்டி): ₹${details.totalLoanAmount}
                 </div>
             </div>`;
         }).join('');
@@ -381,8 +386,8 @@ function renderVattiLists() {
             </div>
             ${loansHTML}
             <div style="background:#0f172a; color:white; padding:12px; border-radius:8px; margin-top:10px; font-size:13px;">
-                <div>மொத்த அசல்: ₹${totalPrincipal} | மொத்த வட்டி: ₹${totalInterest}</div>
-                <div style="color:#4ade80; font-weight:bold; font-size:14px; margin-top:4px;">👉 மொத்தமாகத் தர வேண்டிய தொகை: ₹${totalPrincipal + totalInterest}</div>
+                <div>மொத்த அசல்: ₹${totalPrincipal} | மொத்த வட்டி: ₹${totalAccruedInterest}</div>
+                <div style="color:#4ade80; font-weight:bold; font-size:14px; margin-top:4px;">👉 மொத்தமாகத் தர வேண்டிய தொகை: ₹${totalPrincipal + totalAccruedInterest}</div>
             </div>
         </div>`;
     }
@@ -393,6 +398,7 @@ function openVattiEditModal(name, index) {
     let loan = vattiAccounts[name][index];
     document.getElementById('edit-vatti-amt').value = loan.amount;
     document.getElementById('edit-vatti-rate').value = loan.rate;
+    document.getElementById('edit-vatti-date').value = loan.date;
     document.getElementById('vattiEditModal').style.display = 'flex';
 }
 
@@ -409,7 +415,7 @@ function saveVattiEdit() {
         
         let newDate = document.getElementById('edit-vatti-date').value;
         if (newDate) {
-            loan.date = new Date(newDate).toLocaleDateString();
+            loan.date = newDate;
         }
 
         saveState();
