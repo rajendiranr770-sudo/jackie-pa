@@ -115,7 +115,7 @@
             <div id="sk-list"></div>
         </section>
 
-        <!-- Vatti Tab (Old Layout Restored) -->
+        <!-- Vatti Tab -->
         <section id="vatti-tab" class="tab-content">
             <div class="card-form-box">
                 <h3>வட்டி கடன் சேர்க்க</h3>
@@ -126,6 +126,7 @@
                         <input type="number" class="vatti-rate-input" placeholder="வட்டி % / பைசா" style="flex:1;">
                     </div>
                 </div>
+                <input type="datetime-local" id="vatti-date-input" style="width:100%; margin-bottom:8px;">
                 <button class="btn-secondary" onclick="addMoreLoanField()" style="width:100%; margin-bottom:8px; background:#f1f5f9; border:1px dashed #cbd5e1; color:#2563eb;">➕ இரண்டாவது கடன் சேர்க்க (Add Loan)</button>
                 <button class="btn-primary" onclick="saveVattiAccount()" style="width:100%; background:#16a34a; font-weight:bold;">கணக்கில் சேர்</button>
             </div>
@@ -135,12 +136,12 @@
 
     <!-- Bottom Chat Input Bar -->
     <div class="bottom-chat-bar">
-        <input type="text" id="userInput" placeholder="எ.கா: சம்பள பணம் 200...">
+        <input type="text" id="userInput" placeholder="எ.கா: வீட்டிலிருந்து பணம் தந்தார்கள் 5000">
         <button class="btn-send" onclick="handleManualInput()">அனுப்பு</button>
         <button class="btn-voice" onclick="startVoiceRecognition()">🎙️ பேசு</button>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- General Edit Modal -->
     <div id="editModal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>பதிவை எடிட் செய்ய</h3>
@@ -148,9 +149,28 @@
             <input type="text" id="edit-text">
             <label>தொகை:</label>
             <input type="number" id="edit-amount">
+            <label>தேதி / நேரம்:</label>
+            <input type="datetime-local" id="edit-date">
             <div class="modal-actions" style="margin-top:10px;">
                 <button onclick="saveEdit()" class="btn-primary">சேமி</button>
                 <button onclick="closeEditModal()" class="btn-cancel">ரத்து</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vatti Loan Edit Modal -->
+    <div id="vattiEditModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3>வட்டி கடனை எடிட் செய்ய</h3>
+            <label>அசல் தொகை (₹):</label>
+            <input type="number" id="edit-vatti-amt">
+            <label>வட்டி %:</label>
+            <input type="number" id="edit-vatti-rate">
+            <label>தேதி / நேரம்:</label>
+            <input type="datetime-local" id="edit-vatti-date">
+            <div class="modal-actions" style="margin-top:10px;">
+                <button onclick="saveVattiEdit()" class="btn-primary">சேமி</button>
+                <button onclick="closeVattiEditModal()" class="btn-cancel">ரத்து</button>
             </div>
         </div>
     </div>
