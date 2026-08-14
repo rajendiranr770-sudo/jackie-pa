@@ -52,7 +52,7 @@ function saveState() {
 }
 
 // ========================================================
-// 4. GOOGLE LOGIN / LOGOUT LOGIC (UPDATED FOR HTML)
+// 4. GOOGLE LOGIN / LOGOUT LOGIC
 // ========================================================
 window.loginWithGoogle = function() {
     signInWithPopup(auth, provider).catch(error => alert("Login Error: " + error.message));
@@ -64,7 +64,6 @@ window.logoutGoogle = function() {
     }).catch(error => alert("Logout Error: " + error.message));
 };
 
-// HTML-ல் உள்ள பட்டன்களுக்கு Event Listeners இணைத்தல்
 document.addEventListener('DOMContentLoaded', () => {
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
@@ -73,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
 });
 
-// ஒன்-டைம் லாகின் செக் (AUTH STATE OBSERVER)
 onAuthStateChanged(auth, (user) => {
     const authContainer = document.getElementById('auth-container');
     const mainApp = document.getElementById('main-app');
@@ -82,12 +80,10 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
 
-        // லாகின் செய்திருந்தால் -> ஆப்பை காட்டு, லாகின் திரையை மறை
         if (authContainer) authContainer.style.display = 'none';
         if (mainApp) mainApp.style.display = 'block';
         if (userNameSpan) userNameSpan.textContent = user.displayName || user.email;
 
-        // Firebase-ல் இருந்து டேட்டாவை Sync செய்தல்
         onSnapshot(doc(db, "users", user.uid), (docSnap) => {
             if (docSnap.exists()) {
                 let data = docSnap.data();
@@ -105,14 +101,13 @@ onAuthStateChanged(auth, (user) => {
     } else {
         currentUser = null;
 
-        // லாகின் செய்யவில்லை என்றால் -> லாகின் திரையைக் காட்டு, ஆப்பை மறை
         if (authContainer) authContainer.style.display = 'flex';
         if (mainApp) mainApp.style.display = 'none';
     }
 });
 
 // ========================================================
-// 5. NAVIGATION & UI FUNCTIONS (EXPOSED TO HTML)
+// 5. NAVIGATION & UI FUNCTIONS
 // ========================================================
 window.switchTab = function(tabId, btnElement) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -131,12 +126,11 @@ window.scrollToSection = function(elementId) {
 };
 
 // ========================================================
-// 6. TAMIL PARSING & AI LOGIC (FIXED SK/MK & SOURCE DETECTION)
+// 6. TAMIL PARSING & AI LOGIC
 // ========================================================
 function parseTamilAmount(text) {
     let t = text.toLowerCase().trim();
 
-    // 1. எண்களும் வார்த்தைகளும் கலந்திருந்தால் (எ.கா: "20 ஆயிரம்", "50 ஆயிரம்")
     let numMatch = t.match(/(\d[\d,]*)/);
     if (numMatch) {
         let baseNum = parseFloat(numMatch[1].replace(/,/g, ''));
@@ -145,7 +139,6 @@ function parseTamilAmount(text) {
         return baseNum;
     }
 
-    // 2. முழுவதும் தமிழ் வார்த்தைகளாக இருந்தால் (எ.கா: "இருபது ஆயிரம்", "ஐம்பதாயிரம்")
     let multiplier = 1;
     if (t.includes("லட்சம்")) multiplier = 100000;
     else if (t.includes("ஆயிரம்")) multiplier = 1000;
@@ -226,7 +219,7 @@ function processNewTransaction(text) {
         source = "வீடு";
     }
 
-    // 2. வரவு / கடன் / பிரிவுகள் (FIXED MK & SK MATCHING)
+    // 2. வரவு / கடன் / பிரிவுகள் மேட்ச் செய்தல்
     if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
         isExpense = false;
         category = "வீடு";
@@ -261,7 +254,6 @@ function processNewTransaction(text) {
         saveState();
         return;
     } 
-    // 👇 MK / SK மற்றும் கொல்லை கணக்குகள் சரியாக மேட்ச் ஆக சீரமைக்கப்பட்டுள்ளது 👇
     else if (t.includes("எஸ்கே") || t.includes("எஸ் கே") || t.includes("sk") || t.includes("sk-")) {
         category = "SK செலவு";
     } 
@@ -284,7 +276,6 @@ function processNewTransaction(text) {
         date: new Date().toLocaleString()
     };
 
-    // பணத்தின் ஆதாரம் (சம்பளம் / வீடு) குறிப்பிடப்படவில்லை என்றால் Pop-up Modal கேட்கும்
     if (isExpense && !source) {
         pendingTxData = txData;
         let modalTextEl = document.getElementById('sourceModalText');
@@ -294,7 +285,6 @@ function processNewTransaction(text) {
             modalTextEl.innerText = `"${text}" - இதற்கான தொகையை எந்த பணத்திலிருந்து கழிக்க வேண்டும்?`;
             modalEl.style.display = 'flex';
         } else {
-            // Modal இல்லை என்றால் Default ஆக வீட்டுப் பணத்தில் சேர்க்கும்
             txData.source = "வீடு";
             transactions.push(txData);
             saveState();
@@ -321,36 +311,43 @@ window.confirmSource = function(selectedSource) {
 };
 
 // ========================================================
-// 7. MANUAL ENTRY & VATTI FORM LOGIC (EXPOSED TO HTML)
+// 7. MANUAL ENTRY & VATTI FORM LOGIC (FIXED FOR TABS)
 // ========================================================
+
+// மேனுவல் என்ட்ரியில் பதிவிடும் போது AI சிஸ்டத்திற்கு அனுப்பி சரியாகப் பிரிக்கும் மாற்றம்
 window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
     let desc = document.getElementById(descId).value.trim();
     let amt = parseFloat(document.getElementById(amtId).value) || 0;
     let type = document.getElementById(typeId).value;
-    let customDate = document.getElementById(dateId) ? document.getElementById(dateId).value : '';
 
     if (!desc || amt <= 0) return alert("விவரம் மற்றும் தொகையை சரிபார்க்கவும்.");
 
-    let formattedDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
-    transactions.push({ id: Date.now(), text: desc, amount: amt, category: category, source: category, isExpense: (type === 'expense'), date: formattedDate });
+    if (type === 'expense') {
+        let textToProcess = `${desc} ${amt} ${category} பணத்தில்`;
+        processNewTransaction(textToProcess);
+    } else {
+        let customDate = document.getElementById(dateId) ? document.getElementById(dateId).value : '';
+        let formattedDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
+        transactions.push({ id: Date.now(), text: desc, amount: amt, category: category, source: category, isExpense: false, date: formattedDate });
+        saveState();
+    }
+
     document.getElementById(descId).value = '';
     document.getElementById(amtId).value = '';
-    saveState();
 };
 
 window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
     let desc = document.getElementById(descId).value.trim();
     let amt = parseFloat(document.getElementById(amtId).value) || 0;
-    let source = document.getElementById(sourceId).value;
-    let customDate = document.getElementById(dateId) ? document.getElementById(dateId).value : '';
+    let source = document.getElementById(sourceId) ? document.getElementById(sourceId).value : category;
 
     if (!desc || amt <= 0) return alert("விவரம் மற்றும் தொகையை சரிபார்க்கவும்.");
 
-    let formattedDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
-    transactions.push({ id: Date.now(), text: desc, amount: amt, category: category, source: source, isExpense: true, date: formattedDate });
+    let textToProcess = `${desc} ${amt} ${source} பணத்தில்`;
+    processNewTransaction(textToProcess);
+
     document.getElementById(descId).value = '';
     document.getElementById(amtId).value = '';
-    saveState();
 };
 
 window.addMoreLoanField = function() {
@@ -575,7 +572,7 @@ function renderVattiLists() {
 }
 
 // ========================================================
-// 9. MODALS, EDIT & DELETE HANDLERS (EXPOSED TO HTML)
+// 9. MODALS, EDIT & DELETE HANDLERS
 // ========================================================
 window.openVattiEditModal = function(name, index) {
     editingVattiInfo = { name, index };
@@ -661,7 +658,7 @@ window.handleManualInput = function() {
 };
 
 // ========================================================
-// 10. VOICE RECOGNITION (EXPOSED TO HTML)
+// 10. VOICE RECOGNITION
 // ========================================================
 window.startVoiceRecognition = function() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
