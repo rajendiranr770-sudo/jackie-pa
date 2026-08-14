@@ -105,33 +105,82 @@ window.scrollToSection = function(elementId) {
 };
 
 // ========================================================
-// 6. TAMIL PARSING & AI LOGIC
+// 6. TAMIL PARSING & AI LOGIC (FIXED TAMIL NUMBERS & SK/MK)
 // ========================================================
 function parseTamilAmount(text) {
     let t = text.toLowerCase().trim();
 
+    // 1. எண்களும் வார்த்தைகளும் கலந்திருந்தால் (எ.கா: "20 ஆயிரம்", "50 ஆயிரம்")
     let numMatch = t.match(/(\d[\d,]*)/);
     if (numMatch) {
         let baseNum = parseFloat(numMatch[1].replace(/,/g, ''));
-        if (t.includes("ஆயிரம்") || t.includes("ayiram")) return baseNum * 1000;
         if (t.includes("லட்சம்") || t.includes("lakh")) return baseNum * 100000;
+        if (t.includes("ஆயிரம்") || t.includes("ayiram")) return baseNum * 1000;
         return baseNum;
     }
 
-    let wordMap = {
-        "ஒரு": 1, "ஒன்னு": 1, "இரண்டு": 2, "ரெண்டு": 2, "மூன்று": 3, "மூணு": 3, "நான்கு": 4, "நாலு": 4,
-        "ஐந்து": 5, "அஞ்சு": 5, "ஆறு": 6, "ஏழு": 7, "எட்டு": 8, "ஒன்பது": 9, "பத்து": 10,
-        "நூறு": 100, "இருநூறு": 200, "முன்னூறு": 300, "நானூறு": 400, "ஐந்நூறு": 500,
-        "ஆயிரம்": 1000, "இரண்டாயிரம்": 2000, "ரெண்டாயிரம்": 2000, "மூன்றாயிரம்": 3000, "மூணாயிரம்": 3000,
-        "நாலாயிரம்": 4000, "ஐயாயிரம்": 5000, "ஆறாயிரம்": 6000, "ஏழாயிரம்": 7000, "எட்டாயிரம்": 8000, "ஒன்பதாயிரம்": 9000,
-        "பத்தாயிரம்": 10000, "பதினைந்தாயிரம்": 15000, "இருபதாயிரம்": 20000, "முப்பதாயிரம்": 30000,
-        "நாற்பதாயிரம்": 40000, "ஐம்பதாயிரம்": 50000, "அறுபதாயிரம்": 60000, "எழுபதாயிரம்": 70000, "எண்பதாயிரம்": 80000,
-        "ஒரு லட்சம்": 100000, "லட்சம்": 100000
-    };
+    // 2. முழுவதும் தமிழ் வார்த்தைகளாக இருந்தால் (எ.கா: "இருபது ஆயிரம்", "ஐம்பதாயிரம்")
+    let multiplier = 1;
+    if (t.includes("லட்சம்")) multiplier = 100000;
+    else if (t.includes("ஆயிரம்")) multiplier = 1000;
 
-    for (let word in wordMap) {
-        if (t.includes(word)) return wordMap[word];
+    let numbersMap = [
+        { word: "ஒரு லட்சம்", val: 100000 },
+        { word: "தொண்ணூறாயிரம்", val: 90000 },
+        { word: "எண்பதாயிரம்", val: 80000 },
+        { word: "எழுபதாயிரம்", val: 70000 },
+        { word: "அறுபதாயிரம்", val: 60000 },
+        { word: "ஐம்பதாயிரம்", val: 50000 },
+        { word: "நாற்பதாயிரம்", val: 40000 },
+        { word: "முப்பதாயிரம்", val: 30000 },
+        { word: "இருபதாயிரம்", val: 20000 },
+        { word: "பதினைந்தாயிரம்", val: 15000 },
+        { word: "பத்தாயிரம்", val: 10000 },
+        { word: "ஒன்பதாயிரம்", val: 9000 },
+        { word: "எட்டாயிரம்", val: 8000 },
+        { word: "ஏழாயிரம்", val: 7000 },
+        { word: "ஆறாயிரம்", val: 6000 },
+        { word: "ஐயாயிரம்", val: 5000 },
+        { word: "நாலாயிரம்", val: 4000 },
+        { word: "மூணாயிரம்", val: 3000 },
+        { word: "மூன்றாயிரம்", val: 3000 },
+        { word: "ரெண்டாயிரம்", val: 2000 },
+        { word: "இரண்டாயிரம்", val: 2000 },
+        { word: "ஆயிரம்", val: 1000 },
+        
+        { word: "தொண்ணூறு", val: 90 },
+        { word: "எண்பது", val: 80 },
+        { word: "எழுபது", val: 70 },
+        { word: "அறுபது", val: 60 },
+        { word: "ஐம்பது", val: 50 },
+        { word: "நாற்பது", val: 40 },
+        { word: "முப்பது", val: 30 },
+        { word: "இருபது", val: 20 },
+        { word: "பதினைந்து", val: 15 },
+        { word: "பத்து", val: 10 },
+        { word: "ஒன்பது", val: 9 },
+        { word: "எட்டு", val: 8 },
+        { word: "ஏழு", val: 7 },
+        { word: "ஆறு", val: 6 },
+        { word: "அஞ்சு", val: 5 },
+        { word: "ஐந்து", val: 5 },
+        { word: "நாலு", val: 4 },
+        { word: "நான்கு", val: 4 },
+        { word: "மூணு", val: 3 },
+        { word: "மூன்று", val: 3 },
+        { word: "ரெண்டு", val: 2 },
+        { word: "இரண்டு", val: 2 },
+        { word: "ஒன்னு", val: 1 },
+        { word: "ஒரு", val: 1 }
+    ];
+
+    for (let item of numbersMap) {
+        if (t.includes(item.word)) {
+            if (item.val >= 1000) return item.val;
+            return item.val * multiplier;
+        }
     }
+
     return 0;
 }
 
@@ -139,21 +188,25 @@ function processNewTransaction(text) {
     let amount = parseTamilAmount(text);
     if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
 
-    let t = text.toLowerCase();
-    let category = "வீடு"; 
+    let t = text.toLowerCase().trim();
+    let category = null; 
     let source = null; 
     let isExpense = true;
 
+    // 1. பணத்தின் ஆதாரம் (Source)
     if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்") || t.includes("சம்பளம்")) {
         source = "சம்பளம்";
     } else if (t.includes("வீட்டு பணத்தில்") || t.includes("வீட்டு பணம்") || t.includes("வீடு")) {
         source = "வீடு";
     }
 
+    // 2. வரவு / கடன் / பிரிவுகள்
     if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
         isExpense = false;
+        category = "வீடு";
         if (!source) source = "வீடு";
-    } else if (t.includes("வட்டி") || t.includes("பைசா") || t.includes("கடன்")) {
+    } 
+    else if (t.includes("வட்டி") || t.includes("பைசா") || t.includes("கடன்")) {
         category = "வட்டி";
         isExpense = false;
 
@@ -181,12 +234,18 @@ function processNewTransaction(text) {
 
         saveState();
         return;
-    } else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்") || t.includes("கூலி")) {
-        category = "கொல்லை";
-    } else if (t.includes("mk") || t.includes("எம் கே")) {
-        category = "MK செலவு";
-    } else if (t.includes("sk") || t.includes("எஸ் கே")) {
+    } 
+    else if (t.includes("எஸ்கே") || t.includes("எஸ்கேவுக்கு") || t.includes("எஸ் கே") || t.includes("sk")) {
         category = "SK செலவு";
+    } 
+    else if (t.includes("எம்கே") || t.includes("எம்கேவுக்கு") || t.includes("எம் கே") || t.includes("mk")) {
+        category = "MK செலவு";
+    } 
+    else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்") || t.includes("கூலி") || t.includes("கொல்லைக்கு")) {
+        category = "கொல்லை";
+    } 
+    else {
+        category = "வீடு";
     }
 
     let txData = {
@@ -470,7 +529,7 @@ function renderVattiLists() {
 }
 
 // ========================================================
-// 8. MODALS, EDIT & DELETE HANDLERS (EXPOSED TO HTML)
+// 9. MODALS, EDIT & DELETE HANDLERS (EXPOSED TO HTML)
 // ========================================================
 window.openVattiEditModal = function(name, index) {
     editingVattiInfo = { name, index };
@@ -554,7 +613,7 @@ window.handleManualInput = function() {
 };
 
 // ========================================================
-// 9. VOICE RECOGNITION (EXPOSED TO HTML)
+// 10. VOICE RECOGNITION (EXPOSED TO HTML)
 // ========================================================
 window.startVoiceRecognition = function() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
