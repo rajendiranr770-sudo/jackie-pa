@@ -52,7 +52,7 @@ function saveState() {
 }
 
 // ========================================================
-// 4. GOOGLE LOGIN / LOGOUT LOGIC
+// 4. GOOGLE LOGIN / LOGOUT LOGIC (UPDATED FOR HTML)
 // ========================================================
 window.loginWithGoogle = function() {
     signInWithPopup(auth, provider).catch(error => alert("Login Error: " + error.message));
@@ -60,14 +60,34 @@ window.loginWithGoogle = function() {
 
 window.logoutGoogle = function() {
     signOut(auth).then(() => {
-        alert("Logged Out Successfully!");
-        location.reload();
-    });
+        alert("வெற்றிகரமாக லாக்அவுட் செய்யப்பட்டது!");
+    }).catch(error => alert("Logout Error: " + error.message));
 };
 
+// HTML-ல் உள்ள பட்டன்களுக்கு Event Listeners இணைத்தல்
+document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
+    if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
+});
+
+// ஒன்-டைம் லாகின் செக் (AUTH STATE OBSERVER)
 onAuthStateChanged(auth, (user) => {
+    const authContainer = document.getElementById('auth-container');
+    const mainApp = document.getElementById('main-app');
+    const userNameSpan = document.getElementById('user-display-name');
+
     if (user) {
         currentUser = user;
+
+        // லாகின் செய்திருந்தால் -> ஆப்பை காட்டு, லாகின் திரையை மறை
+        if (authContainer) authContainer.style.display = 'none';
+        if (mainApp) mainApp.style.display = 'block';
+        if (userNameSpan) userNameSpan.textContent = user.displayName || user.email;
+
+        // Firebase-ல் இருந்து டேட்டாவை Sync செய்தல்
         onSnapshot(doc(db, "users", user.uid), (docSnap) => {
             if (docSnap.exists()) {
                 let data = docSnap.data();
@@ -82,6 +102,12 @@ onAuthStateChanged(auth, (user) => {
                 renderVattiLists();
             }
         });
+    } else {
+        currentUser = null;
+
+        // லாகின் செய்யவில்லை என்றால் -> லாகின் திரையைக் காட்டு, ஆப்பை மறை
+        if (authContainer) authContainer.style.display = 'flex';
+        if (mainApp) mainApp.style.display = 'none';
     }
 });
 
