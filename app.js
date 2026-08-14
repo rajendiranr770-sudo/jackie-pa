@@ -5,7 +5,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// 🔑 உங்கள் Firebase Config சாவி
 const firebaseConfig = {
     apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
     authDomain: "myfinanceapp-3f883.firebaseapp.com",
@@ -222,7 +221,7 @@ function processNewTransaction(text) {
     // 2. வரவு / கடன் / பிரிவுகள் மேட்ச் செய்தல்
     if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
         isExpense = false;
-        category = "வீடு";
+        category = "வரவு";
         if (!source) source = "வீடு";
     } 
     else if (t.includes("வட்டி") || t.includes("பைசா") || t.includes("கடன்")) {
@@ -264,7 +263,7 @@ function processNewTransaction(text) {
         category = "கொல்லை";
     } 
     else {
-        category = "வீடு";
+        category = "பொதுச் செலவு"; // 👈 பொதுவான செலவுகளுக்கு 'பொதுச் செலவு' என மாற்றப்பட்டது
     }
 
     let txData = {
@@ -311,10 +310,8 @@ window.confirmSource = function(selectedSource) {
 };
 
 // ========================================================
-// 7. MANUAL ENTRY & VATTI FORM LOGIC (FIXED FOR TABS)
+// 7. MANUAL ENTRY & VATTI FORM LOGIC
 // ========================================================
-
-// மேனுவல் என்ட்ரியில் பதிவிடும் போது AI சிஸ்டத்திற்கு அனுப்பி சரியாகப் பிரிக்கும் மாற்றம்
 window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
     let desc = document.getElementById(descId).value.trim();
     let amt = parseFloat(document.getElementById(amtId).value) || 0;
@@ -328,7 +325,7 @@ window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
     } else {
         let customDate = document.getElementById(dateId) ? document.getElementById(dateId).value : '';
         let formattedDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
-        transactions.push({ id: Date.now(), text: desc, amount: amt, category: category, source: category, isExpense: false, date: formattedDate });
+        transactions.push({ id: Date.now(), text: desc, amount: amt, category: "வரவு", source: category, isExpense: false, date: formattedDate });
         saveState();
     }
 
@@ -466,7 +463,7 @@ function updateDashboardUI() {
 
     let setVal = (id, val) => {
         let el = document.getElementById(id);
-        if (el) el.innerText = '₹' + val;
+        if (el) el.innerText = '₹' + Math.round(val); // 👈 தசமப் புள்ளிகளைத் தவிர்த்து முழு எண்ணாகக் காட்டும்
     };
 
     setVal('salary-val', totals["சம்பளம்"]);
@@ -496,6 +493,9 @@ function renderAllLists() {
                 let color = isExp ? "#dc2626" : "#16a34a";
                 let prefix = isExp ? "- " : "+ ";
 
+                // 👈 'வீடு' அல்லது 'பொதுச் செலவு' என வராமல், 'சம்பளம்' அல்லது 'வீடு' மட்டுமே காட்டும் படி சீரமைக்கப்பட்டது:
+                let categoryLabel = (t.category === "பொதுச் செலவு" || t.category === "வீடு") ? (t.source || 'வீடு') : `${t.category} (${t.source || 'வீடு'})`;
+
                 return `
                 <div class="card-box" style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -503,7 +503,7 @@ function renderAllLists() {
                         <span style="color:${color}; font-weight:bold; font-size:16px;">${prefix}₹${t.amount}</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b; margin-top:6px;">
-                        <span>${t.date} | ${t.category} (${t.source || 'வீடு'})</span>
+                        <span>${t.date} | ${categoryLabel}</span>
                         <div>
                             <button onclick="openEditModal(${t.id})" style="background:none; border:none; cursor:pointer;">✏️</button>
                             <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer;">🗑️</button>
