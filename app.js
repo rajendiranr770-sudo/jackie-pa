@@ -1,11 +1,11 @@
 // ========================================================
-// 1. FIREBASE SETUP (இணைப்பு)
+// 1. FIREBASE SETUP
 // ========================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// 🔑 உங்கள் Firebase Config சாவி (இங்கே உங்கள் சாவியை மட்டும் மாற்றிக் கொள்ளவும்)
+// 🔑 உங்கள் Firebase Config சாவியை இங்கே மாற்றவும்
 const firebaseConfig = {
     apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
     authDomain: "myfinanceapp-3f883.firebaseapp.com",
@@ -32,14 +32,12 @@ let editingVattiInfo = null;
 let pendingTxData = null;
 
 // ========================================================
-// 3. SAVE STATE (LOCAL + FIREBASE CLOUD SYNC)
+// 3. SAVE STATE (LOCAL + FIREBASE SYNC)
 // ========================================================
 function saveState() {
-    // LocalStorage-ல் சேமித்தல்
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
     localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
     
-    // லாக்-இன் செய்திருந்தால் Firebase Cloud-ல் ஆன்லைனில் சேமித்தல்
     if (currentUser) {
         setDoc(doc(db, "users", currentUser.uid), {
             transactions: transactions,
@@ -67,7 +65,6 @@ window.logoutGoogle = function() {
     });
 };
 
-// லாக்-இன் நிலையைக் கண்காணித்து ஆன்லைன் டேட்டாவை உடனுக்குடன் சின்க் செய்தல்
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
@@ -89,26 +86,26 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ========================================================
-// 5. APP UI NAVIGATION FUNCTIONS
+// 5. NAVIGATION & UI FUNCTIONS (EXPOSED TO HTML)
 // ========================================================
-function switchTab(tabId, btnElement) {
+window.switchTab = function(tabId, btnElement) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     
     let activeTab = document.getElementById(tabId);
     if (activeTab) activeTab.classList.add('active');
     if (btnElement) btnElement.classList.add('active');
-}
+};
 
-function scrollToSection(elementId) {
+window.scrollToSection = function(elementId) {
     let element = document.getElementById(elementId);
     if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-}
+};
 
 // ========================================================
-// 6. TAMIL NUMBERS PARSING & AI LOGIC
+// 6. TAMIL PARSING & AI LOGIC
 // ========================================================
 function parseTamilAmount(text) {
     let t = text.toLowerCase().trim();
@@ -212,7 +209,7 @@ function processNewTransaction(text) {
     }
 }
 
-function confirmSource(selectedSource) {
+window.confirmSource = function(selectedSource) {
     if (pendingTxData) {
         pendingTxData.source = selectedSource;
         if (pendingTxData.text.indexOf("பணத்தில்") === -1) {
@@ -223,12 +220,12 @@ function confirmSource(selectedSource) {
         saveState();
     }
     document.getElementById('sourceModal').style.display = 'none';
-}
+};
 
 // ========================================================
-// 7. MANUAL ENTRY & VATTI FORM LOGIC
+// 7. MANUAL ENTRY & VATTI FORM LOGIC (EXPOSED TO HTML)
 // ========================================================
-function addManualEntry(category, descId, amtId, typeId, dateId) {
+window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
     let desc = document.getElementById(descId).value.trim();
     let amt = parseFloat(document.getElementById(amtId).value) || 0;
     let type = document.getElementById(typeId).value;
@@ -241,9 +238,9 @@ function addManualEntry(category, descId, amtId, typeId, dateId) {
     document.getElementById(descId).value = '';
     document.getElementById(amtId).value = '';
     saveState();
-}
+};
 
-function addExpenseManual(category, descId, amtId, sourceId, dateId) {
+window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
     let desc = document.getElementById(descId).value.trim();
     let amt = parseFloat(document.getElementById(amtId).value) || 0;
     let source = document.getElementById(sourceId).value;
@@ -256,9 +253,9 @@ function addExpenseManual(category, descId, amtId, sourceId, dateId) {
     document.getElementById(descId).value = '';
     document.getElementById(amtId).value = '';
     saveState();
-}
+};
 
-function addMoreLoanField() {
+window.addMoreLoanField = function() {
     let container = document.getElementById('vatti-inputs-container');
     let div = document.createElement('div');
     div.style.cssText = "display: flex; gap: 8px; margin-bottom: 8px;";
@@ -267,9 +264,9 @@ function addMoreLoanField() {
         <input type="number" class="vatti-rate-input" placeholder="வட்டி %" style="flex:1;">
     `;
     container.appendChild(div);
-}
+};
 
-function saveVattiAccount() {
+window.saveVattiAccount = function() {
     let name = document.getElementById('vatti-name').value.trim() || "பொது வட்டி";
     let amtInputs = document.querySelectorAll('.vatti-amt-input');
     let rateInputs = document.querySelectorAll('.vatti-rate-input');
@@ -299,14 +296,14 @@ function saveVattiAccount() {
         </div>
     `;
     saveState();
-}
+};
 
-function addSingleLoanForPerson(name) {
+window.addSingleLoanForPerson = function(name) {
     document.getElementById('vatti-name').value = name;
-    scrollToSection('vatti-form-box');
+    window.scrollToSection('vatti-form-box');
     let amtInput = document.querySelector('.vatti-amt-input');
     if (amtInput) amtInput.focus();
-}
+};
 
 // ========================================================
 // 8. VATTI CALCULATOR & DASHBOARD UI
@@ -473,22 +470,22 @@ function renderVattiLists() {
 }
 
 // ========================================================
-// 9. MODALS, EDIT & DELETE HANDLERS
+// 8. MODALS, EDIT & DELETE HANDLERS (EXPOSED TO HTML)
 // ========================================================
-function openVattiEditModal(name, index) {
+window.openVattiEditModal = function(name, index) {
     editingVattiInfo = { name, index };
     let loan = vattiAccounts[name][index];
     document.getElementById('edit-vatti-amt').value = loan.amount;
     document.getElementById('edit-vatti-rate').value = loan.rate;
     document.getElementById('edit-vatti-date').value = loan.date;
     document.getElementById('vattiEditModal').style.display = 'flex';
-}
+};
 
-function closeVattiEditModal() {
+window.closeVattiEditModal = function() {
     document.getElementById('vattiEditModal').style.display = 'none';
-}
+};
 
-function saveVattiEdit() {
+window.saveVattiEdit = function() {
     if (editingVattiInfo) {
         let { name, index } = editingVattiInfo;
         let loan = vattiAccounts[name][index];
@@ -502,34 +499,34 @@ function saveVattiEdit() {
 
         saveState();
     }
-    closeVattiEditModal();
-}
+    window.closeVattiEditModal();
+};
 
-function deleteVattiLoan(name, index) {
+window.deleteVattiLoan = function(name, index) {
     vattiAccounts[name].splice(index, 1);
     if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
     saveState();
-}
+};
 
-function deleteVattiPerson(name) {
+window.deleteVattiPerson = function(name) {
     delete vattiAccounts[name];
     saveState();
-}
+};
 
-function openEditModal(id) {
+window.openEditModal = function(id) {
     let tx = transactions.find(t => t.id === id);
     if (!tx) return;
     editingTxId = id;
     document.getElementById('edit-text').value = tx.text;
     document.getElementById('edit-amount').value = tx.amount;
     document.getElementById('editModal').style.display = 'flex';
-}
+};
 
-function closeEditModal() { 
+window.closeEditModal = function() { 
     document.getElementById('editModal').style.display = 'none'; 
-}
+};
 
-function saveEdit() {
+window.saveEdit = function() {
     let tx = transactions.find(t => t.id === editingTxId);
     if (tx) {
         tx.text = document.getElementById('edit-text').value;
@@ -540,26 +537,26 @@ function saveEdit() {
         }
         saveState();
     }
-    closeEditModal();
-}
+    window.closeEditModal();
+};
 
-function deleteTx(id) {
+window.deleteTx = function(id) {
     transactions = transactions.filter(t => t.id !== id);
     saveState();
-}
+};
 
-function handleManualInput() {
+window.handleManualInput = function() {
     let input = document.getElementById('userInput');
     if (input && input.value.trim() !== '') {
         processNewTransaction(input.value.trim());
         input.value = '';
     }
-}
+};
 
 // ========================================================
-// 10. VOICE RECOGNITION
+// 9. VOICE RECOGNITION (EXPOSED TO HTML)
 // ========================================================
-function startVoiceRecognition() {
+window.startVoiceRecognition = function() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
@@ -574,4 +571,9 @@ function startVoiceRecognition() {
     } else {
         alert("குரல் வசதி இந்த பிரவுசரில் இல்லை");
     }
-}
+};
+
+// INITIAL RENDER
+updateDashboardUI();
+renderAllLists();
+renderVattiLists();
