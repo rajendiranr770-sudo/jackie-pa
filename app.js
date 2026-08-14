@@ -1,17 +1,96 @@
+// ========================================================
+// 1. FIREBASE SETUP (இணைப்பு)
+// ========================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+// 🔑 உங்கள் Firebase Config சாவி (இங்கே உங்கள் சாவியை மட்டும் மாற்றிக் கொள்ளவும்)
+const firebaseConfig = {
+    apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
+    authDomain: "myfinanceapp-3f883.firebaseapp.com",
+    projectId: "myfinanceapp-3f883",
+    storageBucket: "myfinanceapp-3f883.firebasestorage.app",
+    messagingSenderId: "698658153791",
+    appId: "1:698658153791:web:08ea0171d24a9b0da51f8a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+let currentUser = null;
+
+// ========================================================
+// 2. STATE VARIABLES
+// ========================================================
 let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
 let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
 let editingTxId = null;
 let editingVattiInfo = null;
 let pendingTxData = null;
 
+// ========================================================
+// 3. SAVE STATE (LOCAL + FIREBASE CLOUD SYNC)
+// ========================================================
 function saveState() {
+    // LocalStorage-ல் சேமித்தல்
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
     localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
+    
+    // லாக்-இன் செய்திருந்தால் Firebase Cloud-ல் ஆன்லைனில் சேமித்தல்
+    if (currentUser) {
+        setDoc(doc(db, "users", currentUser.uid), {
+            transactions: transactions,
+            vattiAccounts: vattiAccounts,
+            lastUpdated: new Date().toISOString()
+        });
+    }
+
     updateDashboardUI();
     renderAllLists();
     renderVattiLists();
 }
 
+// ========================================================
+// 4. GOOGLE LOGIN / LOGOUT LOGIC
+// ========================================================
+window.loginWithGoogle = function() {
+    signInWithPopup(auth, provider).catch(error => alert("Login Error: " + error.message));
+};
+
+window.logoutGoogle = function() {
+    signOut(auth).then(() => {
+        alert("Logged Out Successfully!");
+        location.reload();
+    });
+};
+
+// லாக்-இன் நிலையைக் கண்காணித்து ஆன்லைன் டேட்டாவை உடனுக்குடன் சின்க் செய்தல்
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+            if (docSnap.exists()) {
+                let data = docSnap.data();
+                transactions = data.transactions || [];
+                vattiAccounts = data.vattiAccounts || {};
+                
+                localStorage.setItem('my_app_txs', JSON.stringify(transactions));
+                localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
+                
+                updateDashboardUI();
+                renderAllLists();
+                renderVattiLists();
+            }
+        });
+    }
+});
+
+// ========================================================
+// 5. APP UI NAVIGATION FUNCTIONS
+// ========================================================
 function switchTab(tabId, btnElement) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -28,7 +107,9 @@ function scrollToSection(elementId) {
     }
 }
 
-// Tamil Numbers to Digits Parsing
+// ========================================================
+// 6. TAMIL NUMBERS PARSING & AI LOGIC
+// ========================================================
 function parseTamilAmount(text) {
     let t = text.toLowerCase().trim();
 
@@ -57,7 +138,6 @@ function parseTamilAmount(text) {
     return 0;
 }
 
-// AI Engine Logic
 function processNewTransaction(text) {
     let amount = parseTamilAmount(text);
     if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
@@ -145,6 +225,9 @@ function confirmSource(selectedSource) {
     document.getElementById('sourceModal').style.display = 'none';
 }
 
+// ========================================================
+// 7. MANUAL ENTRY & VATTI FORM LOGIC
+// ========================================================
 function addManualEntry(category, descId, amtId, typeId, dateId) {
     let desc = document.getElementById(descId).value.trim();
     let amt = parseFloat(document.getElementById(amtId).value) || 0;
@@ -225,20 +308,19 @@ function addSingleLoanForPerson(name) {
     if (amtInput) amtInput.focus();
 }
 
-// 🎯 ACCURATE ACCRUED INTEREST CALCULATOR
+// ========================================================
+// 8. VATTI CALCULATOR & DASHBOARD UI
+// ========================================================
 function calculateAccruedInterest(loan) {
     let amount = loan.amount || 0;
     let rate = loan.rate || 3;
     
-    // Monthly Interest
     let monthlyInterest = (amount * rate) / 100;
     let dailyInterest = monthlyInterest / 30;
 
-    // Date Calculation
     let loanDate = new Date(loan.date);
     let today = new Date();
     
-    // Difference in days
     let diffTime = today.getTime() - loanDate.getTime();
     let diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
     if (diffDays < 0 || isNaN(diffDays)) diffDays = 0;
@@ -247,8 +329,6 @@ function calculateAccruedInterest(loan) {
     let remainingDays = diffDays % 30;
 
     let timeText = `${diffDays} நாட்கள் (${months} மாதம் ${remainingDays} நாள்)`;
-
-    // Total Interest for the entire elapsed time
     let totalInterestAccrued = Math.round(diffDays * dailyInterest);
 
     return {
@@ -336,7 +416,6 @@ function renderAllLists() {
     }
 }
 
-// 📊 Vatti Cards UI Matching Screen Design perfectly
 function renderVattiLists() {
     let container = document.getElementById('vatti-person-list');
     if (!container) return;
@@ -393,6 +472,9 @@ function renderVattiLists() {
     }
 }
 
+// ========================================================
+// 9. MODALS, EDIT & DELETE HANDLERS
+// ========================================================
 function openVattiEditModal(name, index) {
     editingVattiInfo = { name, index };
     let loan = vattiAccounts[name][index];
@@ -474,6 +556,9 @@ function handleManualInput() {
     }
 }
 
+// ========================================================
+// 10. VOICE RECOGNITION
+// ========================================================
 function startVoiceRecognition() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -487,8 +572,6 @@ function startVoiceRecognition() {
         };
         recognition.start();
     } else {
-        alert("குரல் வசதி இந்த பிரவுசரில் இல்லை.");
+        alert("குரல் வசதி இந்த பிரவுசரில் இல்லை");
     }
 }
-
-document.addEventListener("DOMContentLoaded", saveState);
