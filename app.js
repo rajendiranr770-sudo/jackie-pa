@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ⚠️ உங்கள் Firebase விவரங்கள் ⚠️
 const firebaseConfig = {
     apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
     authDomain: "myfinanceapp-3f883.firebaseapp.com",
@@ -19,6 +18,7 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
 let globalTransactionsData = null;
+let currentEditingKey = null;
 
 // AUTHENTICATION
 onAuthStateChanged(auth, (user) => {
@@ -45,16 +45,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginBtn) {
         loginBtn.addEventListener('click', () => {
-            signInWithPopup(auth, provider).catch(error => {
-                alert("Login செய்ய முடியவில்லை: " + error.message);
-            });
+            signInWithPopup(auth, provider).catch(error => alert("Login Error: " + error.message));
         });
     }
 
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            signOut(auth);
-        });
+        logoutBtn.addEventListener('click', () => signOut(auth));
     }
 });
 
@@ -70,15 +66,10 @@ window.switchTab = function(tabId, btn) {
 
 // 1. MANUAL ENTRY (சம்பளம் / வீடு)
 window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
-    const descElem = document.getElementById(descId);
-    const amtElem = document.getElementById(amtId);
-    const typeElem = document.getElementById(typeId);
-    const dateElem = document.getElementById(dateId);
-
-    const desc = descElem ? descElem.value.trim() : '';
-    const amt = amtElem ? parseFloat(amtElem.value) : NaN;
-    const type = typeElem ? typeElem.value : 'income';
-    const customDate = dateElem ? dateElem.value : null;
+    const desc = document.getElementById(descId)?.value.trim();
+    const amt = parseFloat(document.getElementById(amtId)?.value);
+    const type = document.getElementById(typeId)?.value || 'income';
+    const customDate = document.getElementById(dateId)?.value;
 
     if (!desc || isNaN(amt)) {
         alert("தயவுசெய்து விவரம் மற்றும் தொகையை சரியாக உள்ளிடவும்.");
@@ -86,35 +77,26 @@ window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
     }
 
     const entryDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
-    const timestamp = customDate ? new Date(customDate).getTime() : Date.now();
 
-    const entry = {
+    saveTransaction({
         category: category,
         description: desc,
         amount: amt,
         type: type,
         date: entryDate,
-        timestamp: timestamp
-    };
+        timestamp: Date.now()
+    });
 
-    saveTransaction(entry);
-
-    if (descElem) descElem.value = '';
-    if (amtElem) amtElem.value = '';
-    if (dateElem) dateElem.value = '';
+    document.getElementById(descId).value = '';
+    document.getElementById(amtId).value = '';
 };
 
-// 2. EXPENSE MANUAL (கொல்லை, MK, SK)
+// 2. EXPENSE MANUAL (கொல்லை, MK, SK) - சம்பளத்தில் தானாகக் குறையும் & அந்த கார்டில் ஏறும்
 window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
-    const descElem = document.getElementById(descId);
-    const amtElem = document.getElementById(amtId);
-    const sourceElem = document.getElementById(sourceId);
-    const dateElem = document.getElementById(dateId);
-
-    const desc = descElem ? descElem.value.trim() : '';
-    const amt = amtElem ? parseFloat(amtElem.value) : NaN;
-    const source = sourceElem ? sourceElem.value : 'சம்பளம் பணத்தில்';
-    const customDate = dateElem ? dateElem.value : null;
+    const desc = document.getElementById(descId)?.value.trim();
+    const amt = parseFloat(document.getElementById(amtId)?.value);
+    const source = document.getElementById(sourceId)?.value || 'சம்பளம் பணத்தில்';
+    const customDate = document.getElementById(dateId)?.value;
 
     if (!desc || isNaN(amt)) {
         alert("தயவுசெய்து விவரம் மற்றும் தொகையை சரியாக உள்ளிடவும்.");
@@ -122,41 +104,48 @@ window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
     }
 
     const entryDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
-    const timestamp = customDate ? new Date(customDate).getTime() : Date.now();
 
-    const entry = {
+    // 1. செலவு கார்டில் பதிவு
+    saveTransaction({
         category: category,
         description: desc,
         amount: amt,
         type: 'expense',
         source: source,
         date: entryDate,
-        timestamp: timestamp
-    };
+        timestamp: Date.now()
+    });
 
-    saveTransaction(entry);
+    // 2. சம்பளப் பணத்திலிருந்து எடுக்கப்பட்டால், சம்பளத்தில் தானாகவே செலவாகக் கழித்தல்
+    if (source === 'சம்பளம் பணத்தில்') {
+        saveTransaction({
+            category: 'சம்பளம்',
+            description: `${category}க்காக எடுத்தது (${desc})`,
+            amount: amt,
+            type: 'expense',
+            date: entryDate,
+            timestamp: Date.now()
+        });
+    }
 
-    if (descElem) descElem.value = '';
-    if (amtElem) amtElem.value = '';
-    if (dateElem) dateElem.value = '';
+    document.getElementById(descId).value = '';
+    document.getElementById(amtId).value = '';
 };
 
 function saveTransaction(entry) {
-    const transactionsRef = ref(db, 'transactions');
-    push(transactionsRef, entry);
+    push(ref(db, 'transactions'), entry);
 }
 
 function listenToTransactions() {
-    const transactionsRef = ref(db, 'transactions');
-    onValue(transactionsRef, (snapshot) => {
+    onValue(ref(db, 'transactions'), (snapshot) => {
         globalTransactionsData = snapshot.val();
         renderTransactions(globalTransactionsData);
     });
 }
 
 function renderTransactions(data) {
-    let totals = { சம்பளம்: 0, வீடு: 0, கொல்லை: 0, MK: 0, SK: 0 };
-    let lists = { சம்பளம்: '', வீடு: '', கொல்லை: '', MK: '', SK: '' };
+    let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0 };
+    let lists = { "All": "", "சம்பளம்": "", "வீடு": "", "கொல்லை": "", "MK செலவு": "", "SK செலவு": "" };
 
     if (data) {
         Object.keys(data).forEach(key => {
@@ -168,40 +157,77 @@ function renderTransactions(data) {
             }
 
             const html = `
-                <div class="transaction-card" style="background:#fff; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                <div style="background:#fff; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                     <div>
                         <b>${item.description}</b> 
                         <span style="color:${item.type === 'income' ? '#16a34a' : '#dc2626'}; font-weight:bold;">
                             ${item.type === 'income' ? '+' : '-'}₹${item.amount}
                         </span>
-                        <br><small style="color:#64748b;">${item.date} | ${item.category} ${item.source ? '(' + item.source + ')' : ''}</small>
+                        <br><small style="color:#64748b;">${item.date} | ${item.category}</small>
                     </div>
                     <div>
+                        <button onclick="openTxEditModal('${key}')" style="border:none; background:none; cursor:pointer; font-size:16px;">✏️</button>
                         <button onclick="deleteTransaction('${key}')" style="border:none; background:none; cursor:pointer; font-size:16px;">🗑️</button>
                     </div>
                 </div>
             `;
 
-            if (item.category === 'சம்பளம்') lists['சம்பளம்'] += html;
-            else if (item.category === 'வீடு') lists['வீடு'] += html;
-            else if (item.category === 'கொல்லை') lists['கொல்லை'] += html;
-            else if (item.category === 'MK செலவு') lists['MK'] += html;
-            else if (item.category === 'SK செலவு') lists['SK'] += html;
+            lists["All"] += html;
+            if (lists[item.category] !== undefined) lists[item.category] += html;
         });
     }
 
+    // DASHBOARD UPDATE
     if(document.getElementById('salary-val')) document.getElementById('salary-val').innerText = `₹${totals['சம்பளம்']}`;
     if(document.getElementById('home-val')) document.getElementById('home-val').innerText = `₹${totals['வீடு']}`;
     if(document.getElementById('kollai-val')) document.getElementById('kollai-val').innerText = `₹${totals['கொல்லை']}`;
-    if(document.getElementById('mk-val')) document.getElementById('mk-val').innerText = `₹${totals['MK']}`;
-    if(document.getElementById('sk-val')) document.getElementById('sk-val').innerText = `₹${totals['SK']}`;
+    if(document.getElementById('mk-val')) document.getElementById('mk-val').innerText = `₹${totals['MK செலவு']}`;
+    if(document.getElementById('sk-val')) document.getElementById('sk-val').innerText = `₹${totals['SK செலவு']}`;
 
-    if(document.getElementById('salary-list')) document.getElementById('salary-list').innerHTML = lists['சம்பளம்'];
-    if(document.getElementById('home-list')) document.getElementById('home-list').innerHTML = lists['வீடு'];
-    if(document.getElementById('kollai-list')) document.getElementById('kollai-list').innerHTML = lists['கொல்லை'];
-    if(document.getElementById('mk-list')) document.getElementById('mk-list').innerHTML = lists['MK'];
-    if(document.getElementById('sk-list')) document.getElementById('sk-list').innerHTML = lists['SK'];
+    if(document.getElementById('salary-list')) document.getElementById('salary-list').innerHTML = lists['All'];
 }
+
+// ================= EDIT TRANSACTION LOGIC =================
+window.openTxEditModal = function(key) {
+    if (!globalTransactionsData || !globalTransactionsData[key]) return;
+    const item = globalTransactionsData[key];
+    currentEditingKey = key;
+
+    document.getElementById('edit-tx-desc').value = item.description || '';
+    document.getElementById('edit-tx-amt').value = item.amount || '';
+    document.getElementById('edit-tx-cat').value = item.category || 'சம்பளம்';
+    document.getElementById('edit-tx-type').value = item.type || 'income';
+    document.getElementById('edit-tx-date').value = item.date || '';
+
+    document.getElementById('txEditModal').style.display = 'flex';
+};
+
+window.saveTransactionEdit = function() {
+    if (!currentEditingKey) return;
+
+    const updatedData = {
+        description: document.getElementById('edit-tx-desc').value.trim(),
+        amount: parseFloat(document.getElementById('edit-tx-amt').value),
+        category: document.getElementById('edit-tx-cat').value,
+        type: document.getElementById('edit-tx-type').value,
+        date: document.getElementById('edit-tx-date').value
+    };
+
+    if (!updatedData.description || isNaN(updatedData.amount)) {
+        alert("விவரம் மற்றும் தொகையை சரியாக உள்ளிடவும்.");
+        return;
+    }
+
+    update(ref(db, `transactions/${currentEditingKey}`), updatedData).then(() => {
+        closeTxEditModal();
+        alert("பதிவு வெற்றிகரமாக மாற்றப்பட்டது!");
+    });
+};
+
+window.closeTxEditModal = function() {
+    document.getElementById('txEditModal').style.display = 'none';
+    currentEditingKey = null;
+};
 
 window.deleteTransaction = function(key) {
     if (confirm("இந்த பதிவை நீக்க விரும்புகிறீர்களா?")) {
@@ -209,7 +235,7 @@ window.deleteTransaction = function(key) {
     }
 };
 
-// ================= SEARCH & CALCULATE LOGIC (பெட்ரோல் / சிகரெட் தேடல்) =================
+// SEARCH & VOICE CONTROL
 window.searchExpenses = function() {
     const query = document.getElementById('search-query-input').value.toLowerCase().trim();
     const resultBox = document.getElementById('search-result-box');
@@ -232,7 +258,7 @@ window.searchExpenses = function() {
         if (desc.includes(query) || cat.includes(query)) {
             totalMatchAmount += item.amount;
             filteredHtml += `
-                <div class="transaction-card" style="background:#e0f2fe; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="background:#e0f2fe; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <b>${item.description}</b> - <span style="color:#dc2626; font-weight:bold;">₹${item.amount}</span>
                         <br><small style="color:#64748b;">${item.date} | ${item.category}</small>
@@ -246,24 +272,19 @@ window.searchExpenses = function() {
     filteredList.innerHTML = filteredHtml;
 };
 
-// ================= VOICE COMMAND LOGIC (குரல் மூலம் பதிவிட) =================
 window.startVoiceRecognition = function() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("உங்கள் பிரவுசரில் Voice Recognition வசதி இல்லை.");
+        alert("Voice recognition is not supported in this browser.");
         return;
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'ta-IN'; // Tamil Voice Input
+    recognition.lang = 'ta-IN';
 
-    recognition.onstart = function() {
-        alert("பேசலாம்... (எ.கா: எம் கே செலவு 500)");
-    };
-
-    recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        document.getElementById('voice-text-input').value = transcript;
+    recognition.onstart = () => alert("பேசலாம்...");
+    recognition.onresult = (event) => {
+        document.getElementById('voice-text-input').value = event.results[0][0].transcript;
         processVoiceOrText();
     };
 
@@ -274,95 +295,56 @@ window.processVoiceOrText = function() {
     const text = document.getElementById('voice-text-input').value.trim();
     if (!text) return;
 
-    // Numbers extraction
     const amtMatch = text.match(/\d+/);
     if (!amtMatch) {
-        alert("தொகையைக் கண்டுபிடிக்க முடியவில்லை. எண்களை சரியாகப் பேசவும்.");
+        alert("தொகையைக் கண்டுபிடிக்க முடியவில்லை.");
         return;
     }
     const amt = parseFloat(amtMatch[0]);
 
-    let category = 'MK செலவு'; // Default
+    let category = 'SK செலவு';
     if (text.includes('சம்பளம்')) category = 'சம்பளம்';
     else if (text.includes('வீடு')) category = 'வீடு';
     else if (text.includes('கொல்லை')) category = 'கொல்லை';
-    else if (text.includes('எஸ் கே') || text.includes('SK')) category = 'SK செலவு';
+    else if (text.includes('எம் கே') || text.includes('MK')) category = 'MK செலவு';
 
-    const entry = {
-        category: category,
-        description: text,
-        amount: amt,
-        type: category === 'சம்பளம்' || category === 'வீடு' ? 'income' : 'expense',
-        date: new Date().toLocaleString(),
-        timestamp: Date.now()
-    };
+    // SK / MK செலவாக இருந்தால் சம்பளத்திலும் கழியும் + SK கார்டிலும் ஏறும்
+    if (category === 'SK செலவு' || category === 'MK செலவு' || category === 'கொல்லை') {
+        saveTransaction({
+            category: category,
+            description: text,
+            amount: amt,
+            type: 'expense',
+            date: new Date().toLocaleString(),
+            timestamp: Date.now()
+        });
+        saveTransaction({
+            category: 'சம்பளம்',
+            description: `${category}க்கு எடுத்தது (${text})`,
+            amount: amt,
+            type: 'expense',
+            date: new Date().toLocaleString(),
+            timestamp: Date.now()
+        });
+    } else {
+        saveTransaction({
+            category: category,
+            description: text,
+            amount: amt,
+            type: category === 'சம்பளம்' || category === 'வீடு' ? 'income' : 'expense',
+            date: new Date().toLocaleString(),
+            timestamp: Date.now()
+        });
+    }
 
-    saveTransaction(entry);
     document.getElementById('voice-text-input').value = '';
     alert("வெற்றிகரமாகப் பதிவு செய்யப்பட்டது!");
 };
 
-// ================= VATTI BUSINESS LOGIC =================
-window.addMoreLoanField = function() {
-    const container = document.getElementById('vatti-inputs-container');
-    const div = document.createElement('div');
-    div.style.cssText = "display: flex; gap: 8px;";
-    div.innerHTML = `
-        <input type="number" class="vatti-amt-input" placeholder="அசல் தொகை (₹)" style="flex:1;">
-        <input type="number" class="vatti-rate-input" placeholder="வட்டி % / பைசா" style="flex:1;">
-    `;
-    container.appendChild(div);
-};
-
-window.saveVattiAccount = function() {
-    const name = document.getElementById('vatti-name').value.trim();
-    const amtInputs = document.querySelectorAll('.vatti-amt-input');
-    const rateInputs = document.querySelectorAll('.vatti-rate-input');
-    const dateVal = document.getElementById('vatti-date-input').value;
-
-    if (!name) {
-        alert("தயவுசெய்து நபர் பெயரை உள்ளிடவும்.");
-        return;
-    }
-
-    let loans = [];
-    amtInputs.forEach((amtElem, idx) => {
-        const amt = parseFloat(amtElem.value);
-        const rawRate = rateInputs[idx].value.trim();
-        const rate = (rawRate === "" || isNaN(parseFloat(rawRate))) ? 3 : parseFloat(rawRate);
-
-        if (!isNaN(amt)) {
-            loans.push({
-                amount: amt,
-                rate: rate,
-                date: dateVal ? dateVal : new Date().toISOString().split('T')[0]
-            });
-        }
-    });
-
-    if (loans.length === 0) {
-        alert("குறைந்தது ஒரு கடனுக்கான தொகையை உள்ளிடவும்.");
-        return;
-    }
-
-    const vattiRef = ref(db, 'vatti/' + name);
-    push(vattiRef, { loans: loans, createdAt: Date.now() });
-
-    document.getElementById('vatti-name').value = '';
-    document.getElementById('vatti-inputs-container').innerHTML = `
-        <div style="display: flex; gap: 8px;">
-            <input type="number" class="vatti-amt-input" placeholder="அசல் தொகை (₹)" style="flex:1;">
-            <input type="number" class="vatti-rate-input" placeholder="வட்டி % / பைசா" style="flex:1;">
-        </div>
-    `;
-    document.getElementById('vatti-date-input').value = '';
-};
-
+// VATTI FUNCTIONS
 function listenToVattiData() {
-    const vattiRef = ref(db, 'vatti');
-    onValue(vattiRef, (snapshot) => {
-        const data = snapshot.val();
-        renderVattiList(data);
+    onValue(ref(db, 'vatti'), (snapshot) => {
+        renderVattiList(snapshot.val());
     });
 }
 
@@ -371,9 +353,7 @@ function calculateDays(startDateStr) {
     const today = new Date();
     const diffTime = Math.abs(today - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const months = Math.floor(diffDays / 30);
-    const remainingDays = diffDays % 30;
-    return { totalDays: isNaN(diffDays) ? 0 : diffDays, months: isNaN(months) ? 0 : months, days: isNaN(remainingDays) ? 0 : remainingDays };
+    return { totalDays: isNaN(diffDays) ? 0 : diffDays, months: Math.floor(diffDays / 30), days: diffDays % 30 };
 }
 
 function renderVattiList(data) {
@@ -410,35 +390,21 @@ function renderVattiList(data) {
                                         <button onclick="deleteVattiLoan('${personKey}', '${loanKey}')" style="border:none; background:none; cursor:pointer;">🗑️</button>
                                     </div>
                                 </div>
-                                <div style="font-size:12px; color:#64748b; margin:4px 0;">
-                                    📅 தேதி: ${loan.date} (${dayData.totalDays} நாட்கள் (${dayData.months} மாதம் ${dayData.days} நாள்))
-                                </div>
-                                <div style="color:#d97706; font-weight:bold;">
-                                    வட்டி தொகை: ₹${totalInterest} <span style="font-weight:normal; font-size:12px; color:#64748b;">(மாத வட்டி ₹${monthlyInterest})</span>
-                                </div>
-                                <div style="color:#2563eb; font-weight:bold;">
-                                    மொத்தம் (அசல்+வட்டி): ₹${loan.amount + totalInterest}
-                                </div>
+                                <div style="font-size:12px; color:#64748b; margin:4px 0;">📅 தேதி: ${loan.date} (${dayData.totalDays} நாட்கள்)</div>
+                                <div style="color:#d97706; font-weight:bold;">வட்டி தொகை: ₹${totalInterest}</div>
                             </div>
                         `;
                     });
                 }
             });
 
-            const grandTotalPerson = personTotalPrincipal + personTotalInterest;
             totalVattiBusinessAmt += personTotalPrincipal;
-
             html += `
-                <div class="card" style="background:#fff; border-radius:12px; padding:15px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <h3 style="margin:0; color:#0f172a; display:flex; align-items:center; gap:6px;">👤 ${personKey}</h3>
-                    </div>
+                <div style="background:#fff; border-radius:12px; padding:15px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <h3>👤 ${personKey}</h3>
                     ${loansHtml}
-                    <div style="background:#0f172a; color:#fff; padding:12px; border-radius:8px; margin-top:10px;">
-                        <div>மொத்த அசல்: ₹${personTotalPrincipal} | மொத்த வட்டி: ₹${personTotalInterest}</div>
-                        <div style="color:#4ade80; font-weight:bold; font-size:16px; margin-top:4px;">
-                            👉 மொத்தமாகத் தர வேண்டிய தொகை: ₹${grandTotalPerson}
-                        </div>
+                    <div style="background:#0f172a; color:#fff; padding:10px; border-radius:8px;">
+                        அசல்: ₹${personTotalPrincipal} | வட்டி: ₹${personTotalInterest}
                     </div>
                 </div>
             `;
@@ -446,61 +412,5 @@ function renderVattiList(data) {
     }
 
     container.innerHTML = html;
-    if (document.getElementById('vatti-val')) {
-        document.getElementById('vatti-val').innerText = `₹${totalVattiBusinessAmt}`;
-    }
+    if (document.getElementById('vatti-val')) document.getElementById('vatti-val').innerText = `₹${totalVattiBusinessAmt}`;
 }
-
-// VATTI EDIT MODAL LOGIC
-window.openVattiEditModal = function(personKey, loanKey, lIdx, amt, rate, date) {
-    const modal = document.getElementById('vattiEditModal');
-    if (!modal) return;
-    
-    modal.dataset.personKey = personKey;
-    modal.dataset.loanKey = loanKey;
-    modal.dataset.lIdx = lIdx;
-
-    if (document.getElementById('edit-vatti-amt')) document.getElementById('edit-vatti-amt').value = amt;
-    if (document.getElementById('edit-vatti-rate')) document.getElementById('edit-vatti-rate').value = rate;
-    if (document.getElementById('edit-vatti-date')) document.getElementById('edit-vatti-date').value = date;
-
-    modal.style.display = 'flex';
-};
-
-window.saveVattiEdit = function() {
-    const modal = document.getElementById('vattiEditModal');
-    const personKey = modal.dataset.personKey;
-    const loanKey = modal.dataset.loanKey;
-    const lIdx = modal.dataset.lIdx;
-
-    const newAmt = parseFloat(document.getElementById('edit-vatti-amt').value);
-    const rawRate = document.getElementById('edit-vatti-rate').value.trim();
-    const newDate = document.getElementById('edit-vatti-date').value;
-
-    if (isNaN(newAmt)) {
-        alert("தொகையை சரியாக உள்ளிடவும்.");
-        return;
-    }
-
-    const newRate = (rawRate === "" || isNaN(parseFloat(rawRate))) ? 0 : parseFloat(rawRate);
-
-    const loanRef = ref(db, `vatti/${personKey}/${loanKey}/loans/${lIdx}`);
-    update(loanRef, {
-        amount: newAmt,
-        rate: newRate,
-        date: newDate
-    }).then(() => {
-        closeVattiEditModal();
-    });
-};
-
-window.closeVattiEditModal = function() {
-    const modal = document.getElementById('vattiEditModal');
-    if (modal) modal.style.display = 'none';
-};
-
-window.deleteVattiLoan = function(personKey, loanKey) {
-    if (confirm("இந்த கடன் பதிவை நீக்க விரும்புகிறீர்களா?")) {
-        remove(ref(db, `vatti/${personKey}/${loanKey}`));
-    }
-};
