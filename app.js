@@ -452,12 +452,18 @@ function renderAllLists() {
         if (el) {
             let list = filterByMonth(filterMap[id]());
 
+            // Search Filter + Total Calculation
+            let totalSearchAmt = 0;
             if (searchQuery !== "") {
-                list = list.filter(t => 
-                    t.text.toLowerCase().includes(searchQuery) || 
-                    t.amount.toString().includes(searchQuery) ||
-                    (t.category && t.category.toLowerCase().includes(searchQuery))
-                );
+                list = list.filter(t => {
+                    let match = t.text.toLowerCase().includes(searchQuery) || 
+                                t.amount.toString().includes(searchQuery) ||
+                                (t.category && t.category.toLowerCase().includes(searchQuery));
+                    if (match) {
+                        totalSearchAmt += (t.isExpense ? t.amount : -t.amount);
+                    }
+                    return match;
+                });
             }
 
             if (list.length === 0) {
@@ -465,7 +471,18 @@ function renderAllLists() {
                 continue;
             }
 
-            el.innerHTML = list.map(t => {
+            // தேடல் இருந்தா மட்டும் மேல மொத்த தொகையைக் காட்டும் கார்டு
+            let searchSummaryHTML = "";
+            if (searchQuery !== "") {
+                searchSummaryHTML = `
+                <div style="background:#e0f2fe; border:1px solid #0284c7; border-radius:8px; padding:10px; margin-bottom:12px; text-align:center;">
+                    <span style="font-size:14px; color:#0369a1; font-weight:bold;">
+                        🔍 "${searchQuery}" தேடலின் மொத்த செலவு: ₹${totalSearchAmt}
+                    </span>
+                </div>`;
+            }
+
+            el.innerHTML = searchSummaryHTML + list.map(t => {
                 let isExp = t.isExpense;
                 let color = isExp ? "#dc2626" : "#16a34a";
                 let prefix = isExp ? "- " : "+ ";
