@@ -65,9 +65,17 @@
         <!-- TABS CONTENT CONTAINER -->
         <div class="tab-content-container">
 
-            <!-- TAB: ALL -->
+            <!-- TAB: ALL & SEARCH -->
             <div id="tab-all" class="tab-content active">
+                <div class="form-card" style="margin-bottom: 15px; background: #e0f2fe;">
+                    <h3>🔍 செலவு கணக்கு கேட்க / தேட</h3>
+                    <input type="text" id="search-query-input" placeholder="எ.கா: பெட்ரோல், சிகரெட் அல்லது MK செலவு">
+                    <button class="btn-submit" onclick="searchExpenses()" style="background: #0284c7;">தேடு / கணக்கு பார்</button>
+                    <div id="search-result-box" style="margin-top: 10px; font-weight: bold; color: #0369a1;"></div>
+                </div>
+
                 <h3>அனைத்துப் பதிவுகள்</h3>
+                <div id="search-filtered-list"></div>
                 <div id="salary-list"></div>
                 <div id="home-list"></div>
                 <div id="kollai-list"></div>
@@ -175,6 +183,14 @@
             </div>
 
         </div>
+
+        <!-- VOICE CONTROL FOOTER BAR -->
+        <div class="voice-bar">
+            <input type="text" id="voice-text-input" placeholder="எ.கா: எம் கே செலவு 500 / பெட்ரோல் 100">
+            <button onclick="processVoiceOrText()" class="btn-send">அனுப்பு</button>
+            <button onclick="startVoiceRecognition()" class="btn-mic">🎙️ பேசு</button>
+        </div>
+
     </div>
 
     <!-- VATTI EDIT MODAL -->
