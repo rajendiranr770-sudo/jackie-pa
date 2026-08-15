@@ -263,7 +263,7 @@ function processNewTransaction(text) {
         category = "கொல்லை";
     } 
     else {
-        category = "பொதுச் செலவு"; // 👈 பொதுவான செலவுகளுக்கு 'பொதுச் செலவு' என மாற்றப்பட்டது
+        category = "பொதுச் செலவு";
     }
 
     let txData = {
@@ -463,7 +463,7 @@ function updateDashboardUI() {
 
     let setVal = (id, val) => {
         let el = document.getElementById(id);
-        if (el) el.innerText = '₹' + Math.round(val); // 👈 தசமப் புள்ளிகளைத் தவிர்த்து முழு எண்ணாகக் காட்டும்
+        if (el) el.innerText = '₹' + Math.round(val);
     };
 
     setVal('salary-val', totals["சம்பளம்"]);
@@ -493,7 +493,6 @@ function renderAllLists() {
                 let color = isExp ? "#dc2626" : "#16a34a";
                 let prefix = isExp ? "- " : "+ ";
 
-                // 👈 'வீடு' அல்லது 'பொதுச் செலவு' என வராமல், 'சம்பளம்' அல்லது 'வீடு' மட்டுமே காட்டும் படி சீரமைக்கப்பட்டது:
                 let categoryLabel = (t.category === "பொதுச் செலவு" || t.category === "வீடு") ? (t.source || 'வீடு') : `${t.category} (${t.source || 'வீடு'})`;
 
                 return `
@@ -630,15 +629,31 @@ window.closeEditModal = function() {
     if (modal) modal.style.display = 'none'; 
 };
 
+// 💡 எடிட்டிங் செய்யும் போது Category-ஐத் தானாக மாற்றும் பகுதி சேர்க்கப்பட்டது:
 window.saveEdit = function() {
     let tx = transactions.find(t => t.id === editingTxId);
     if (tx) {
-        tx.text = document.getElementById('edit-text').value;
-        tx.amount = parseFloat(document.getElementById('edit-amount').value) || tx.amount;
-        let newDate = document.getElementById('edit-date').value;
+        let newText = document.getElementById('edit-text').value;
+        let newAmt = parseFloat(document.getElementById('edit-amount').value) || tx.amount;
+        let newDate = document.getElementById('edit-date') ? document.getElementById('edit-date').value : '';
+
+        tx.text = newText;
+        tx.amount = newAmt;
         if (newDate) {
             tx.date = new Date(newDate).toLocaleString();
         }
+
+        let t = newText.toLowerCase().trim();
+        if (t.includes("எஸ்கே") || t.includes("எஸ் கே") || t.includes("sk") || t.includes("sk-")) {
+            tx.category = "SK செலவு";
+        } else if (t.includes("எம்கே") || t.includes("எம் கே") || t.includes("mk") || t.includes("mk-")) {
+            tx.category = "MK செலவு";
+        } else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்") || t.includes("கூலி") || t.includes("கொல்லைக்கு")) {
+            tx.category = "கொல்லை";
+        } else {
+            tx.category = "பொதுச் செலவு";
+        }
+
         saveState();
     }
     window.closeEditModal();
