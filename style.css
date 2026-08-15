@@ -1,62 +1,179 @@
-/* இரண்டாவது படத்தில் உள்ளது போன்ற அதே Form Card Layout */
-.form-card {
-    background: #ffffff;
-    padding: 20px 16px;
-    border-radius: 16px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e2e8f0;
+* {
+    box-sizing: border-box;
+    font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
-.form-card h3 {
-    margin-top: 0;
-    margin-bottom: 16px;
-    font-size: 20px;
-    font-weight: 700;
+body {
+    background-color: #f1f5f9;
     color: #0f172a;
+    padding: 10px;
 }
 
-.vertical-form {
+/* AUTH BOX */
+.auth-box {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    height: 80vh;
 }
 
-.vertical-form input, 
-.vertical-form select {
-    width: 100%;
-    height: 48px;
-    padding: 0 14px;
+.btn-login {
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+/* HEADER */
+.top-header {
+    background-color: #0f172a;
+    color: white;
+    padding: 12px 15px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.btn-logout {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* DASHBOARD CARDS */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.card-summary {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card-summary.highlight {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+
+/* TAB NAVIGATION */
+.tab-navigation {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+}
+
+.tab-btn {
+    background: white;
     border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    font-size: 16px;
-    box-sizing: border-box;
-    background-color: #f8fafc;
-    color: #1e293b;
+    padding: 8px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.tab-btn.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+/* TAB CONTENT CONTROL - IMPORTANT */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* FORM CARDS */
+.form-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
     outline: none;
 }
 
-.vertical-form input:focus,
-.vertical-form select:focus {
-    border-color: #2563eb;
-    background-color: #ffffff;
-}
-
-/* இரண்டாவது படத்தில் உள்ள நீல நிற "சேர்" பொத்தான் */
-.vertical-form button.btn-submit {
-    width: 100%;
-    height: 48px;
+.btn-submit {
     background: #2563eb;
-    color: #ffffff;
+    color: white;
     border: none;
-    border-radius: 10px;
-    font-size: 18px;
+    padding: 12px;
+    border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
-    margin-top: 6px;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
-.vertical-form button.btn-submit:active {
-    background: #1d4ed8;
+.btn-save {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #475569;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* MODAL */
+.modal-overlay {
+    position: fixed;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-box {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
