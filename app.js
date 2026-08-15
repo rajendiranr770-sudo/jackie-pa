@@ -446,7 +446,7 @@ function updateDashboardUI() {
     setVal('vatti-val', totals["வட்டி"]);
 }
 
-function renderAllLists() {
+ function renderAllLists() {
     const filterMap = {
         'all-list': () => transactions,
         'salary-list': () => transactions.filter(t => t.source === 'சம்பளம்'),
@@ -456,18 +456,28 @@ function renderAllLists() {
         'sk-list': () => transactions.filter(t => t.category === 'SK செலவு')
     };
 
+    let searchInputEl = document.getElementById('search-query-input');
+    let q = searchInputEl ? searchInputEl.value.toLowerCase().trim() : searchQuery.toLowerCase().trim();
+
     for (let id in filterMap) {
         let el = document.getElementById(id);
         if (el) {
             let list = filterByMonth(filterMap[id]());
 
-            // Search Filter + Total Calculation
             let totalSearchAmt = 0;
-            if (searchQuery !== "") {
+            if (q !== "") {
+                // தமிழ் எழுத்துப் பிழைகளைச் சரிசெய்ய (சிகரட் / சிகரெட்)
+                let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+
                 list = list.filter(t => {
-                    let match = t.text.toLowerCase().includes(searchQuery) || 
-                                t.amount.toString().includes(searchQuery) ||
-                                (t.category && t.category.toLowerCase().includes(searchQuery));
+                    let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+                    let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+                    
+                    let match = textClean.includes(cleanQ) || 
+                                t.text.toLowerCase().includes(q) || 
+                                t.amount.toString().includes(q) ||
+                                catClean.includes(cleanQ);
+
                     if (match) {
                         totalSearchAmt += (t.isExpense ? t.amount : -t.amount);
                     }
@@ -480,14 +490,12 @@ function renderAllLists() {
                 continue;
             }
 
-            // தேடல் இருந்தா மட்டும் மேல மொத்த தொகையைக் காட்டும் கார்டு
             let searchSummaryHTML = "";
-            if (searchQuery !== "") {
+            if (q !== "") {
                 searchSummaryHTML = `
-                <div style="background:#e0f2fe; border:1px solid #0284c7; border-radius:8px; padding:10px; margin-bottom:12px; text-align:center;">
-                    <span style="font-size:14px; color:#0369a1; font-weight:bold;">
-                        🔍 "${searchQuery}" தேடலின் மொத்த செலவு: ₹${totalSearchAmt}
-                    </span>
+                <div style="background:#e0f2fe; border:2px solid #0284c7; border-radius:10px; padding:12px; margin-bottom:15px; text-align:center;">
+                    <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு</div>
+                    <div style="font-size:22px; color:#dc2626; font-weight:800; margin-top:2px;">₹${totalSearchAmt}</div>
                 </div>`;
             }
 
