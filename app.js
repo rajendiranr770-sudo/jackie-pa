@@ -2,22 +2,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ⚠️ உங்கள் Firebase Console-இல் கிடைத்த உண்மையான விவரங்களை இங்கே இடவும் ⚠️
+// ⚠️ உங்கள் Firebase விவரங்கள் ⚠️
 const firebaseConfig = {
-    apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
+    apiKey: "YOUR_ACTUAL_API_KEY",
     authDomain: "myfinanceapp-3f883.firebaseapp.com",
     databaseURL: "https://myfinanceapp-3f883-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "myfinanceapp-3f883",
     storageBucket: "myfinanceapp-3f883.appspot.com",
-    messagingSenderId: "698658153791",
-    appId: "1:698658153791:web:08ea0171d24a9b0da51f8a"
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+
+let globalTransactionsData = null;
 
 // AUTHENTICATION
 onAuthStateChanged(auth, (user) => {
@@ -57,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// TAB SWITCHING (FIXED LOGIC)
+// TAB SWITCHING
 window.switchTab = function(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -67,12 +68,17 @@ window.switchTab = function(tabId, btn) {
     if (btn) btn.classList.add('active');
 };
 
-// 1. வரவு / செலவு பதிவு (சம்பளம், வீடு)
+// 1. MANUAL ENTRY (சம்பளம் / வீடு)
 window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
-    const desc = document.getElementById(descId).value.trim();
-    const amt = parseFloat(document.getElementById(amtId).value);
-    const type = document.getElementById(typeId).value;
-    const customDate = document.getElementById(dateId) ? document.getElementById(dateId).value : null;
+    const descElem = document.getElementById(descId);
+    const amtElem = document.getElementById(amtId);
+    const typeElem = document.getElementById(typeId);
+    const dateElem = document.getElementById(dateId);
+
+    const desc = descElem ? descElem.value.trim() : '';
+    const amt = amtElem ? parseFloat(amtElem.value) : NaN;
+    const type = typeElem ? typeElem.value : 'income';
+    const customDate = dateElem ? dateElem.value : null;
 
     if (!desc || isNaN(amt)) {
         alert("தயவுசெய்து விவரம் மற்றும் தொகையை சரியாக உள்ளிடவும்.");
@@ -93,17 +99,22 @@ window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
 
     saveTransaction(entry);
 
-    document.getElementById(descId).value = '';
-    document.getElementById(amtId).value = '';
-    if (document.getElementById(dateId)) document.getElementById(dateId).value = '';
+    if (descElem) descElem.value = '';
+    if (amtElem) amtElem.value = '';
+    if (dateElem) dateElem.value = '';
 };
 
-// 2. செலவு பதிவு (கொல்லை, MK, SK)
+// 2. EXPENSE MANUAL (கொல்லை, MK, SK)
 window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
-    const desc = document.getElementById(descId).value.trim();
-    const amt = parseFloat(document.getElementById(amtId).value);
-    const source = document.getElementById(sourceId).value;
-    const customDate = document.getElementById(dateId) ? document.getElementById(dateId).value : null;
+    const descElem = document.getElementById(descId);
+    const amtElem = document.getElementById(amtId);
+    const sourceElem = document.getElementById(sourceId);
+    const dateElem = document.getElementById(dateId);
+
+    const desc = descElem ? descElem.value.trim() : '';
+    const amt = amtElem ? parseFloat(amtElem.value) : NaN;
+    const source = sourceElem ? sourceElem.value : 'சம்பளம் பணத்தில்';
+    const customDate = dateElem ? dateElem.value : null;
 
     if (!desc || isNaN(amt)) {
         alert("தயவுசெய்து விவரம் மற்றும் தொகையை சரியாக உள்ளிடவும்.");
@@ -125,23 +136,21 @@ window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
 
     saveTransaction(entry);
 
-    document.getElementById(descId).value = '';
-    document.getElementById(amtId).value = '';
-    if (document.getElementById(dateId)) document.getElementById(dateId).value = '';
+    if (descElem) descElem.value = '';
+    if (amtElem) amtElem.value = '';
+    if (dateElem) dateElem.value = '';
 };
 
-// SAVE TRANSACTION
 function saveTransaction(entry) {
     const transactionsRef = ref(db, 'transactions');
     push(transactionsRef, entry);
 }
 
-// LISTEN TO TRANSACTIONS
 function listenToTransactions() {
     const transactionsRef = ref(db, 'transactions');
     onValue(transactionsRef, (snapshot) => {
-        const data = snapshot.val();
-        renderTransactions(data);
+        globalTransactionsData = snapshot.val();
+        renderTransactions(globalTransactionsData);
     });
 }
 
@@ -200,8 +209,100 @@ window.deleteTransaction = function(key) {
     }
 };
 
-// ================= VATTI BUSINESS LOGIC =================
+// ================= SEARCH & CALCULATE LOGIC (பெட்ரோல் / சிகரெட் தேடல்) =================
+window.searchExpenses = function() {
+    const query = document.getElementById('search-query-input').value.toLowerCase().trim();
+    const resultBox = document.getElementById('search-result-box');
+    const filteredList = document.getElementById('search-filtered-list');
 
+    if (!query || !globalTransactionsData) {
+        resultBox.innerText = '';
+        filteredList.innerHTML = '';
+        return;
+    }
+
+    let totalMatchAmount = 0;
+    let filteredHtml = '';
+
+    Object.keys(globalTransactionsData).forEach(key => {
+        const item = globalTransactionsData[key];
+        const desc = (item.description || '').toLowerCase();
+        const cat = (item.category || '').toLowerCase();
+
+        if (desc.includes(query) || cat.includes(query)) {
+            totalMatchAmount += item.amount;
+            filteredHtml += `
+                <div class="transaction-card" style="background:#e0f2fe; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <b>${item.description}</b> - <span style="color:#dc2626; font-weight:bold;">₹${item.amount}</span>
+                        <br><small style="color:#64748b;">${item.date} | ${item.category}</small>
+                    </div>
+                </div>
+            `;
+        }
+    });
+
+    resultBox.innerText = `'${query}' தொடர்பான மொத்த செலவு: ₹${totalMatchAmount}`;
+    filteredList.innerHTML = filteredHtml;
+};
+
+// ================= VOICE COMMAND LOGIC (குரல் மூலம் பதிவிட) =================
+window.startVoiceRecognition = function() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("உங்கள் பிரவுசரில் Voice Recognition வசதி இல்லை.");
+        return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ta-IN'; // Tamil Voice Input
+
+    recognition.onstart = function() {
+        alert("பேசலாம்... (எ.கா: எம் கே செலவு 500)");
+    };
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('voice-text-input').value = transcript;
+        processVoiceOrText();
+    };
+
+    recognition.start();
+};
+
+window.processVoiceOrText = function() {
+    const text = document.getElementById('voice-text-input').value.trim();
+    if (!text) return;
+
+    // Numbers extraction
+    const amtMatch = text.match(/\d+/);
+    if (!amtMatch) {
+        alert("தொகையைக் கண்டுபிடிக்க முடியவில்லை. எண்களை சரியாகப் பேசவும்.");
+        return;
+    }
+    const amt = parseFloat(amtMatch[0]);
+
+    let category = 'MK செலவு'; // Default
+    if (text.includes('சம்பளம்')) category = 'சம்பளம்';
+    else if (text.includes('வீடு')) category = 'வீடு';
+    else if (text.includes('கொல்லை')) category = 'கொல்லை';
+    else if (text.includes('எஸ் கே') || text.includes('SK')) category = 'SK செலவு';
+
+    const entry = {
+        category: category,
+        description: text,
+        amount: amt,
+        type: category === 'சம்பளம்' || category === 'வீடு' ? 'income' : 'expense',
+        date: new Date().toLocaleString(),
+        timestamp: Date.now()
+    };
+
+    saveTransaction(entry);
+    document.getElementById('voice-text-input').value = '';
+    alert("வெற்றிகரமாகப் பதிவு செய்யப்பட்டது!");
+};
+
+// ================= VATTI BUSINESS LOGIC =================
 window.addMoreLoanField = function() {
     const container = document.getElementById('vatti-inputs-container');
     const div = document.createElement('div');
