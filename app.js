@@ -459,6 +459,9 @@ function updateDashboardUI() {
     let searchInputEl = document.getElementById('search-query-input');
     let q = searchInputEl ? searchInputEl.value.toLowerCase().trim() : searchQuery.toLowerCase().trim();
 
+    // 1. தேடல் மொத்த தொகையைக் காட்டும் பாக்ஸைப் பிடித் துப் புதுப்பிக்கிறோம்
+    let searchBoxEl = document.getElementById('search-result-box');
+    
     for (let id in filterMap) {
         let el = document.getElementById(id);
         if (el) {
@@ -466,7 +469,6 @@ function updateDashboardUI() {
 
             let totalSearchAmt = 0;
             if (q !== "") {
-                // தமிழ் எழுத்துப் பிழைகளைச் சரிசெய்ய (சிகரட் / சிகரெட்)
                 let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
 
                 list = list.filter(t => {
@@ -485,21 +487,27 @@ function updateDashboardUI() {
                 });
             }
 
+            // 'All' டேப்பில் இருக்கும்போது மட்டும் தேடல் பாக்ஸைக் காட்டுவோம்
+            if (id === 'all-list' && searchBoxEl) {
+                if (q !== "") {
+                    searchBoxEl.style.display = "block";
+                    searchBoxEl.innerHTML = `
+                    <div style="background:#e0f2fe; border:2px solid #0284c7; border-radius:10px; padding:12px; margin-top:12px; margin-bottom:5px; text-align:center;">
+                        <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு</div>
+                        <div style="font-size:22px; color:#dc2626; font-weight:800; margin-top:2px;">₹${totalSearchAmt}</div>
+                    </div>`;
+                } else {
+                    searchBoxEl.style.display = "none";
+                    searchBoxEl.innerHTML = "";
+                }
+            }
+
             if (list.length === 0) {
                 el.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px;">பதிவுகள் எதுவும் இல்லை</div>`;
                 continue;
             }
 
-            let searchSummaryHTML = "";
-            if (q !== "") {
-                searchSummaryHTML = `
-                <div style="background:#e0f2fe; border:2px solid #0284c7; border-radius:10px; padding:12px; margin-bottom:15px; text-align:center;">
-                    <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு</div>
-                    <div style="font-size:22px; color:#dc2626; font-weight:800; margin-top:2px;">₹${totalSearchAmt}</div>
-                </div>`;
-            }
-
-            el.innerHTML = searchSummaryHTML + list.map(t => {
+            el.innerHTML = list.map(t => {
                 let isExp = t.isExpense;
                 let color = isExp ? "#dc2626" : "#16a34a";
                 let prefix = isExp ? "- " : "+ ";
