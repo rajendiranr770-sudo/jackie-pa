@@ -4,13 +4,13 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 
 // ⚠️ உங்கள் Firebase விவரங்கள் ⚠️
 const firebaseConfig = {
-    apiKey: "YOUR_ACTUAL_API_KEY",
+    apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
     authDomain: "myfinanceapp-3f883.firebaseapp.com",
     databaseURL: "https://myfinanceapp-3f883-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "myfinanceapp-3f883",
     storageBucket: "myfinanceapp-3f883.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    messagingSenderId: "698658153791",
+    appId: "1:698658153791:web:08ea0171d24a9b0da51f8a"
 };
 
 const app = initializeApp(firebaseConfig);
