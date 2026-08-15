@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
     if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
 
+       // Search Button & Input Event Listener
     const searchInput = document.getElementById('search-query-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -94,6 +95,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // தேடு பட்டன் கிளிக் பண்ணினாலும் ஒர்க் ஆக:
+    window.processSearch = function() {
+        if (searchInput) {
+            searchQuery = searchInput.value.toLowerCase().trim();
+            renderAllLists();
+        }
+    };
+ 
     populateMonthDropdown();
 });
 
