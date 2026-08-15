@@ -353,8 +353,8 @@ window.addMoreLoanField = function() {
     let div = document.createElement('div');
     div.style.cssText = "display: flex; gap: 8px; margin-bottom: 8px;";
     div.innerHTML = `
-        <input type="number" class="vatti-amt-input" placeholder="கூடுதல் அசல் தொகை (₹)" style="flex:1;">
-        <input type="number" class="vatti-rate-input" placeholder="வட்டி %" style="flex:1;">
+        <input type="number" class="vatti-amt-input" placeholder="கூடுதல் அசல் தொகை (₹)" style="flex:1; padding: 8px;">
+        <input type="number" class="vatti-rate-input" placeholder="வட்டி %" style="flex:1; padding: 8px;">
     `;
     container.appendChild(div);
 };
@@ -388,8 +388,8 @@ window.saveVattiAccount = function() {
     if (container) {
         container.innerHTML = `
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                <input type="number" class="vatti-amt-input" placeholder="அசல் தொகை (₹)" style="flex:1;">
-                <input type="number" class="vatti-rate-input" placeholder="வட்டி % / பைசா" style="flex:1;">
+                <input type="number" class="vatti-amt-input" placeholder="அசல் தொகை (₹)" style="flex:1; padding: 8px;">
+                <input type="number" class="vatti-rate-input" placeholder="வட்டி % / பைசா" style="flex:1; padding: 8px;">
             </div>
         `;
     }
@@ -604,15 +604,20 @@ window.saveVattiEdit = function() {
     window.closeVattiEditModal();
 };
 
+// DELETE WITH CONFIRMATION
 window.deleteVattiLoan = function(name, index) {
-    vattiAccounts[name].splice(index, 1);
-    if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
-    saveState();
+    if (confirm("இந்த வட்டி கடனை நிச்சயமாக நீக்க வேண்டுமா?")) {
+        vattiAccounts[name].splice(index, 1);
+        if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
+        saveState();
+    }
 };
 
 window.deleteVattiPerson = function(name) {
-    delete vattiAccounts[name];
-    saveState();
+    if (confirm(`${name} அவர்களின் மொத்த வட்டி கணக்கையும் நிச்சயமாக நீக்க வேண்டுமா?`)) {
+        delete vattiAccounts[name];
+        saveState();
+    }
 };
 
 window.openEditModal = function(id) {
@@ -629,7 +634,6 @@ window.closeEditModal = function() {
     if (modal) modal.style.display = 'none'; 
 };
 
-// 💡 எடிட்டிங் செய்யும் போது Category-ஐத் தானாக மாற்றும் பகுதி சேர்க்கப்பட்டது:
 window.saveEdit = function() {
     let tx = transactions.find(t => t.id === editingTxId);
     if (tx) {
@@ -659,9 +663,12 @@ window.saveEdit = function() {
     window.closeEditModal();
 };
 
+// DELETE WITH CONFIRMATION
 window.deleteTx = function(id) {
-    transactions = transactions.filter(t => t.id !== id);
-    saveState();
+    if (confirm("இந்த பதிவை நிச்சயமாக நீக்க வேண்டுமா?")) {
+        transactions = transactions.filter(t => t.id !== id);
+        saveState();
+    }
 };
 
 window.handleManualInput = function() {
