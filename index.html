@@ -199,25 +199,54 @@
 
     </div>
 
+    <!-- VOICE MODAL (குரல் பதிவின் போது பணம் ஆதாரம் கேட்கும் பாப்-அப்) -->
+    <div id="sourceModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h4 style="margin-bottom: 10px;">பண ஆதாரம் தேர்வு செய்யவும்</h4>
+            <p id="sourceModalText" style="margin-bottom: 15px; font-size: 14px; color: #475569;"></p>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="confirmSource('சம்பளம்')" class="btn-submit">💼 சம்பளம்</button>
+                <button onclick="confirmSource('வீடு')" class="btn-secondary" style="background: #16a34a; color: white;">🏠 வீடு</button>
+            </div>
+        </div>
+    </div>
+
     <!-- GENERAL TRANSACTION EDIT MODAL -->
     <div id="txEditModal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
             <h3>பதிவைத் திருத்து</h3>
+            <label>விவரம் / பெயர்:</label>
             <input type="text" id="edit-tx-desc" placeholder="விவரம் / பெயர்">
+            
+            <label>தொகை (₹):</label>
             <input type="number" id="edit-tx-amt" placeholder="தொகை (₹)">
+            
+            <label style="margin-top: 8px; display: block;">💳 பணம் எதுல இருந்து எடுக்கப்பட்டது?</label>
+            <select id="edit-tx-source">
+                <option value="வீடு">வீடு</option>
+                <option value="சம்பளம்">சம்பளம்</option>
+            </select>
+
+            <label style="margin-top: 8px; display: block;">📁 எதுக்கு கொண்டு போகணும்?</label>
             <select id="edit-tx-cat">
+                <option value="பொதுச் செலவு">பொதுச் செலவு</option>
                 <option value="சம்பளம்">சம்பளம்</option>
                 <option value="வீடு">வீடு</option>
                 <option value="கொல்லை">கொல்லை</option>
                 <option value="MK செலவு">MK செலவு</option>
                 <option value="SK செலவு">SK செலவு</option>
             </select>
+
+            <label style="margin-top: 8px; display: block;">வகை:</label>
             <select id="edit-tx-type">
-                <option value="income">வரவு (+)</option>
                 <option value="expense">செலவு (-)</option>
+                <option value="income">வரவு (+)</option>
             </select>
+
+            <label style="margin-top: 8px; display: block;">தேதி மற்றும் நேரம்:</label>
             <input type="text" id="edit-tx-date" placeholder="தேதி மற்றும் நேரம்">
-            <div style="display:flex; gap:8px; margin-top:12px;">
+
+            <div style="display:flex; gap:8px; margin-top:15px;">
                 <button class="btn-submit" onclick="saveTransactionEdit()">சேமி</button>
                 <button class="btn-secondary" onclick="closeTxEditModal()">மூடு</button>
             </div>
