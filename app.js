@@ -22,6 +22,13 @@ const provider = new GoogleAuthProvider();
 
 let currentUser = null;
 
+// PWA Service Worker Register (Offline-ல் இயங்க)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log("Service Worker Registered!"))
+        .catch(err => console.log("SW Registration Failed:", err));
+}
+
 // ========================================================
 // 2. STATE VARIABLES
 // ========================================================
@@ -30,7 +37,8 @@ let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
 let editingTxId = null;
 let editingVattiInfo = null;
 let searchQuery = "";
-let pendingVoiceTxData = null; // குரல் வழியில் பண ஆதாரம் தேர்வு செய்ய
+let selectedMonthFilter = "ALL";
+let pendingVoiceTxData = null;
 
 // ========================================================
 // 3. SAVE STATE (LOCAL + FIREBASE SYNC)
@@ -39,7 +47,7 @@ function saveState() {
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
     localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
     
-    if (currentUser) {
+    if (currentUser && navigator.onLine) {
         setDoc(doc(db, "users", currentUser.uid), {
             transactions: transactions,
             vattiAccounts: vattiAccounts,
@@ -47,13 +55,19 @@ function saveState() {
         });
     }
 
+    populateMonthDropdown();
     updateDashboardUI();
     renderAllLists();
     renderVattiLists();
 }
 
+// Net வந்தவுடன் Auto-Sync செய்ய
+window.addEventListener('online', () => {
+    if (currentUser) saveState();
+});
+
 // ========================================================
-// 4. GOOGLE LOGIN / LOGOUT LOGIC
+// 4. GOOGLE LOGIN / LOGOUT
 // ========================================================
 window.loginWithGoogle = function() {
     signInWithPopup(auth, provider).catch(error => alert("Login Error: " + error.message));
@@ -72,7 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
     if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
 
-    // Search Box Real-time Listener
     const searchInput = document.getElementById('search-query-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -80,6 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAllLists();
         });
     }
+
+    populateMonthDropdown();
 });
 
 onAuthStateChanged(auth, (user) => {
@@ -89,7 +104,6 @@ onAuthStateChanged(auth, (user) => {
 
     if (user) {
         currentUser = user;
-
         if (authContainer) authContainer.style.display = 'none';
         if (mainApp) mainApp.style.display = 'block';
         if (userNameSpan) userNameSpan.textContent = user.displayName || user.email;
@@ -103,6 +117,7 @@ onAuthStateChanged(auth, (user) => {
                 localStorage.setItem('my_app_txs', JSON.stringify(transactions));
                 localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
                 
+                populateMonthDropdown();
                 updateDashboardUI();
                 renderAllLists();
                 renderVattiLists();
@@ -110,14 +125,56 @@ onAuthStateChanged(auth, (user) => {
         });
     } else {
         currentUser = null;
-
         if (authContainer) authContainer.style.display = 'flex';
         if (mainApp) mainApp.style.display = 'none';
     }
 });
 
 // ========================================================
-// 5. NAVIGATION & SEARCH
+// 5. MONTHLY FILTER LOGIC
+// ========================================================
+function populateMonthDropdown() {
+    let selectEl = document.getElementById('month-filter-select');
+    if (!selectEl) return;
+
+    let months = new Set();
+    transactions.forEach(t => {
+        if (t.date) {
+            let d = new Date(t.date);
+            if (!isNaN(d)) {
+                let monthYear = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+                months.add(monthYear);
+            }
+        }
+    });
+
+    let currentSelection = selectEl.value || "ALL";
+    selectEl.innerHTML = `<option value="ALL">எல்லா மாதங்களும் (All)</option>`;
+    
+    months.forEach(m => {
+        selectEl.innerHTML += `<option value="${m}">${m}</option>`;
+    });
+
+    selectEl.value = currentSelection;
+    selectEl.onchange = (e) => {
+        selectedMonthFilter = e.target.value;
+        renderAllLists();
+        updateDashboardUI();
+    };
+}
+
+function filterByMonth(list) {
+    if (selectedMonthFilter === "ALL") return list;
+    return list.filter(t => {
+        if (!t.date) return false;
+        let d = new Date(t.date);
+        let monthYear = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+        return monthYear === selectedMonthFilter;
+    });
+}
+
+// ========================================================
+// 6. NAVIGATION
 // ========================================================
 window.switchTab = function(tabId, btnElement) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -125,26 +182,14 @@ window.switchTab = function(tabId, btnElement) {
     
     let activeTab = document.getElementById(tabId);
     if (activeTab) activeTab.classList.add('active');
-    
-    if (btnElement) {
-        btnElement.classList.add('active');
-    }
-};
-
-window.searchExpenses = function() {
-    let input = document.getElementById('search-query-input');
-    if (input) {
-        searchQuery = input.value.toLowerCase().trim();
-        renderAllLists();
-    }
+    if (btnElement) btnElement.classList.add('active');
 };
 
 // ========================================================
-// 6. TAMIL PARSING LOGIC
+// 7. TAMIL PARSING & VOICE PROCESSING
 // ========================================================
 function parseTamilAmount(text) {
     let t = text.toLowerCase().trim();
-
     let numMatch = t.match(/(\d[\d,]*(\.\d+)?)/);
     if (numMatch) {
         let baseNum = parseFloat(numMatch[1].replace(/,/g, ''));
@@ -188,7 +233,6 @@ function parseTamilAmount(text) {
             return item.val * multiplier;
         }
     }
-
     return 0;
 }
 
@@ -246,7 +290,7 @@ window.confirmSource = function(selectedSource) {
 };
 
 // ========================================================
-// 7. MANUAL ENTRY & VATTI FORM LOGIC
+// 8. MANUAL ENTRIES & VATTI FORM
 // ========================================================
 window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
     let desc = document.getElementById(descId).value.trim();
@@ -300,18 +344,6 @@ window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
     document.getElementById(amtId).value = '';
 };
 
-window.addMoreLoanField = function() {
-    let container = document.getElementById('vatti-inputs-container');
-    if (!container) return;
-    let div = document.createElement('div');
-    div.style.cssText = "display: flex; gap: 8px; margin-top: 8px;";
-    div.innerHTML = `
-        <input type="number" class="vatti-amt-input" placeholder="கூடுதல் அசல் தொகை (₹)" style="flex:1;">
-        <input type="number" class="vatti-rate-input" placeholder="வட்டி %" style="flex:1;">
-    `;
-    container.appendChild(div);
-};
-
 window.saveVattiAccount = function() {
     let nameInput = document.getElementById('vatti-name');
     let name = nameInput ? nameInput.value.trim() || "பொது வட்டி" : "பொது வட்டி";
@@ -343,7 +375,7 @@ window.saveVattiAccount = function() {
 };
 
 // ========================================================
-// 8. DASHBOARD & RENDER LISTS
+// 9. DASHBOARD & RENDER LISTS
 // ========================================================
 function calculateAccruedInterest(loan) {
     let amount = loan.amount || 0;
@@ -370,8 +402,9 @@ function calculateAccruedInterest(loan) {
 
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
+    let filteredTxs = filterByMonth(transactions);
 
-    transactions.forEach(t => {
+    filteredTxs.forEach(t => {
         if (!t.isExpense) {
             if (t.source === "சம்பளம்") totals["சம்பளம்"] += t.amount;
             else totals["வீடு"] += t.amount;
@@ -417,7 +450,7 @@ function renderAllLists() {
     for (let id in filterMap) {
         let el = document.getElementById(id);
         if (el) {
-            let list = filterMap[id]();
+            let list = filterByMonth(filterMap[id]());
 
             if (searchQuery !== "") {
                 list = list.filter(t => 
@@ -506,7 +539,7 @@ function renderVattiLists() {
 }
 
 // ========================================================
-// 9. MODALS, EDIT & DELETE HANDLERS (Dual Drop-down Support)
+// 10. MODALS, EDIT, DELETE & VOICE
 // ========================================================
 window.openTxEditModal = function(id) {
     let tx = transactions.find(t => t.id === id);
@@ -532,56 +565,17 @@ window.closeTxEditModal = function() {
 window.saveTransactionEdit = function() {
     let tx = transactions.find(t => t.id === editingTxId);
     if (tx) {
-        let desc = document.getElementById('edit-tx-desc').value;
-        let amt = parseFloat(document.getElementById('edit-tx-amt').value);
-        let src = document.getElementById('edit-tx-source') ? document.getElementById('edit-tx-source').value : tx.source;
-        let cat = document.getElementById('edit-tx-cat').value;
-        let type = document.getElementById('edit-tx-type').value;
+        tx.text = document.getElementById('edit-tx-desc').value || tx.text;
+        tx.amount = parseFloat(document.getElementById('edit-tx-amt').value) || tx.amount;
+        tx.source = document.getElementById('edit-tx-source') ? document.getElementById('edit-tx-source').value : tx.source;
+        tx.category = document.getElementById('edit-tx-cat').value;
+        tx.isExpense = (document.getElementById('edit-tx-type').value === 'expense');
         let date = document.getElementById('edit-tx-date').value;
-
-        tx.text = desc || tx.text;
-        tx.amount = !isNaN(amt) ? amt : tx.amount;
-        tx.source = src;
-        tx.category = cat;
-        tx.isExpense = (type === 'expense');
         if (date) tx.date = date;
 
         saveState();
     }
     window.closeTxEditModal();
-};
-
-window.openVattiEditModal = function(name, index) {
-    editingVattiInfo = { name, index };
-    let loan = vattiAccounts[name][index];
-    if (document.getElementById('edit-vatti-amt')) document.getElementById('edit-vatti-amt').value = loan.amount;
-    if (document.getElementById('edit-vatti-rate')) document.getElementById('edit-vatti-rate').value = loan.rate;
-    if (document.getElementById('edit-vatti-date')) document.getElementById('edit-vatti-date').value = loan.date;
-    
-    let modal = document.getElementById('vattiEditModal');
-    if (modal) modal.style.display = 'flex';
-};
-
-window.closeVattiEditModal = function() {
-    let modal = document.getElementById('vattiEditModal');
-    if (modal) modal.style.display = 'none';
-};
-
-window.saveVattiEdit = function() {
-    if (editingVattiInfo) {
-        let { name, index } = editingVattiInfo;
-        let loan = vattiAccounts[name][index];
-        let amt = parseFloat(document.getElementById('edit-vatti-amt').value);
-        let rate = parseFloat(document.getElementById('edit-vatti-rate').value);
-        let date = document.getElementById('edit-vatti-date').value;
-
-        if (!isNaN(amt)) loan.amount = amt;
-        if (!isNaN(rate)) loan.rate = rate;
-        if (date) loan.date = date;
-
-        saveState();
-    }
-    window.closeVattiEditModal();
 };
 
 window.deleteTx = function(id) {
@@ -591,17 +585,6 @@ window.deleteTx = function(id) {
     }
 };
 
-window.deleteVattiLoan = function(name, index) {
-    if (confirm("இந்தக் கடனை நீக்க விரும்புகிறீர்களா?")) {
-        vattiAccounts[name].splice(index, 1);
-        if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
-        saveState();
-    }
-};
-
-// ========================================================
-// 10. VOICE & FOOTER INPUT
-// ========================================================
 window.processVoiceOrText = function() {
     let input = document.getElementById('voice-text-input');
     if (input && input.value.trim() !== '') {
