@@ -91,7 +91,7 @@ window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
     document.getElementById(amtId).value = '';
 };
 
-// 2. EXPENSE MANUAL (கொல்லை, MK, SK) - சம்பளத்தில் தானாகக் குறையும் & அந்த கார்டில் ஏறும்
+// 2. EXPENSE MANUAL (கொல்லை, MK, SK)
 window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
     const desc = document.getElementById(descId)?.value.trim();
     const amt = parseFloat(document.getElementById(amtId)?.value);
@@ -105,22 +105,22 @@ window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
 
     const entryDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
 
-    // 1. செலவு கார்டில் பதிவு
+    // குறிப்பிட்ட செலவு கார்டில் (SK / MK / கொல்லை) தொகையைக் கூட்ட வரவாக (+) பதிவாகிறது
     saveTransaction({
         category: category,
         description: desc,
         amount: amt,
-        type: 'expense',
+        type: 'income',
         source: source,
         date: entryDate,
         timestamp: Date.now()
     });
 
-    // 2. சம்பளப் பணத்திலிருந்து எடுக்கப்பட்டால், சம்பளத்தில் தானாகவே செலவாகக் கழித்தல்
+    // சம்பளப் பணத்திலிருந்து எடுக்கப்பட்டால், சம்பளத்தில் செலவாக (-) கழிகிறது
     if (source === 'சம்பளம் பணத்தில்') {
         saveTransaction({
             category: 'சம்பளம்',
-            description: `${category}க்காக எடுத்தது (${desc})`,
+            description: `${category} செலவு (${desc})`,
             amount: amt,
             type: 'expense',
             date: entryDate,
@@ -173,21 +173,29 @@ function renderTransactions(data) {
             `;
 
             lists["All"] += html;
-            if (lists[item.category] !== undefined) lists[item.category] += html;
+            if (lists[item.category] !== undefined) {
+                lists[item.category] += html;
+            }
         });
     }
 
-    // DASHBOARD UPDATE
+    // DASHBOARD CARDS UPDATE
     if(document.getElementById('salary-val')) document.getElementById('salary-val').innerText = `₹${totals['சம்பளம்']}`;
     if(document.getElementById('home-val')) document.getElementById('home-val').innerText = `₹${totals['வீடு']}`;
     if(document.getElementById('kollai-val')) document.getElementById('kollai-val').innerText = `₹${totals['கொல்லை']}`;
     if(document.getElementById('mk-val')) document.getElementById('mk-val').innerText = `₹${totals['MK செலவு']}`;
     if(document.getElementById('sk-val')) document.getElementById('sk-val').innerText = `₹${totals['SK செலவு']}`;
 
-    if(document.getElementById('salary-list')) document.getElementById('salary-list').innerHTML = lists['All'];
+    // TAB LISTS UPDATE
+    if(document.getElementById('all-list')) document.getElementById('all-list').innerHTML = lists['All'];
+    if(document.getElementById('salary-list')) document.getElementById('salary-list').innerHTML = lists['சம்பளம்'];
+    if(document.getElementById('home-list')) document.getElementById('home-list').innerHTML = lists['வீடு'];
+    if(document.getElementById('kollai-list')) document.getElementById('kollai-list').innerHTML = lists['கொல்லை'];
+    if(document.getElementById('mk-list')) document.getElementById('mk-list').innerHTML = lists['MK செலவு'];
+    if(document.getElementById('sk-list')) document.getElementById('sk-list').innerHTML = lists['SK செலவு'];
 }
 
-// ================= EDIT TRANSACTION LOGIC =================
+// EDIT TRANSACTION LOGIC
 window.openTxEditModal = function(key) {
     if (!globalTransactionsData || !globalTransactionsData[key]) return;
     const item = globalTransactionsData[key];
@@ -260,7 +268,7 @@ window.searchExpenses = function() {
             filteredHtml += `
                 <div style="background:#e0f2fe; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <b>${item.description}</b> - <span style="color:#dc2626; font-weight:bold;">₹${item.amount}</span>
+                        <b>${item.description}</b> - <span style="color:${item.type === 'income' ? '#16a34a' : '#dc2626'}; font-weight:bold;">₹${item.amount}</span>
                         <br><small style="color:#64748b;">${item.date} | ${item.category}</small>
                     </div>
                 </div>
@@ -268,7 +276,7 @@ window.searchExpenses = function() {
         }
     });
 
-    resultBox.innerText = `'${query}' தொடர்பான மொத்த செலவு: ₹${totalMatchAmount}`;
+    resultBox.innerText = `'${query}' தொடர்பான மொத்த தொகை: ₹${totalMatchAmount}`;
     filteredList.innerHTML = filteredHtml;
 };
 
@@ -308,19 +316,19 @@ window.processVoiceOrText = function() {
     else if (text.includes('கொல்லை')) category = 'கொல்லை';
     else if (text.includes('எம் கே') || text.includes('MK')) category = 'MK செலவு';
 
-    // SK / MK செலவாக இருந்தால் சம்பளத்திலும் கழியும் + SK கார்டிலும் ஏறும்
     if (category === 'SK செலவு' || category === 'MK செலவு' || category === 'கொல்லை') {
         saveTransaction({
             category: category,
             description: text,
             amount: amt,
-            type: 'expense',
+            type: 'income',
             date: new Date().toLocaleString(),
             timestamp: Date.now()
         });
+
         saveTransaction({
             category: 'சம்பளம்',
-            description: `${category}க்கு எடுத்தது (${text})`,
+            description: `${category} செலவு (${text})`,
             amount: amt,
             type: 'expense',
             date: new Date().toLocaleString(),
