@@ -5,31 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Tracker</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* பழைய ஹோம் பேஜ் ஸ்டைல் */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            padding: 15px;
-        }
-        .card {
-            background: #fff;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .card h3 {
-            margin: 0;
-            font-size: 20px;
-            color: #000;
-        }
-        .card p {
-            margin: 5px 0 0 0;
-            font-size: 18px;
-            color: #333;
-        }
-    </style>
 </head>
 <body>
 
@@ -42,154 +17,138 @@
     <!-- MAIN APP -->
     <div id="main-app" style="display: none;">
         <!-- HEADER -->
-        <header style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #0f172a; color: white;">
-            <span style="font-size: 16px;">வரவேற்கிறோம், <b id="user-display-name">RUBA ABI</b></span>
+        <header style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #1e293b; color: white;">
+            <span style="font-size: 16px; font-weight: bold;">வரவேற்கிறோம், <b id="user-display-name">RUBA ABI</b></span>
             <button id="logout-btn" style="background: #dc2626; color: white; border: none; padding: 6px 14px; border-radius: 4px; font-weight: bold; cursor: pointer;">லாக்அவுட்</button>
         </header>
 
-        <!-- DASHBOARD CARDS (2 Columns as per Image) -->
+        <!-- DASHBOARD CARDS (Dark 3 Columns) -->
         <div class="dashboard-grid">
-            <div class="card" onclick="switchTab('salary-tab', document.querySelectorAll('.tab-btn')[1])">
+            <div class="card" onclick="switchTab('salary-tab', document.querySelectorAll('.tab-btn')[0])">
                 <h3>சம்பளம்</h3>
                 <p id="salary-val">₹0</p>
             </div>
-            <div class="card" onclick="switchTab('home-tab', document.querySelectorAll('.tab-btn')[2])">
+            <div class="card" onclick="switchTab('home-tab', document.querySelectorAll('.tab-btn')[1])">
                 <h3>வீடு</h3>
                 <p id="home-val">₹0</p>
             </div>
-            <div class="card" onclick="switchTab('sk-tab', document.querySelectorAll('.tab-btn')[5])">
-                <h3>SK செலவு</h3>
-                <p id="sk-val">₹0</p>
-            </div>
-            <div class="card" onclick="switchTab('mk-tab', document.querySelectorAll('.tab-btn')[4])">
-                <h3>MK செலவு</h3>
-                <p id="mk-val">₹0</p>
-            </div>
-            <div class="card" onclick="switchTab('kollai-tab', document.querySelectorAll('.tab-btn')[3])">
+            <div class="card" onclick="switchTab('kollai-tab', document.querySelectorAll('.tab-btn')[2])">
                 <h3>கொல்லை</h3>
                 <p id="kollai-val">₹0</p>
             </div>
-            <div class="card" onclick="switchTab('vatti-tab', document.querySelectorAll('.tab-btn')[6])">
-                <h3>வட்டி</h3>
+            <div class="card" onclick="switchTab('mk-tab', document.querySelectorAll('.tab-btn')[3])">
+                <h3>MK செலவு</h3>
+                <p id="mk-val">₹0</p>
+            </div>
+            <div class="card" onclick="switchTab('sk-tab', document.querySelectorAll('.tab-btn')[4])">
+                <h3>SK செலவு</h3>
+                <p id="sk-val">₹0</p>
+            </div>
+            <div class="card" onclick="switchTab('vatti-tab', document.querySelectorAll('.tab-btn')[5])">
+                <h3>வட்டி பிசினஸ்</h3>
                 <p id="vatti-val">₹0</p>
             </div>
         </div>
 
-        <!-- VOICE / INPUT SECTION -->
-        <div style="padding: 0 15px 15px 15px; display: flex; gap: 8px;">
-            <input type="text" id="userInput" placeholder="எ.கா: பால் வாங்கியது 50 சம்பளம் பணத்தில்" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px;">
-            <button onclick="handleManualInput()" style="background: #2563eb; color: white; border: none; padding: 10px 18px; border-radius: 5px; cursor: pointer; font-weight: bold;">அனுப்பு</button>
-            <button onclick="startVoiceRecognition()" style="background: #16a34a; color: white; border: none; padding: 10px 18px; border-radius: 5px; cursor: pointer; font-weight: bold;">பேசு</button>
-        </div>
-
-        <!-- TABS NAVIGATION -->
-        <div class="tabs-nav" style="display: flex; overflow-x: auto; gap: 15px; padding: 0 15px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
-            <button class="tab-btn active" onclick="switchTab('ai-tab', this)">அனைத்தும்</button>
-            <button class="tab-btn" onclick="switchTab('salary-tab', this)">சம்பளம்</button>
-            <button class="tab-btn" onclick="switchTab('home-tab', this)">வீடு</button>
-            <button class="tab-btn" onclick="switchTab('kollai-tab', this)">கொல்லை</button>
-            <button class="tab-btn" onclick="switchTab('mk-tab', this)">MK செலவு</button>
-            <button class="tab-btn" onclick="switchTab('sk-tab', this)">SK செலவு</button>
-            <button class="tab-btn" onclick="switchTab('vatti-tab', this)">வட்டி கணக்கு</button>
+        <!-- TABS NAVIGATION WITH EMOJIS -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('salary-tab', this)">💼 சம்பளம்</button>
+            <button class="tab-btn" onclick="switchTab('home-tab', this)">🏡 வீடு</button>
+            <button class="tab-btn" onclick="switchTab('kollai-tab', this)">🌱 கொல்லை</button>
+            <button class="tab-btn" onclick="switchTab('mk-tab', this)">🛍️ MK</button>
+            <button class="tab-btn" onclick="switchTab('sk-tab', this)">🛒 SK</button>
+            <button class="tab-btn" onclick="switchTab('vatti-tab', this)">💰 வட்டி</button>
+            <button class="tab-btn" onclick="switchTab('ai-tab', this)">📋 அனைத்தும்</button>
         </div>
 
         <!-- TAB CONTENTS -->
-        <div style="padding: 0 15px;">
-            <!-- 1. AI ALL LIST -->
-            <div id="ai-tab" class="tab-content active">
+        <div style="padding: 0 15px; margin-bottom: 80px;">
+            <div id="ai-tab" class="tab-content">
                 <div id="ai-list"></div>
             </div>
 
-            <!-- 2. SALARY TAB -->
-            <div id="salary-tab" class="tab-content">
-                <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+            <div id="salary-tab" class="tab-content active">
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
                     <h4 style="margin-top:0;">சம்பள வரவு / செலவு சேர்க்க</h4>
-                    <input type="text" id="sal-desc" placeholder="விவரம்" style="padding: 6px; margin-right: 5px;">
-                    <input type="number" id="sal-amt" placeholder="தொகை" style="padding: 6px; width: 80px; margin-right: 5px;">
-                    <select id="sal-type" style="padding: 6px; margin-right: 5px;">
-                        <option value="income">வரவு (+)</option>
-                        <option value="expense">செலவு (-)</option>
-                    </select>
-                    <button onclick="addManualEntry('சம்பளம்', 'sal-desc', 'sal-amt', 'sal-type')" style="padding: 6px 12px; background: #2563eb; color: white; border: none; border-radius: 4px;">சேர்</button>
+                    <input type="text" id="sal-desc" placeholder="விவரம்" style="padding: 8px; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" id="sal-amt" placeholder="தொகை" style="padding: 8px; flex: 1;">
+                        <select id="sal-type" style="padding: 8px;">
+                            <option value="income">வரவு (+)</option>
+                            <option value="expense">செலவு (-)</option>
+                        </select>
+                        <button onclick="addManualEntry('சம்பளம்', 'sal-desc', 'sal-amt', 'sal-type')" style="padding: 8px 15px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">சேர்</button>
+                    </div>
                 </div>
                 <div id="salary-list"></div>
             </div>
 
-            <!-- 3. HOME TAB -->
             <div id="home-tab" class="tab-content">
-                <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
                     <h4 style="margin-top:0;">வீட்டு வரவு / செலவு சேர்க்க</h4>
-                    <input type="text" id="home-desc" placeholder="விவரம்" style="padding: 6px; margin-right: 5px;">
-                    <input type="number" id="home-amt" placeholder="தொகை" style="padding: 6px; width: 80px; margin-right: 5px;">
-                    <select id="home-type" style="padding: 6px; margin-right: 5px;">
-                        <option value="income">வரவு (+)</option>
-                        <option value="expense">செலவு (-)</option>
-                    </select>
-                    <button onclick="addManualEntry('வீடு', 'home-desc', 'home-amt', 'home-type')" style="padding: 6px 12px; background: #2563eb; color: white; border: none; border-radius: 4px;">சேர்</button>
+                    <input type="text" id="home-desc" placeholder="விவரம்" style="padding: 8px; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" id="home-amt" placeholder="தொகை" style="padding: 8px; flex: 1;">
+                        <select id="home-type" style="padding: 8px;">
+                            <option value="income">வரவு (+)</option>
+                            <option value="expense">செலவு (-)</option>
+                        </select>
+                        <button onclick="addManualEntry('வீடு', 'home-desc', 'home-amt', 'home-type')" style="padding: 8px 15px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">சேர்</button>
+                    </div>
                 </div>
                 <div id="home-list"></div>
             </div>
 
-            <!-- 4. KOLLAI TAB -->
             <div id="kollai-tab" class="tab-content">
-                <div style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-                    <h3 style="margin-top: 0; font-size: 18px;">கொல்லை செலவு சேர்க்க</h3>
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <input type="text" id="kollai-desc" placeholder="விவரம் (மருந்து/உரம்)" style="flex:2; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        <input type="number" id="kollai-amt" placeholder="தொகை" style="flex:1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="kollai-source" style="flex:2; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin-top: 0;">கொல்லை செலவு சேர்க்க</h4>
+                    <input type="text" id="kollai-desc" placeholder="விவரம் (மருந்து/உரம்)" style="padding: 8px; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" id="kollai-amt" placeholder="தொகை" style="padding: 8px; flex: 1;">
+                        <select id="kollai-source" style="padding: 8px;">
                             <option value="சம்பளம்">சம்பளம் பணத்தில்</option>
                             <option value="வீடு">வீட்டு பணத்தில்</option>
                         </select>
-                        <button onclick="addExpenseManual('கொல்லை', 'kollai-desc', 'kollai-amt', 'kollai-source')" style="flex:1; padding: 8px 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">சேர்</button>
+                        <button onclick="addExpenseManual('கொல்லை', 'kollai-desc', 'kollai-amt', 'kollai-source')" style="padding: 8px 15px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">சேர்</button>
                     </div>
                 </div>
                 <div id="kollai-list"></div>
             </div>
 
-            <!-- 5. MK TAB -->
             <div id="mk-tab" class="tab-content">
-                <div style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-                    <h3 style="margin-top: 0; font-size: 18px;">MK செலவு சேர்க்க</h3>
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <input type="text" id="mk-desc" placeholder="விவரம்" style="flex:2; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        <input type="number" id="mk-amt" placeholder="தொகை" style="flex:1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="mk-source" style="flex:2; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin-top: 0;">MK செலவு சேர்க்க</h4>
+                    <input type="text" id="mk-desc" placeholder="விவரம்" style="padding: 8px; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" id="mk-amt" placeholder="தொகை" style="padding: 8px; flex: 1;">
+                        <select id="mk-source" style="padding: 8px;">
                             <option value="சம்பளம்">சம்பளம் பணத்தில்</option>
                             <option value="வீடு">வீட்டு பணத்தில்</option>
                         </select>
-                        <button onclick="addExpenseManual('MK செலவு', 'mk-desc', 'mk-amt', 'mk-source')" style="flex:1; padding: 8px 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">சேர்</button>
+                        <button onclick="addExpenseManual('MK செலவு', 'mk-desc', 'mk-amt', 'mk-source')" style="padding: 8px 15px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">சேர்</button>
                     </div>
                 </div>
                 <div id="mk-list"></div>
             </div>
 
-            <!-- 6. SK TAB -->
             <div id="sk-tab" class="tab-content">
-                <div style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-                    <h3 style="margin-top: 0; font-size: 18px;">SK செலவு சேர்க்க</h3>
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <input type="text" id="sk-desc" placeholder="விவரம்" style="flex:2; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        <input type="number" id="sk-amt" placeholder="தொகை" style="flex:1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="sk-source" style="flex:2; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin-top: 0;">SK செலவு சேர்க்க</h4>
+                    <input type="text" id="sk-desc" placeholder="விவரம்" style="padding: 8px; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" id="sk-amt" placeholder="தொகை" style="padding: 8px; flex: 1;">
+                        <select id="sk-source" style="padding: 8px;">
                             <option value="சம்பளம்">சம்பளம் பணத்தில்</option>
                             <option value="வீடு">வீட்டு பணத்தில்</option>
                         </select>
-                        <button onclick="addExpenseManual('SK செலவு', 'sk-desc', 'sk-amt', 'sk-source')" style="flex:1; padding: 8px 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">சேர்</button>
+                        <button onclick="addExpenseManual('SK செலவு', 'sk-desc', 'sk-amt', 'sk-source')" style="padding: 8px 15px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold;">சேர்</button>
                     </div>
                 </div>
                 <div id="sk-list"></div>
             </div>
 
-            <!-- 7. VATTI TAB -->
             <div id="vatti-tab" class="tab-content">
-                <div id="vatti-form-box" style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                <div id="vatti-form-box" style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
                     <h4 style="margin-top:0;">வட்டி கடன் பதிவிட</h4>
                     <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சுரேஷ்)" style="width: 100%; padding: 8px; margin-bottom: 8px; box-sizing: border-box;">
                     <div id="vatti-inputs-container">
@@ -206,6 +165,13 @@
                 </div>
                 <div id="vatti-person-list"></div>
             </div>
+        </div>
+
+        <!-- VOICE / INPUT FIXED BOTTOM BAR -->
+        <div class="bottom-input-bar">
+            <input type="text" id="userInput" placeholder="எ.கா: சம்பளம் 20000 அல்லது பால் 50" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px;">
+            <button onclick="handleManualInput()" style="background: #2563eb; color: white; border: none; padding: 10px 16px; border-radius: 5px; font-weight: bold; cursor: pointer;">அனுப்பு</button>
+            <button onclick="startVoiceRecognition()" style="background: #16a34a; color: white; border: none; padding: 10px 16px; border-radius: 5px; font-weight: bold; cursor: pointer;">🎙️ பேசு</button>
         </div>
     </div>
 
