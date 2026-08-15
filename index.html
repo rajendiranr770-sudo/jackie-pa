@@ -23,29 +23,29 @@
             <button id="logout-btn" class="btn-logout">லாக்அவுட்</button>
         </header>
 
-        <!-- DASHBOARD SUMMARY CARDS -->
+        <!-- DASHBOARD SUMMARY CARDS (சேர்க்கப்பட்ட பகுதி: டச் செய்தால் டேப் மாறும் வசதி சேர்க்கப்பட்டுள்ளது) -->
         <div class="dashboard-grid">
-            <div class="card-summary">
+            <div class="card-summary" onclick="switchTab('tab-salary', document.querySelectorAll('.tab-btn')[1])" style="cursor: pointer;">
                 <small>சம்பளம்</small>
                 <h3 id="salary-val">₹0</h3>
             </div>
-            <div class="card-summary">
+            <div class="card-summary" onclick="switchTab('tab-home', document.querySelectorAll('.tab-btn')[2])" style="cursor: pointer;">
                 <small>வீடு</small>
                 <h3 id="home-val">₹0</h3>
             </div>
-            <div class="card-summary">
+            <div class="card-summary" onclick="switchTab('tab-kollai', document.querySelectorAll('.tab-btn')[3])" style="cursor: pointer;">
                 <small>கொல்லை</small>
                 <h3 id="kollai-val">₹0</h3>
             </div>
-            <div class="card-summary">
+            <div class="card-summary" onclick="switchTab('tab-mk', document.querySelectorAll('.tab-btn')[4])" style="cursor: pointer;">
                 <small>MK செலவு</small>
                 <h3 id="mk-val">₹0</h3>
             </div>
-            <div class="card-summary">
+            <div class="card-summary" onclick="switchTab('tab-sk', document.querySelectorAll('.tab-btn')[5])" style="cursor: pointer;">
                 <small>SK செலவு</small>
                 <h3 id="sk-val">₹0</h3>
             </div>
-            <div class="card-summary highlight">
+            <div class="card-summary highlight" onclick="switchTab('tab-vatti', document.querySelectorAll('.tab-btn')[6])" style="cursor: pointer;">
                 <small>வட்டி பிசினஸ்</small>
                 <h3 id="vatti-val">₹0</h3>
             </div>
