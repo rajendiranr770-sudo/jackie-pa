@@ -8,6 +8,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 const firebaseConfig = {
     apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
     authDomain: "myfinanceapp-3f883.firebaseapp.com",
+    databaseURL: "https://myfinanceapp-3f883-default-rtdb.firebaseio.com",
     projectId: "myfinanceapp-3f883",
     storageBucket: "myfinanceapp-3f883.firebasestorage.app",
     messagingSenderId: "698658153791",
@@ -71,14 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
     if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
 
-    // Search input listener
-    const searchInput = document.getElementById('search-input') || document.querySelector('.search-box input');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
+    // Search Box Listener (Real-time Filtering)
+    const searchInputs = document.querySelectorAll('#search-input, .search-box input, #searchQueryInput');
+    searchInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
             searchQuery = e.target.value.toLowerCase().trim();
             renderAllLists();
         });
-    }
+    });
 });
 
 onAuthStateChanged(auth, (user) => {
@@ -116,7 +117,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ========================================================
-// 5. NAVIGATION & UI FUNCTIONS (TAB SWITCHING FIX)
+// 5. NAVIGATION & UI FUNCTIONS
 // ========================================================
 window.switchTab = function(tabId, btnElement) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -137,6 +138,14 @@ window.scrollToSection = function(elementId) {
     let element = document.getElementById(elementId);
     if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+};
+
+window.triggerSearch = function() {
+    let input = document.getElementById('searchQueryInput') || document.querySelector('.search-box input');
+    if (input) {
+        searchQuery = input.value.toLowerCase().trim();
+        renderAllLists();
     }
 };
 
@@ -298,7 +307,8 @@ function processNewTransaction(text) {
             modalTextEl.innerText = `"${text}" - இதற்கான தொகையை எந்த பணத்திலிருந்து கழிக்க வேண்டும்?`;
             modalEl.style.display = 'flex';
         } else {
-            txData.source = "வீடு";
+            let userSource = confirm(`"${text}" - சம்பள பணத்தில் கழிக்க ஓகே என்றால் (OK), வீட்டு பணத்தில் கழிக்க என்றால் (Cancel) அழுத்தவும்.`);
+            txData.source = userSource ? "சம்பளம்" : "வீடு";
             transactions.push(txData);
             saveState();
         }
@@ -313,7 +323,7 @@ window.confirmSource = function(selectedSource) {
     if (pendingTxData) {
         pendingTxData.source = selectedSource;
         if (pendingTxData.text.indexOf("பணத்தில்") === -1) {
-            pendingTxData.text += ` ${selectedSource} பணத்தில்`;
+            pendingTxData.text += ` (${selectedSource} பணம்)`;
         }
         transactions.push(pendingTxData);
         pendingTxData = null;
@@ -421,7 +431,7 @@ window.addSingleLoanForPerson = function(name) {
 };
 
 // ========================================================
-// 8. VATTI CALCULATOR & DASHBOARD UI (0% Vatti Fix)
+// 8. VATTI CALCULATOR & DASHBOARD UI
 // ========================================================
 function calculateAccruedInterest(loan) {
     let amount = loan.amount || 0;
@@ -492,6 +502,7 @@ function updateDashboardUI() {
 
 function renderAllLists() {
     const filterMap = {
+        'all-list': () => transactions,
         'ai-list': () => transactions,
         'salary-list': () => transactions.filter(t => t.source === 'சம்பளம்'),
         'home-list': () => transactions.filter(t => t.source === 'வீடு'),
@@ -509,8 +520,14 @@ function renderAllLists() {
                 list = list.filter(t => 
                     t.text.toLowerCase().includes(searchQuery) || 
                     t.amount.toString().includes(searchQuery) ||
-                    t.category.toLowerCase().includes(searchQuery)
+                    (t.category && t.category.toLowerCase().includes(searchQuery)) ||
+                    (t.source && t.source.toLowerCase().includes(searchQuery))
                 );
+            }
+
+            if (list.length === 0) {
+                el.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px;">பதிவுகள் எதுவும் இல்லை</div>`;
+                continue;
             }
 
             el.innerHTML = list.map(t => {
@@ -529,8 +546,8 @@ function renderAllLists() {
                     <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b; margin-top:6px;">
                         <span>${t.date} | ${categoryLabel}</span>
                         <div>
-                            <button onclick="openEditModal(${t.id})" style="background:none; border:none; cursor:pointer;">✏️</button>
-                            <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer;">🗑️</button>
+                            <button onclick="openEditModal(${t.id})" style="background:none; border:none; cursor:pointer; font-size:15px; margin-right:8px;">✏️</button>
+                            <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer; font-size:15px;">🗑️</button>
                         </div>
                     </div>
                 </div>`;
@@ -596,7 +613,7 @@ function renderVattiLists() {
 }
 
 // ========================================================
-// 9. MODALS, EDIT & DELETE HANDLERS (Fixed Edit Logic)
+// 9. MODALS, EDIT & DELETE HANDLERS
 // ========================================================
 window.openVattiEditModal = function(name, index) {
     editingVattiInfo = { name, index };
@@ -650,9 +667,15 @@ window.openEditModal = function(id) {
     let tx = transactions.find(t => t.id === id);
     if (!tx) return;
     editingTxId = id;
-    if (document.getElementById('edit-text')) document.getElementById('edit-text').value = tx.text;
-    if (document.getElementById('edit-amount')) document.getElementById('edit-amount').value = tx.amount;
-    
+
+    let textEl = document.getElementById('edit-text');
+    let amtEl = document.getElementById('edit-amount');
+    let sourceEl = document.getElementById('edit-source');
+
+    if (textEl) textEl.value = tx.text;
+    if (amtEl) amtEl.value = tx.amount;
+    if (sourceEl) sourceEl.value = tx.source || 'வீடு';
+
     let modal = document.getElementById('editModal');
     if (modal) modal.style.display = 'flex';
 };
@@ -668,10 +691,12 @@ window.saveEdit = function() {
         let textInput = document.getElementById('edit-text');
         let amtInput = document.getElementById('edit-amount');
         let dateInput = document.getElementById('edit-date');
+        let sourceInput = document.getElementById('edit-source');
 
         if (textInput) tx.text = textInput.value;
         if (amtInput) tx.amount = parseFloat(amtInput.value) || tx.amount;
         if (dateInput && dateInput.value) tx.date = new Date(dateInput.value).toLocaleString();
+        if (sourceInput) tx.source = sourceInput.value;
 
         let t = tx.text.toLowerCase().trim();
         if (t.includes("எஸ்கே") || t.includes("எஸ் கே") || t.includes("sk") || t.includes("sk-")) {
@@ -697,7 +722,7 @@ window.deleteTx = function(id) {
 };
 
 window.handleManualInput = function() {
-    let input = document.getElementById('userInput');
+    let input = document.getElementById('userInput') || document.getElementById('searchQueryInput');
     if (input && input.value.trim() !== '') {
         processNewTransaction(input.value.trim());
         input.value = '';
@@ -714,7 +739,7 @@ window.startVoiceRecognition = function() {
         recognition.lang = 'ta-IN';
         recognition.onresult = function(event) {
             let transcript = event.results[0][0].transcript;
-            let input = document.getElementById('userInput');
+            let input = document.getElementById('userInput') || document.getElementById('searchQueryInput');
             if (input) input.value = transcript;
             processNewTransaction(transcript);
         };
