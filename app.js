@@ -1,40 +1,71 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Firebase Configuration (உங்கள் Firebase விவரங்களை இங்கு பயன்படுத்தவும்)
+// ⚠️ உங்கள் Firebase Console-இல் கிடைத்த உண்மையான விவரங்களை இங்கே இடவும் ⚠️
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
+    authDomain: "myfinanceapp-3f883.firebaseapp.com",
+    databaseURL: "https://myfinanceapp-3f883-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    projectId: "myfinanceapp-3f883",
+    storageBucket: "myfinanceapp-3f883.firebasestorage.app",
+    messagingSenderId: "698658153791",
+    appId: "1:698658153791:web:08ea0171d24a9b0da51f8a"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-// Global Variables
-let currentEditCategory = null;
-let currentEditIndex = null;
-let selectedSource = null;
-let pendingExpenseEntry = null;
+// AUTHENTICATION (உள்நுழைவு கட்டுப்பாடு)
+onAuthStateChanged(auth, (user) => {
+    const authContainer = document.getElementById('auth-container');
+    const mainApp = document.getElementById('main-app');
+
+    if (user) {
+        if (authContainer) authContainer.style.display = 'none';
+        if (mainApp) mainApp.style.display = 'block';
+        if (document.getElementById('user-display-name')) {
+            document.getElementById('user-display-name').innerText = user.displayName || 'User';
+        }
+        listenToTransactions();
+        listenToVattiData();
+    } else {
+        if (authContainer) authContainer.style.display = 'flex';
+        if (mainApp) mainApp.style.display = 'none';
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(error => {
+                alert("Login செய்ய முடியவில்லை: " + error.message);
+            });
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth);
+        });
+    }
+});
 
 // TAB SWITCHING
 window.switchTab = function(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     
-    document.getElementById(tabId).classList.add('active');
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) targetTab.classList.add('active');
     if (btn) btn.classList.add('active');
 };
-
-// INITIAL LOAD & REALTIME LISTENERS
-window.addEventListener('DOMContentLoaded', () => {
-    listenToTransactions();
-    listenToVattiData();
-});
 
 // 1. வரவு / செலவு பதிவு (சம்பளம், வீடு)
 window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
@@ -128,16 +159,16 @@ function renderTransactions(data) {
             }
 
             const html = `
-                <div class="transaction-card">
+                <div class="transaction-card" style="background:#fff; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                     <div>
                         <b>${item.description}</b> 
-                        <span class="${item.type === 'income' ? 'text-green' : 'text-red'}">
+                        <span style="color:${item.type === 'income' ? '#16a34a' : '#dc2626'}; font-weight:bold;">
                             ${item.type === 'income' ? '+' : '-'}₹${item.amount}
                         </span>
                         <br><small style="color:#64748b;">${item.date} | ${item.category} ${item.source ? '(' + item.source + ')' : ''}</small>
                     </div>
                     <div>
-                        <button onclick="deleteTransaction('${key}')">🗑️</button>
+                        <button onclick="deleteTransaction('${key}')" style="border:none; background:none; cursor:pointer; font-size:16px;">🗑️</button>
                     </div>
                 </div>
             `;
@@ -150,14 +181,12 @@ function renderTransactions(data) {
         });
     }
 
-    // Update Dashboard Cards
     if(document.getElementById('salary-val')) document.getElementById('salary-val').innerText = `₹${totals['சம்பளம்']}`;
     if(document.getElementById('home-val')) document.getElementById('home-val').innerText = `₹${totals['வீடு']}`;
     if(document.getElementById('kollai-val')) document.getElementById('kollai-val').innerText = `₹${totals['கொல்லை']}`;
     if(document.getElementById('mk-val')) document.getElementById('mk-val').innerText = `₹${totals['MK']}`;
     if(document.getElementById('sk-val')) document.getElementById('sk-val').innerText = `₹${totals['SK']}`;
 
-    // Update Lists
     if(document.getElementById('salary-list')) document.getElementById('salary-list').innerHTML = lists['சம்பளம்'];
     if(document.getElementById('home-list')) document.getElementById('home-list').innerHTML = lists['வீடு'];
     if(document.getElementById('kollai-list')) document.getElementById('kollai-list').innerHTML = lists['கொல்லை'];
@@ -171,7 +200,7 @@ window.deleteTransaction = function(key) {
     }
 };
 
-// ================= VATTI BUSINESS LOGIC (FIXED 0% BUG) =================
+// ================= VATTI BUSINESS LOGIC =================
 
 window.addMoreLoanField = function() {
     const container = document.getElementById('vatti-inputs-container');
@@ -200,7 +229,6 @@ window.saveVattiAccount = function() {
         const amt = parseFloat(amtElem.value);
         const rawRate = rateInputs[idx].value.trim();
         
-        // BUG FIX: 0% போட்டால் 0 ஆக மட்டுமே எடுக்கும் (Empty-ஆக இருந்தால் மட்டுமே default 3%)
         const rate = (rawRate === "" || isNaN(parseFloat(rawRate))) ? 3 : parseFloat(rawRate);
 
         if (!isNaN(amt)) {
@@ -245,7 +273,7 @@ function calculateDays(startDateStr) {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const months = Math.floor(diffDays / 30);
     const remainingDays = diffDays % 30;
-    return { totalDays: diffDays, months: months, days: remainingDays };
+    return { totalDays: isNaN(diffDays) ? 0 : diffDays, months: isNaN(months) ? 0 : months, days: isNaN(remainingDays) ? 0 : remainingDays };
 }
 
 function renderVattiList(data) {
@@ -263,13 +291,12 @@ function renderVattiList(data) {
 
             let loansHtml = '';
 
-            Object.keys(personGroup).forEach((loanKey, index) => {
+            Object.keys(personGroup).forEach((loanKey) => {
                 const item = personGroup[loanKey];
                 if (item.loans) {
                     item.loans.forEach((loan, lIdx) => {
                         const dayData = calculateDays(loan.date);
                         
-                        // 0% வட்டி கணக்கீடு
                         const monthlyInterest = loan.rate === 0 ? 0 : Math.round((loan.amount * loan.rate) / 100);
                         const totalInterest = loan.rate === 0 ? 0 : Math.round((monthlyInterest / 30) * dayData.totalDays);
 
@@ -329,13 +356,15 @@ function renderVattiList(data) {
 // VATTI EDIT MODAL LOGIC
 window.openVattiEditModal = function(personKey, loanKey, lIdx, amt, rate, date) {
     const modal = document.getElementById('vattiEditModal');
+    if (!modal) return;
+    
     modal.dataset.personKey = personKey;
     modal.dataset.loanKey = loanKey;
     modal.dataset.lIdx = lIdx;
 
-    document.getElementById('edit-vatti-amt').value = amt;
-    document.getElementById('edit-vatti-rate').value = rate;
-    document.getElementById('edit-vatti-date').value = date;
+    if (document.getElementById('edit-vatti-amt')) document.getElementById('edit-vatti-amt').value = amt;
+    if (document.getElementById('edit-vatti-rate')) document.getElementById('edit-vatti-rate').value = rate;
+    if (document.getElementById('edit-vatti-date')) document.getElementById('edit-vatti-date').value = date;
 
     modal.style.display = 'flex';
 };
@@ -355,7 +384,6 @@ window.saveVattiEdit = function() {
         return;
     }
 
-    // BUG FIX: 0% வட்டி பதிவு
     const newRate = (rawRate === "" || isNaN(parseFloat(rawRate))) ? 0 : parseFloat(rawRate);
 
     const loanRef = ref(db, `vatti/${personKey}/${loanKey}/loans/${lIdx}`);
@@ -369,7 +397,8 @@ window.saveVattiEdit = function() {
 };
 
 window.closeVattiEditModal = function() {
-    document.getElementById('vattiEditModal').style.display = 'none';
+    const modal = document.getElementById('vattiEditModal');
+    if (modal) modal.style.display = 'none';
 };
 
 window.deleteVattiLoan = function(personKey, loanKey) {
