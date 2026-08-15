@@ -1,155 +1,62 @@
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: #f8fafc;
-    padding-bottom: 75px; /* Bottom bar மறைக்காமல் இருக்க space */
-}
-
-/* 1. TOP DARK DASHBOARD GRID (3-Columns Responsive) */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    padding: 12px;
-    background-color: #1e293b;
-}
-
-.card {
-    background: #2b3952;
-    padding: 12px 6px;
-    border-radius: 8px;
-    text-align: center;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-}
-
-.card h3 {
-    margin: 0;
-    font-size: 13px;
-    color: #94a3b8;
-    font-weight: normal;
-}
-
-.card p {
-    margin: 6px 0 0 0;
-    font-size: 15px;
-    font-weight: bold;
-    color: #38bdf8;
-}
-
-/* 2. TABS NAVIGATION */
-.tabs-nav {
-    display: flex;
-    overflow-x: auto;
-    gap: 12px;
-    padding: 12px 15px;
-    background: #fff;
-    border-bottom: 1px solid #e2e8f0;
-    -webkit-overflow-scrolling: touch;
-}
-
-.tabs-nav::-webkit-scrollbar {
-    display: none;
-}
-
-.tab-btn {
-    background: none;
-    border: none;
-    font-size: 14px;
-    font-weight: bold;
-    color: #64748b;
-    padding-bottom: 6px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.tab-btn.active {
-    color: #2563eb;
-    border-bottom: 3px solid #2563eb;
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* 3. RESPONSIVE FORM FIX (சேர் பொத்தான் திரைக்குள் வர) */
+/* இரண்டாவது படத்தில் உள்ளது போன்ற அதே Form Card Layout */
 .form-card {
-    background: #fff;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 15px;
+    background: #ffffff;
+    padding: 20px 16px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.form-row {
+.form-card h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.vertical-form {
     display: flex;
-    flex-wrap: wrap; /* ஸ்க்ரோல் ஆகாமல் கீழே இறங்கும் */
-    gap: 8px;
-    margin-top: 8px;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.form-row input, .form-row select {
-    padding: 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 14px;
-    box-sizing: border-box;
-}
-
-.form-row input[type="text"] {
+.vertical-form input, 
+.vertical-form select {
     width: 100%;
+    height: 48px;
+    padding: 0 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 16px;
+    box-sizing: border-box;
+    background-color: #f8fafc;
+    color: #1e293b;
+    outline: none;
 }
 
-.form-row .flex-1 {
-    flex: 1;
-    min-width: 100px;
+.vertical-form input:focus,
+.vertical-form select:focus {
+    border-color: #2563eb;
+    background-color: #ffffff;
 }
 
-.btn-primary {
+/* இரண்டாவது படத்தில் உள்ள நீல நிற "சேர்" பொத்தான் */
+.vertical-form button.btn-submit {
+    width: 100%;
+    height: 48px;
     background: #2563eb;
-    color: white;
+    color: #ffffff;
     border: none;
-    padding: 10px 18px;
-    border-radius: 6px;
+    border-radius: 10px;
+    font-size: 18px;
     font-weight: bold;
     cursor: pointer;
-    white-space: nowrap;
+    margin-top: 6px;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
-/* 4. FIXED AI BOTTOM INPUT BAR (கீழே நிலையாக நிற்க) */
-.bottom-input-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: #fff;
-    padding: 10px 12px;
-    display: flex;
-    gap: 6px;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    box-sizing: border-box;
-    z-index: 1000;
-}
-
-.bottom-input-bar input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-.bottom-input-bar button {
-    border: none;
-    padding: 10px 12px;
-    border-radius: 6px;
-    font-weight: bold;
-    color: white;
-    cursor: pointer;
-    font-size: 14px;
+.vertical-form button.btn-submit:active {
+    background: #1d4ed8;
 }
