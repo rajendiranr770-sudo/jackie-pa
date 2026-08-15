@@ -6,9 +6,9 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 const firebaseConfig = {
     apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
     authDomain: "myfinanceapp-3f883.firebaseapp.com",
-    databaseURL: "https://myfinanceapp-3f883-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    databaseURL: "https://myfinanceapp-3f883-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "myfinanceapp-3f883",
-    storageBucket: "myfinanceapp-3f883.firebasestorage.app",
+    storageBucket: "myfinanceapp-3f883.appspot.com",
     messagingSenderId: "698658153791",
     appId: "1:698658153791:web:08ea0171d24a9b0da51f8a"
 };
@@ -19,7 +19,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// AUTHENTICATION (உள்நுழைவு கட்டுப்பாடு)
+// AUTHENTICATION
 onAuthStateChanged(auth, (user) => {
     const authContainer = document.getElementById('auth-container');
     const mainApp = document.getElementById('main-app');
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// TAB SWITCHING
+// TAB SWITCHING (FIXED LOGIC)
 window.switchTab = function(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -130,13 +130,13 @@ window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
     if (document.getElementById(dateId)) document.getElementById(dateId).value = '';
 };
 
-// SAVE TRANSACTION TO FIREBASE
+// SAVE TRANSACTION
 function saveTransaction(entry) {
     const transactionsRef = ref(db, 'transactions');
     push(transactionsRef, entry);
 }
 
-// LISTEN TO TRANSACTIONS AND UPDATE DASHBOARD
+// LISTEN TO TRANSACTIONS
 function listenToTransactions() {
     const transactionsRef = ref(db, 'transactions');
     onValue(transactionsRef, (snapshot) => {
@@ -228,7 +228,6 @@ window.saveVattiAccount = function() {
     amtInputs.forEach((amtElem, idx) => {
         const amt = parseFloat(amtElem.value);
         const rawRate = rateInputs[idx].value.trim();
-        
         const rate = (rawRate === "" || isNaN(parseFloat(rawRate))) ? 3 : parseFloat(rawRate);
 
         if (!isNaN(amt)) {
@@ -288,7 +287,6 @@ function renderVattiList(data) {
             const personGroup = data[personKey];
             let personTotalPrincipal = 0;
             let personTotalInterest = 0;
-
             let loansHtml = '';
 
             Object.keys(personGroup).forEach((loanKey) => {
@@ -296,7 +294,6 @@ function renderVattiList(data) {
                 if (item.loans) {
                     item.loans.forEach((loan, lIdx) => {
                         const dayData = calculateDays(loan.date);
-                        
                         const monthlyInterest = loan.rate === 0 ? 0 : Math.round((loan.amount * loan.rate) / 100);
                         const totalInterest = loan.rate === 0 ? 0 : Math.round((monthlyInterest / 30) * dayData.totalDays);
 
