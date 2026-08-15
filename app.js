@@ -30,6 +30,7 @@ let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
 let editingTxId = null;
 let editingVattiInfo = null;
 let searchQuery = "";
+let pendingVoiceTxData = null; // குரல் வழியில் பண ஆதாரம் தேர்வு செய்ய
 
 // ========================================================
 // 3. SAVE STATE (LOCAL + FIREBASE SYNC)
@@ -71,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
     if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
 
-    // Search Box Real-time Listener (HTML-ன் search-query-input உடன் இணைக்கப்பட்டுள்ளது)
+    // Search Box Real-time Listener
     const searchInput = document.getElementById('search-query-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -197,40 +198,52 @@ function processNewTransaction(text) {
 
     let t = text.toLowerCase().trim();
     let category = "பொதுச் செலவு"; 
-    let source = "வீடு"; 
     let isExpense = true;
+    let explicitSource = null;
 
-    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்") || t.includes("சம்பளம்")) {
-        source = "சம்பளம்";
-    }
+    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்")) explicitSource = "சம்பளம்";
+    else if (t.includes("வீட்டு பணத்தில்") || t.includes("வீட்டு பணம்")) explicitSource = "வீடு";
 
     if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
         isExpense = false;
         category = "வரவு";
     } 
-    else if (t.includes("எஸ்கே") || t.includes("எஸ் கே") || t.includes("sk")) {
-        category = "SK செலவு";
-    } 
-    else if (t.includes("எம்கே") || t.includes("எம் கே") || t.includes("mk")) {
-        category = "MK செலவு";
-    } 
-    else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்") || t.includes("கூலி")) {
-        category = "கொல்லை";
-    }
+    else if (t.includes("எஸ்கே") || t.includes("எஸ் கே") || t.includes("sk")) category = "SK செலவு";
+    else if (t.includes("எம்கே") || t.includes("எம் கே") || t.includes("mk")) category = "MK செலவு";
+    else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்") || t.includes("கூலி")) category = "கொல்லை";
 
-    let txData = {
+    let tempTx = {
         id: Date.now(),
         text: text,
         amount: amount,
         category: category,
-        source: source,
         isExpense: isExpense,
         date: new Date().toLocaleString()
     };
 
-    transactions.push(txData);
-    saveState();
+    if (explicitSource) {
+        tempTx.source = explicitSource;
+        transactions.push(tempTx);
+        saveState();
+    } else {
+        pendingVoiceTxData = tempTx;
+        let modalText = document.getElementById("sourceModalText");
+        if (modalText) modalText.innerText = `"${text}" - ₹${amount}`;
+        let modal = document.getElementById("sourceModal");
+        if (modal) modal.style.display = "flex";
+    }
 }
+
+window.confirmSource = function(selectedSource) {
+    if (pendingVoiceTxData) {
+        pendingVoiceTxData.source = selectedSource;
+        transactions.push(pendingVoiceTxData);
+        pendingVoiceTxData = null;
+        saveState();
+    }
+    let modal = document.getElementById("sourceModal");
+    if (modal) modal.style.display = "none";
+};
 
 // ========================================================
 // 7. MANUAL ENTRY & VATTI FORM LOGIC
@@ -493,7 +506,7 @@ function renderVattiLists() {
 }
 
 // ========================================================
-// 9. MODALS, EDIT & DELETE HANDLERS (HTML ID Matching Fix)
+// 9. MODALS, EDIT & DELETE HANDLERS (Dual Drop-down Support)
 // ========================================================
 window.openTxEditModal = function(id) {
     let tx = transactions.find(t => t.id === id);
@@ -502,7 +515,8 @@ window.openTxEditModal = function(id) {
 
     if (document.getElementById('edit-tx-desc')) document.getElementById('edit-tx-desc').value = tx.text;
     if (document.getElementById('edit-tx-amt')) document.getElementById('edit-tx-amt').value = tx.amount;
-    if (document.getElementById('edit-tx-cat')) document.getElementById('edit-tx-cat').value = tx.category || 'சம்பளம்';
+    if (document.getElementById('edit-tx-source')) document.getElementById('edit-tx-source').value = tx.source || 'வீடு';
+    if (document.getElementById('edit-tx-cat')) document.getElementById('edit-tx-cat').value = tx.category || 'பொதுச் செலவு';
     if (document.getElementById('edit-tx-type')) document.getElementById('edit-tx-type').value = tx.isExpense ? 'expense' : 'income';
     if (document.getElementById('edit-tx-date')) document.getElementById('edit-tx-date').value = tx.date;
 
@@ -520,12 +534,14 @@ window.saveTransactionEdit = function() {
     if (tx) {
         let desc = document.getElementById('edit-tx-desc').value;
         let amt = parseFloat(document.getElementById('edit-tx-amt').value);
+        let src = document.getElementById('edit-tx-source') ? document.getElementById('edit-tx-source').value : tx.source;
         let cat = document.getElementById('edit-tx-cat').value;
         let type = document.getElementById('edit-tx-type').value;
         let date = document.getElementById('edit-tx-date').value;
 
         tx.text = desc || tx.text;
         tx.amount = !isNaN(amt) ? amt : tx.amount;
+        tx.source = src;
         tx.category = cat;
         tx.isExpense = (type === 'expense');
         if (date) tx.date = date;
