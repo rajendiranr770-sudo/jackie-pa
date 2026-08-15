@@ -29,6 +29,7 @@ let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
 let editingTxId = null;
 let editingVattiInfo = null;
 let pendingTxData = null;
+let searchQuery = "";
 
 // ========================================================
 // 3. SAVE STATE (LOCAL + FIREBASE SYNC)
@@ -69,6 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
     if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
+
+    // Search input listener
+    const searchInput = document.getElementById('search-input') || document.querySelector('.search-box input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            renderAllLists();
+        });
+    }
 });
 
 onAuthStateChanged(auth, (user) => {
@@ -494,6 +504,15 @@ function renderAllLists() {
         let el = document.getElementById(id);
         if (el) {
             let list = filterMap[id]();
+
+            if (searchQuery !== "") {
+                list = list.filter(t => 
+                    t.text.toLowerCase().includes(searchQuery) || 
+                    t.amount.toString().includes(searchQuery) ||
+                    t.category.toLowerCase().includes(searchQuery)
+                );
+            }
+
             el.innerHTML = list.map(t => {
                 let isExp = t.isExpense;
                 let color = isExp ? "#dc2626" : "#16a34a";
@@ -577,15 +596,17 @@ function renderVattiLists() {
 }
 
 // ========================================================
-// 9. MODALS, EDIT & DELETE HANDLERS (With Confirm Dialogs)
+// 9. MODALS, EDIT & DELETE HANDLERS (Fixed Edit Logic)
 // ========================================================
 window.openVattiEditModal = function(name, index) {
     editingVattiInfo = { name, index };
     let loan = vattiAccounts[name][index];
-    document.getElementById('edit-vatti-amt').value = loan.amount;
-    document.getElementById('edit-vatti-rate').value = loan.rate;
-    document.getElementById('edit-vatti-date').value = loan.date;
-    document.getElementById('vattiEditModal').style.display = 'flex';
+    if (document.getElementById('edit-vatti-amt')) document.getElementById('edit-vatti-amt').value = loan.amount;
+    if (document.getElementById('edit-vatti-rate')) document.getElementById('edit-vatti-rate').value = loan.rate;
+    if (document.getElementById('edit-vatti-date')) document.getElementById('edit-vatti-date').value = loan.date;
+    
+    let modal = document.getElementById('vattiEditModal');
+    if (modal) modal.style.display = 'flex';
 };
 
 window.closeVattiEditModal = function() {
@@ -597,15 +618,13 @@ window.saveVattiEdit = function() {
     if (editingVattiInfo) {
         let { name, index } = editingVattiInfo;
         let loan = vattiAccounts[name][index];
-        loan.amount = parseFloat(document.getElementById('edit-vatti-amt').value) || loan.amount;
-        
-        let rateVal = document.getElementById('edit-vatti-rate').value;
-        loan.rate = (rateVal !== "" && !isNaN(rateVal)) ? parseFloat(rateVal) : loan.rate;
-        
-        let newDate = document.getElementById('edit-vatti-date').value;
-        if (newDate) {
-            loan.date = newDate;
-        }
+        let amtInput = document.getElementById('edit-vatti-amt');
+        let rateInput = document.getElementById('edit-vatti-rate');
+        let dateInput = document.getElementById('edit-vatti-date');
+
+        if (amtInput) loan.amount = parseFloat(amtInput.value) || loan.amount;
+        if (rateInput && rateInput.value !== "") loan.rate = parseFloat(rateInput.value);
+        if (dateInput && dateInput.value) loan.date = dateInput.value;
 
         saveState();
     }
@@ -631,9 +650,11 @@ window.openEditModal = function(id) {
     let tx = transactions.find(t => t.id === id);
     if (!tx) return;
     editingTxId = id;
-    document.getElementById('edit-text').value = tx.text;
-    document.getElementById('edit-amount').value = tx.amount;
-    document.getElementById('editModal').style.display = 'flex';
+    if (document.getElementById('edit-text')) document.getElementById('edit-text').value = tx.text;
+    if (document.getElementById('edit-amount')) document.getElementById('edit-amount').value = tx.amount;
+    
+    let modal = document.getElementById('editModal');
+    if (modal) modal.style.display = 'flex';
 };
 
 window.closeEditModal = function() { 
@@ -644,17 +665,15 @@ window.closeEditModal = function() {
 window.saveEdit = function() {
     let tx = transactions.find(t => t.id === editingTxId);
     if (tx) {
-        let newText = document.getElementById('edit-text').value;
-        let newAmt = parseFloat(document.getElementById('edit-amount').value) || tx.amount;
-        let newDate = document.getElementById('edit-date') ? document.getElementById('edit-date').value : '';
+        let textInput = document.getElementById('edit-text');
+        let amtInput = document.getElementById('edit-amount');
+        let dateInput = document.getElementById('edit-date');
 
-        tx.text = newText;
-        tx.amount = newAmt;
-        if (newDate) {
-            tx.date = new Date(newDate).toLocaleString();
-        }
+        if (textInput) tx.text = textInput.value;
+        if (amtInput) tx.amount = parseFloat(amtInput.value) || tx.amount;
+        if (dateInput && dateInput.value) tx.date = new Date(dateInput.value).toLocaleString();
 
-        let t = newText.toLowerCase().trim();
+        let t = tx.text.toLowerCase().trim();
         if (t.includes("எஸ்கே") || t.includes("எஸ் கே") || t.includes("sk") || t.includes("sk-")) {
             tx.category = "SK செலவு";
         } else if (t.includes("எம்கே") || t.includes("எம் கே") || t.includes("mk") || t.includes("mk-")) {
