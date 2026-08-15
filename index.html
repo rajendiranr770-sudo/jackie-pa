@@ -193,6 +193,31 @@
 
     </div>
 
+    <!-- GENERAL TRANSACTION EDIT MODAL -->
+    <div id="txEditModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h3>பதிவைத் திருத்து</h3>
+            <input type="text" id="edit-tx-desc" placeholder="விவரம் / பெயர்">
+            <input type="number" id="edit-tx-amt" placeholder="தொகை (₹)">
+            <select id="edit-tx-cat">
+                <option value="சம்பளம்">சம்பளம்</option>
+                <option value="வீடு">வீடு</option>
+                <option value="கொல்லை">கொல்லை</option>
+                <option value="MK செலவு">MK செலவு</option>
+                <option value="SK செலவு">SK செலவு</option>
+            </select>
+            <select id="edit-tx-type">
+                <option value="income">வரவு (+)</option>
+                <option value="expense">செலவு (-)</option>
+            </select>
+            <input type="text" id="edit-tx-date" placeholder="தேதி மற்றும் நேரம்">
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="btn-submit" onclick="saveTransactionEdit()">சேமி</button>
+                <button class="btn-secondary" onclick="closeTxEditModal()">மூடு</button>
+            </div>
+        </div>
+    </div>
+
     <!-- VATTI EDIT MODAL -->
     <div id="vattiEditModal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
