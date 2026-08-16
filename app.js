@@ -446,7 +446,7 @@ function updateDashboardUI() {
     setVal('vatti-val', totals["வட்டி"]);
 }
 
- function renderAllLists() {
+function renderAllLists() {
     const filterMap = {
         'all-list': () => transactions,
         'salary-list': () => transactions.filter(t => t.source === 'சம்பளம்'),
@@ -473,7 +473,7 @@ function updateDashboardUI() {
                         catClean.includes(cleanQ);
 
             if (match) {
-                totalSearchAmt += (t.isExpense ? t.amount : -t.amount);
+                totalSearchAmt += (t.isExpense ? Number(t.amount) : -Number(t.amount));
             }
         });
     }
@@ -482,14 +482,12 @@ function updateDashboardUI() {
     let searchBoxEl = document.getElementById('search-result-box');
     if (searchBoxEl) {
         if (q !== "") {
-            searchBoxEl.style.display = "block";
             searchBoxEl.innerHTML = `
-            <div style="background:#e0f2fe; border:2px solid #0284c7; border-radius:12px; padding:15px; margin-top:12px; margin-bottom:12px; text-align:center;">
+            <div style="background:#e0f2fe; border:2px solid #0284c7; border-radius:12px; padding:15px; margin-top:10px; margin-bottom:15px; text-align:center;">
                 <div style="font-size:15px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு</div>
                 <div style="font-size:24px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalSearchAmt}</div>
             </div>`;
         } else {
-            searchBoxEl.style.display = "none";
             searchBoxEl.innerHTML = "";
         }
     }
