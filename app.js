@@ -459,10 +459,12 @@ function renderAllLists() {
     let searchInputEl = document.getElementById('search-query-input');
     let q = searchInputEl ? searchInputEl.value.toLowerCase().trim() : searchQuery.toLowerCase().trim();
 
-    // 1. தேடல் தொகையைக் கணக்கிடுதல்
-    let totalSearchAmt = 0;
+    // 1. தேடல் தொகையைக் கணக்கிடுதல் & Alert மெசேஜ் காட்டுதல்
     if (q !== "") {
         let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+        let totalSearchAmt = 0;
+        let matchCount = 0;
+
         transactions.forEach(t => {
             let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
             let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
@@ -474,32 +476,26 @@ function renderAllLists() {
 
             if (match) {
                 totalSearchAmt += (t.isExpense ? Number(t.amount) : -Number(t.amount));
+                matchCount++;
             }
         });
-    }
 
-    // 2. தேடல் ரிசல்ட் கார்டைக் காட்டுதல்
-    let searchBoxEl = document.getElementById('search-result-box');
-    if (searchBoxEl) {
-        if (q !== "") {
-            searchBoxEl.innerHTML = `
-            <div style="background:#e0f2fe; border:2px solid #0284c7; border-radius:12px; padding:15px; margin-top:10px; margin-bottom:15px; text-align:center;">
-                <div style="font-size:15px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு</div>
-                <div style="font-size:24px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalSearchAmt}</div>
-            </div>`;
+        // பட்டன் அமுக்கியதும் போன் ஸ்கிரீன்ல பாப்அப் மெசேஜ் வரும்
+        if (matchCount > 0) {
+            alert(`🔍 "${q}" தேடல் முடிவு:\n\nமொத்த செலவு: ₹${totalSearchAmt}`);
         } else {
-            searchBoxEl.innerHTML = "";
+            alert(`🔍 "${q}" என்ற பெயரில் பதிவுகள் எதுவும் இல்லை!`);
         }
     }
 
-    // 3. லிஸ்ட்களை ரெண்டர் செய்தல்
+    // 2. லிஸ்ட்களை ரெண்டர் செய்தல்
     for (let id in filterMap) {
         let el = document.getElementById(id);
         if (el) {
             let list = filterByMonth(filterMap[id]());
 
             if (q !== "") {
-                let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+                let cleanQ = q.replace(/[ாடடிடீடுடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
                 list = list.filter(t => {
                     let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
                     let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
