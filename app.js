@@ -22,11 +22,9 @@ const provider = new GoogleAuthProvider();
 
 let currentUser = null;
 
-// PWA Service Worker Register (Offline-ல் இயங்க)
+// Service Worker Registration
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log("Service Worker Registered!"))
-        .catch(err => console.log("SW Registration Failed:", err));
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log("SW Failed:", err));
 }
 
 // ========================================================
@@ -34,14 +32,12 @@ if ('serviceWorker' in navigator) {
 // ========================================================
 let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
 let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
-let editingTxId = null;
-let editingVattiInfo = null;
 let searchQuery = "";
 let selectedMonthFilter = "ALL";
 let pendingVoiceTxData = null;
 
 // ========================================================
-// 3. SAVE STATE (LOCAL + FIREBASE SYNC)
+// 3. SAVE STATE & AUTO SYNC
 // ========================================================
 function saveState() {
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
@@ -58,25 +54,21 @@ function saveState() {
     populateMonthDropdown();
     updateDashboardUI();
     renderAllLists();
-    renderVattiLists();
 }
 
-// Net வந்தவுடன் Auto-Sync செய்ய
 window.addEventListener('online', () => {
     if (currentUser) saveState();
 });
 
 // ========================================================
-// 4. GOOGLE LOGIN / LOGOUT
+// 4. AUTHENTICATION
 // ========================================================
 window.loginWithGoogle = function() {
     signInWithPopup(auth, provider).catch(error => alert("Login Error: " + error.message));
 };
 
 window.logoutGoogle = function() {
-    signOut(auth).then(() => {
-        alert("வெற்றிகரமாக லாக்அவுட் செய்யப்பட்டது!");
-    }).catch(error => alert("Logout Error: " + error.message));
+    signOut(auth).then(() => alert("வெற்றிகரமாக லாக்அவுட் செய்யப்பட்டது!")).catch(error => alert(error.message));
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -86,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
     if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
 
-    // Search Input Real-time Event Listener
     const searchInput = document.getElementById('search-query-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -96,9 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.processSearch = function() {
-        if (searchInput) {
-            searchQuery = searchInput.value.trim();
-        }
+        if (searchInput) searchQuery = searchInput.value.trim();
         window.searchExpenses();
     };
 
@@ -121,14 +110,7 @@ onAuthStateChanged(auth, (user) => {
                 let data = docSnap.data();
                 transactions = data.transactions || [];
                 vattiAccounts = data.vattiAccounts || {};
-                
-                localStorage.setItem('my_app_txs', JSON.stringify(transactions));
-                localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
-                
-                populateMonthDropdown();
-                updateDashboardUI();
-                renderAllLists();
-                renderVattiLists();
+                saveState();
             }
         });
     } else {
@@ -139,7 +121,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ========================================================
-// 5. MONTHLY FILTER LOGIC
+// 5. MONTHLY FILTER & FIFO BALANCE LOGIC
 // ========================================================
 function populateMonthDropdown() {
     let selectEl = document.getElementById('month-filter-select');
@@ -182,87 +164,30 @@ function filterByMonth(list) {
 }
 
 // ========================================================
-// 6. NAVIGATION
+// 6. PROCESS TRANSACTIONS & AUTO DEBT ADJUSTMENT (TOP INSERTION)
 // ========================================================
-window.switchTab = function(tabId, btnElement) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    
-    let activeTab = document.getElementById(tabId);
-    if (activeTab) activeTab.classList.add('active');
-    if (btnElement) btnElement.classList.add('active');
-};
-
-// ========================================================
-// 7. TAMIL PARSING & VOICE PROCESSING
-// ========================================================
-function parseTamilAmount(text) {
+function processNewTransaction(text) {
     let t = text.toLowerCase().trim();
     let numMatch = t.match(/(\d[\d,]*(\.\d+)?)/);
-    if (numMatch) {
-        let baseNum = parseFloat(numMatch[1].replace(/,/g, ''));
-        if (t.includes("லட்சம்") || t.includes("lakh")) return baseNum * 100000;
-        if (t.includes("ஆயிரம்") || t.includes("ayiram")) return baseNum * 1000;
-        return baseNum;
-    }
+    let amount = numMatch ? parseFloat(numMatch[1].replace(/,/g, '')) : 0;
 
-    let multiplier = 1;
-    if (t.includes("லட்சம்")) multiplier = 100000;
-    else if (t.includes("ஆயிரம்")) multiplier = 1000;
-
-    let numbersMap = [
-        { word: "ஒரு லட்சம்", val: 100000 },
-        { word: "தொண்ணூறாயிரம்", val: 90000 },
-        { word: "எண்பதாயிரம்", val: 80000 },
-        { word: "எழுபதாயிரம்", val: 70000 },
-        { word: "அறுபதாயிரம்", val: 60000 },
-        { word: "ஐம்பதாயிரம்", val: 50000 },
-        { word: "நாற்பதாயிரம்", val: 40000 },
-        { word: "முப்பதாயிரம்", val: 30000 },
-        { word: "இருபதாயிரம்", val: 20000 },
-        { word: "பதினைந்தாயிரம்", val: 15000 },
-        { word: "பத்தாயிரம்", val: 10000 },
-        { word: "ஒன்பதாயிரம்", val: 9000 },
-        { word: "எட்டாயிரம்", val: 8000 },
-        { word: "ஏழாயிரம்", val: 7000 },
-        { word: "ஆறாயிரம்", val: 6000 },
-        { word: "ஐயாயிரம்", val: 5000 },
-        { word: "நாலாயிரம்", val: 4000 },
-        { word: "மூணாயிரம்", val: 3000 },
-        { word: "மூன்றாயிரம்", val: 3000 },
-        { word: "ரெண்டாயிரம்", val: 2000 },
-        { word: "இரண்டாயிரம்", val: 2000 },
-        { word: "ஆயிரம்", val: 1000 }
-    ];
-
-    for (let item of numbersMap) {
-        if (t.includes(item.word)) {
-            if (item.val >= 1000) return item.val;
-            return item.val * multiplier;
-        }
-    }
-    return 0;
-}
-
-function processNewTransaction(text) {
-    let amount = parseTamilAmount(text);
     if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
 
-    let t = text.toLowerCase().trim();
     let category = "பொதுச் செலவு"; 
     let isExpense = true;
     let explicitSource = null;
 
-    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்")) explicitSource = "சம்பளம்";
-    else if (t.includes("வீட்டு பணத்தில்") || t.includes("வீட்டு பணம்")) explicitSource = "வீடு";
+    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்") || t.includes("சம்பளம்")) explicitSource = "சம்பளம்";
+    else if (t.includes("வீட்டு பணத்தில்") || t.includes("வீட்டு பணம்") || t.includes("வீடு")) explicitSource = "வீடு";
 
     if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
         isExpense = false;
         category = "வரவு";
     } 
-    else if (t.includes("எஸ்கே") || t.includes("எஸ் கே") || t.includes("sk")) category = "SK செலவு";
-    else if (t.includes("எம்கே") || t.includes("எம் கே") || t.includes("mk")) category = "MK செலவு";
-    else if (t.includes("கொல்லை") || t.includes("மருந்து") || t.includes("உரம்") || t.includes("கூலி")) category = "கொல்லை";
+    else if (t.includes("எஸ்கே") || t.includes("sk")) category = "SK செலவு";
+    else if (t.includes("எம்கே") || t.includes("mk")) category = "MK செலவு";
+    else if (t.includes("கொல்லை")) category = "கொல்லை";
+    else if (t.includes("கடன்")) category = "கடன் செலவு";
 
     let tempTx = {
         id: Date.now(),
@@ -273,9 +198,17 @@ function processNewTransaction(text) {
         date: new Date().toLocaleString()
     };
 
-    if (explicitSource) {
-        tempTx.source = explicitSource;
-        transactions.push(tempTx);
+    if (explicitSource || !isExpense) {
+        tempTx.source = explicitSource || "சம்பளம்";
+        
+        // நிபந்தனை 2: புதிய பதிவுகள் மேலே சேரும் (unshift)
+        transactions.unshift(tempTx);
+
+        // நிபந்தனை 1: கடன் கழிவு அட்ஜஸ்ட்மென்ட்
+        if (!isExpense) {
+            adjustPendingDebts(tempTx.source);
+        }
+
         saveState();
     } else {
         pendingVoiceTxData = tempTx;
@@ -289,7 +222,7 @@ function processNewTransaction(text) {
 window.confirmSource = function(selectedSource) {
     if (pendingVoiceTxData) {
         pendingVoiceTxData.source = selectedSource;
-        transactions.push(pendingVoiceTxData);
+        transactions.unshift(pendingVoiceTxData); // Top Insertion
         pendingVoiceTxData = null;
         saveState();
     }
@@ -297,130 +230,18 @@ window.confirmSource = function(selectedSource) {
     if (modal) modal.style.display = "none";
 };
 
-// ========================================================
-// 8. MANUAL ENTRIES & VATTI FORM
-// ========================================================
-window.addManualEntry = function(category, descId, amtId, typeId, dateId) {
-    let desc = document.getElementById(descId).value.trim();
-    let amt = parseFloat(document.getElementById(amtId).value) || 0;
-    let type = document.getElementById(typeId).value;
-    let customDate = document.getElementById(dateId) ? document.getElementById(dateId).value : '';
-
-    if (!desc || amt <= 0) return alert("விவரம் மற்றும் தொகையை சரிபார்க்கவும்.");
-
-    let formattedDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
-    let isExpense = (type === 'expense');
-
-    transactions.push({
-        id: Date.now(),
-        text: desc,
-        amount: amt,
-        category: category,
-        source: category,
-        isExpense: isExpense,
-        date: formattedDate
+// கடனைப் புதிய வரவு வந்ததும் ஆட்டோ-அட்ஜஸ்ட் செய்யும் லாஜிக்
+function adjustPendingDebts(sourceName) {
+    let pendingDebts = transactions.filter(t => t.category === "கடன் செலவு" && t.isExpense && !t.adjusted);
+    pendingDebts.forEach(debt => {
+        debt.source = sourceName;
+        debt.adjusted = true; // அட்ஜஸ்ட் செய்யப்பட்டதாக மாற்றுதல்
     });
-
-    saveState();
-    document.getElementById(descId).value = '';
-    document.getElementById(amtId).value = '';
-};
-
-window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
-    let desc = document.getElementById(descId).value.trim();
-    let amt = parseFloat(document.getElementById(amtId).value) || 0;
-    let sourceVal = document.getElementById(sourceId) ? document.getElementById(sourceId).value : 'சம்பளம் பணத்தில்';
-    let customDate = document.getElementById(dateId) ? document.getElementById(dateId).value : '';
-
-    if (!desc || amt <= 0) return alert("விவரம் மற்றும் தொகையை சரிபார்க்கவும்.");
-
-    let source = sourceVal.includes("சம்பளம்") ? "சம்பளம்" : "வீடு";
-    let formattedDate = customDate ? new Date(customDate).toLocaleString() : new Date().toLocaleString();
-
-    transactions.push({
-        id: Date.now(),
-        text: desc,
-        amount: amt,
-        category: category,
-        source: source,
-        isExpense: true,
-        date: formattedDate
-    });
-
-    saveState();
-    document.getElementById(descId).value = '';
-    document.getElementById(amtId).value = '';
-};
-
-window.addMoreLoanField = function() {
-    let container = document.getElementById('vatti-inputs-container');
-    if (!container) return;
-    let newDiv = document.createElement('div');
-    newDiv.style.display = 'flex';
-    newDiv.style.gap = '8px';
-    newDiv.innerHTML = `
-        <input type="number" class="vatti-amt-input" placeholder="அசல் தொகை (₹)" style="flex:1;">
-        <input type="number" class="vatti-rate-input" placeholder="வட்டி % / பைசா" style="flex:1;">
-    `;
-    container.appendChild(newDiv);
-};
-
-window.saveVattiAccount = function() {
-    let nameInput = document.getElementById('vatti-name');
-    let name = nameInput ? nameInput.value.trim() || "பொது வட்டி" : "பொது வட்டி";
-    let amtInputs = document.querySelectorAll('.vatti-amt-input');
-    let rateInputs = document.querySelectorAll('.vatti-rate-input');
-    let dateInput = document.getElementById('vatti-date-input');
-    let customDate = dateInput ? dateInput.value : '';
-    let formattedDate = customDate ? customDate : new Date().toISOString().split('T')[0];
-
-    if (!vattiAccounts[name]) vattiAccounts[name] = [];
-
-    amtInputs.forEach((input, i) => {
-        let amt = parseFloat(input.value) || 0;
-        let rateVal = rateInputs[i]?.value;
-        let rate = (rateVal !== "" && !isNaN(rateVal)) ? parseFloat(rateVal) : 3;
-
-        if (amt > 0) {
-            vattiAccounts[name].push({
-                loanNo: vattiAccounts[name].length + 1,
-                amount: amt,
-                rate: rate,
-                date: formattedDate
-            });
-        }
-    });
-
-    if (nameInput) nameInput.value = '';
-    saveState();
-};
-
-// ========================================================
-// 9. DASHBOARD & RENDER LISTS
-// ========================================================
-function calculateAccruedInterest(loan) {
-    let amount = loan.amount || 0;
-    let rate = (loan.rate !== undefined && loan.rate !== null) ? loan.rate : 3;
-    let monthlyInterest = (rate === 0) ? 0 : (amount * rate) / 100;
-    let dailyInterest = monthlyInterest / 30;
-
-    let loanDate = new Date(loan.date);
-    let today = new Date();
-    let diffDays = Math.floor((today - loanDate) / (1000 * 3600 * 24));
-    if (diffDays < 0 || isNaN(diffDays)) diffDays = 0;
-
-    let months = Math.floor(diffDays / 30);
-    let remainingDays = diffDays % 30;
-    let totalInterestAccrued = (rate === 0) ? 0 : Math.round(diffDays * dailyInterest);
-
-    return {
-        monthlyInterest: Math.round(monthlyInterest),
-        timeText: `${diffDays} நாட்கள் (${months} மாதம் ${remainingDays} நாள்)`,
-        totalInterestAccrued,
-        totalLoanAmount: amount + totalInterestAccrued
-    };
 }
 
+// ========================================================
+// 7. DASHBOARD & BALANCE CALCULATION
+// ========================================================
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
     let filteredTxs = filterByMonth(transactions);
@@ -458,6 +279,9 @@ function updateDashboardUI() {
     setVal('vatti-val', totals["வட்டி"]);
 }
 
+// ========================================================
+// 8. SEARCH & PDF GENERATION (FULL SMART SEARCH & DOWNLOAD)
+// ========================================================
 window.searchExpenses = function() {
     let input = document.getElementById('search-query-input');
     let rawVal = input ? input.value.trim() : searchQuery.trim();
@@ -466,239 +290,107 @@ window.searchExpenses = function() {
     searchQuery = rawVal;
 
     if (rawVal === "") {
-        if (box) {
-            box.style.display = "none";
-            box.innerHTML = "";
-        }
+        if (box) { box.style.display = "none"; box.innerHTML = ""; }
         renderAllLists();
         return;
     }
 
     let cleanQ = rawVal.toLowerCase();
-    let totalAmt = 0;
+    let totalIncome = 0;
+    let totalExpense = 0;
     let count = 0;
 
     transactions.forEach(t => {
         let textMatch = (t.text || '').toLowerCase().includes(cleanQ);
         let catMatch = (t.category || '').toLowerCase().includes(cleanQ);
         let sourceMatch = (t.source || '').toLowerCase().includes(cleanQ);
-        let amtMatch = (t.amount || '').toString().includes(cleanQ);
 
-        if (textMatch || catMatch || sourceMatch || amtMatch) {
-            let amt = Number(t.amount) || 0;
-            totalAmt += (t.isExpense ? amt : -amt);
+        if (textMatch || catMatch || sourceMatch) {
+            if (t.isExpense) totalExpense += t.amount;
+            else totalIncome += t.amount;
             count++;
         }
     });
 
     if (box) {
         box.style.display = "block";
-        if (count > 0) {
-            box.innerHTML = `
-            <div style="background:#ffffff; border:2px solid #0284c7; border-radius:12px; padding:12px; text-align:center; margin-top:12px; box-shadow:0 4px 8px rgba(0,0,0,0.12);">
-                <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${rawVal}" மொத்த செலவு (${count} பதிவுகள்)</div>
-                <div style="font-size:26px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalAmt}</div>
-            </div>`;
-        } else {
-            box.innerHTML = `
-            <div style="background:#fff3f3; border:1px solid #fca5a5; border-radius:10px; padding:12px; text-align:center; color:#991b1b; margin-top:12px; font-weight:bold;">
-                ⚠️ "${rawVal}" என்ற பெயரில் பதிவுகள் எதுவும் இல்லை!
-            </div>`;
-        }
+        let netBalance = totalIncome - totalExpense;
+        box.innerHTML = `
+        <div style="background:#ffffff; border:2px solid #0284c7; border-radius:12px; padding:12px; text-align:center; box-shadow:0 4px 8px rgba(0,0,0,0.12);">
+            <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${rawVal}" தேடல் அறிக்கை (${count} பதிவுகள்)</div>
+            ${totalIncome > 0 ? `<div style="font-size:15px; color:#16a34a; font-weight:bold;">மொத்த வரவு: +₹${totalIncome}</div>` : ''}
+            ${totalExpense > 0 ? `<div style="font-size:15px; color:#dc2626; font-weight:bold;">மொத்த செலவு: -₹${totalExpense}</div>` : ''}
+            <div style="font-size:18px; color:#1e293b; font-weight:800; margin-top:4px;">மீதி தொகையின் நிலை: ₹${netBalance}</div>
+        </div>`;
     }
 
     renderAllLists();
 };
 
 function renderAllLists() {
-    const filterMap = {
-        'all-list': () => transactions,
-        'salary-list': () => transactions.filter(t => t.source === 'சம்பளம்'),
-        'home-list': () => transactions.filter(t => t.source === 'வீடு'),
-        'kollai-list': () => transactions.filter(t => t.category === 'கொல்லை'),
-        'mk-list': () => transactions.filter(t => t.category === 'MK செலவு'),
-        'sk-list': () => transactions.filter(t => t.category === 'SK செலவு')
-    };
+    let el = document.getElementById('all-list');
+    if (!el) return;
 
-    let searchInputEl = document.getElementById('search-query-input');
-    let q = searchInputEl ? searchInputEl.value.toLowerCase().trim() : searchQuery.toLowerCase().trim();
+    let list = filterByMonth(transactions);
+    let q = searchQuery.toLowerCase().trim();
 
-    for (let id in filterMap) {
-        let el = document.getElementById(id);
-        if (el) {
-            let list = filterByMonth(filterMap[id]());
-
-            if (q !== "") {
-                list = list.filter(t => {
-                    return (t.text || '').toLowerCase().includes(q) || 
-                           (t.amount || '').toString().includes(q) ||
-                           (t.category || '').toLowerCase().includes(q) ||
-                           (t.source || '').toLowerCase().includes(q);
-                });
-            }
-
-            if (list.length === 0) {
-                el.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px;">பதிவுகள் எதுவும் இல்லை</div>`;
-                continue;
-            }
-
-            el.innerHTML = list.map(t => {
-                let isExp = t.isExpense;
-                let color = isExp ? "#dc2626" : "#16a34a";
-                let prefix = isExp ? "- " : "+ ";
-
-                return `
-                <div class="card-box" style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:15px; color:#1e293b;">${t.text}</strong>
-                        <span style="color:${color}; font-weight:bold; font-size:16px;">${prefix}₹${t.amount}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b; margin-top:6px;">
-                        <span>${t.date} | ${t.category} (${t.source || 'வீடு'})</span>
-                        <div>
-                            <button onclick="openTxEditModal(${t.id})" style="background:none; border:none; cursor:pointer; font-size:15px; margin-right:8px;">✏️</button>
-                            <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer; font-size:15px;">🗑️</button>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-        }
+    if (q !== "") {
+        list = list.filter(t => {
+            return (t.text || '').toLowerCase().includes(q) || 
+                   (t.category || '').toLowerCase().includes(q) ||
+                   (t.source || '').toLowerCase().includes(q);
+        });
     }
-}
 
-function renderVattiLists() {
-    let container = document.getElementById('vatti-person-list');
-    if (!container) return;
-    container.innerHTML = '';
+    if (list.length === 0) {
+        el.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px;">பதிவுகள் எதுவும் இல்லை</div>`;
+        return;
+    }
 
-    for (let name in vattiAccounts) {
-        let loans = vattiAccounts[name];
-        let totalPrincipal = 0;
-        let totalAccruedInterest = 0;
+    // நிபந்தனை 2: சமீபத்திய பதிவுகள் மேலே (Newest Top)
+    list.sort((a, b) => b.id - a.id);
 
-        let loansHTML = loans.map((l, idx) => {
-            let details = calculateAccruedInterest(l);
-            totalPrincipal += l.amount;
-            totalAccruedInterest += details.totalInterestAccrued;
+    el.innerHTML = list.map(t => {
+        let color = t.isExpense ? "#dc2626" : "#16a34a";
+        let prefix = t.isExpense ? "- " : "+ ";
 
-            return `
-            <div style="background:#f8fafc; border-left:4px solid #2563eb; padding:10px 12px; border-radius:6px; margin-bottom:8px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:14px; color:#1e293b;">
-                        <strong>கடன் ${idx+1}:</strong> அசல்: ₹${l.amount} | வட்டி: ${l.rate}%
-                    </span>
-                    <div>
-                        <button onclick="openVattiEditModal('${name}', ${idx})" style="background:none; border:none; cursor:pointer; font-size:14px;">✏️</button>
-                        <button onclick="deleteVattiLoan('${name}', ${idx})" style="background:none; border:none; cursor:pointer; font-size:14px;">🗑️</button>
-                    </div>
-                </div>
-                <div style="font-size:12px; color:#64748b; margin-top:4px;">
-                    📅 தேதி: ${l.date} (${details.timeText})
-                </div>
-                <div style="font-size:13px; font-weight:bold; color:#d97706; margin-top:4px;">
-                    வட்டி தொகை: ₹${details.totalInterestAccrued} (மாத வட்டி ₹${details.monthlyInterest})
-                </div>
-            </div>`;
-        }).join('');
-
-        container.innerHTML += `
-        <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:12px; margin-bottom:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <span style="font-size:16px; font-weight:bold; color:#1e293b;">👤 ${name}</span>
+        return `
+        <div class="card-box" style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="font-size:15px; color:#1e293b;">${t.text}</strong>
+                <span style="color:${color}; font-weight:bold; font-size:16px;">${prefix}₹${t.amount}</span>
             </div>
-            ${loansHTML}
-            <div style="background:#0f172a; color:white; padding:10px; border-radius:8px; margin-top:10px; font-size:13px;">
-                <div>மொத்த அசல்: ₹${totalPrincipal} | மொத்த வட்டி: ₹${totalAccruedInterest}</div>
-                <div style="color:#4ade80; font-weight:bold; font-size:14px; margin-top:4px;">மொத்தம்: ₹${totalPrincipal + totalAccruedInterest}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b; margin-top:6px;">
+                <span>${t.date} | ${t.category} (${t.source || 'வீடு'})</span>
+                <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer;">🗑️</button>
             </div>
         </div>`;
-    }
+    }).join('');
 }
 
-// ========================================================
-// 10. MODALS, EDIT, DELETE & VOICE
-// ========================================================
-window.openTxEditModal = function(id) {
-    let tx = transactions.find(t => t.id === id);
-    if (!tx) return;
-    editingTxId = id;
+// நிபந்தனை 3, 4, 5: PDF டவுன்லோட் வசதி
+window.downloadFilteredPDF = function() {
+    let element = document.getElementById('pdf-printable-area');
+    let title = document.getElementById('pdf-header-title');
+    
+    if (title) title.style.display = "block";
 
-    if (document.getElementById('edit-tx-desc')) document.getElementById('edit-tx-desc').value = tx.text;
-    if (document.getElementById('edit-tx-amt')) document.getElementById('edit-tx-amt').value = tx.amount;
-    if (document.getElementById('edit-tx-source')) document.getElementById('edit-tx-source').value = tx.source || 'வீடு';
-    if (document.getElementById('edit-tx-cat')) document.getElementById('edit-tx-cat').value = tx.category || 'பொதுச் செலவு';
-    if (document.getElementById('edit-tx-type')) document.getElementById('edit-tx-type').value = tx.isExpense ? 'expense' : 'income';
-    if (document.getElementById('edit-tx-date')) document.getElementById('edit-tx-date').value = tx.date;
+    let opt = {
+        margin:       0.5,
+        filename:     `Finance_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
 
-    let modal = document.getElementById('txEditModal');
-    if (modal) modal.style.display = 'flex';
-};
-
-window.closeTxEditModal = function() { 
-    let modal = document.getElementById('txEditModal');
-    if (modal) modal.style.display = 'none'; 
-};
-
-window.saveTransactionEdit = function() {
-    let tx = transactions.find(t => t.id === editingTxId);
-    if (tx) {
-        tx.text = document.getElementById('edit-tx-desc').value || tx.text;
-        tx.amount = parseFloat(document.getElementById('edit-tx-amt').value) || tx.amount;
-        tx.source = document.getElementById('edit-tx-source') ? document.getElementById('edit-tx-source').value : tx.source;
-        tx.category = document.getElementById('edit-tx-cat').value;
-        tx.isExpense = (document.getElementById('edit-tx-type').value === 'expense');
-        let date = document.getElementById('edit-tx-date').value;
-        if (date) tx.date = date;
-
-        saveState();
-    }
-    window.closeTxEditModal();
+    html2pdf().set(opt).from(element).save().then(() => {
+        if (title) title.style.display = "none";
+    });
 };
 
 window.deleteTx = function(id) {
     if (confirm("இந்த பதிவை நீக்க விரும்புகிறீர்களா?")) {
         transactions = transactions.filter(t => t.id !== id);
-        saveState();
-    }
-};
-
-window.openVattiEditModal = function(name, index) {
-    if (!vattiAccounts[name] || !vattiAccounts[name][index]) return;
-    editingVattiInfo = { name, index };
-    let loan = vattiAccounts[name][index];
-
-    if (document.getElementById('edit-vatti-amt')) document.getElementById('edit-vatti-amt').value = loan.amount;
-    if (document.getElementById('edit-vatti-rate')) document.getElementById('edit-vatti-rate').value = loan.rate;
-    if (document.getElementById('edit-vatti-date')) document.getElementById('edit-vatti-date').value = loan.date;
-
-    let modal = document.getElementById('vattiEditModal');
-    if (modal) modal.style.display = 'flex';
-};
-
-window.closeVattiEditModal = function() {
-    let modal = document.getElementById('vattiEditModal');
-    if (modal) modal.style.display = 'none';
-};
-
-window.saveVattiEdit = function() {
-    if (!editingVattiInfo) return;
-    let { name, index } = editingVattiInfo;
-    let loan = vattiAccounts[name][index];
-    if (loan) {
-        loan.amount = parseFloat(document.getElementById('edit-vatti-amt').value) || loan.amount;
-        loan.rate = parseFloat(document.getElementById('edit-vatti-rate').value);
-        let date = document.getElementById('edit-vatti-date').value;
-        if (date) loan.date = date;
-
-        saveState();
-    }
-    window.closeVattiEditModal();
-};
-
-window.deleteVattiLoan = function(name, index) {
-    if (confirm("இந்த வட்டி பதிவை நீக்க விரும்புகிறீர்களா?")) {
-        vattiAccounts[name].splice(index, 1);
-        if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
         saveState();
     }
 };
@@ -728,7 +420,6 @@ window.startVoiceRecognition = function() {
     }
 };
 
-// INITIAL RENDER
+// INITIAL LOAD
 updateDashboardUI();
 renderAllLists();
-renderVattiLists();
