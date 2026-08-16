@@ -24,15 +24,18 @@ let searchQuery = "";
 let selectedMonthFilter = "ALL";
 let selectedCategoryTab = "ALL";
 
-// Global Window functions for inline click events
-window.editTx = editTx;
+let currentEditTxId = null;
+let currentVattiEditTarget = null; // { name, loanId }
+
+// Global Window functions for inline HTML events
+window.editTx = openEditModal;
 window.deleteTx = deleteTx;
+window.editVattiLoan = openVattiEditModal;
 window.deleteVattiLoan = deleteVattiLoan;
 window.downloadSingleVattiPDF = downloadSingleVattiPDF;
 
-// Attach click events on DOM Content Loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Event listener for tab buttons
+    // Category Tabs click
     document.querySelectorAll('.filter-tab').forEach(btn => {
         btn.addEventListener('click', () => {
             let cat = btn.getAttribute('data-category');
@@ -40,18 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Event listener for top stat cards
+    // Top Stat Cards click
     const categories = ['சம்பளம்', 'வீடு', 'கொல்லை', 'MK செலவு', 'SK செலவு', 'வட்டி பிசினஸ்'];
     categories.forEach(cat => {
         let card = document.getElementById(`card-${cat}`);
         if (card) {
-            card.addEventListener('click', () => {
-                selectCategoryTab(cat);
-            });
+            card.addEventListener('click', () => selectCategoryTab(cat));
         }
     });
 
-    // Action buttons
+    // Action & Modal Buttons
     document.getElementById('login-btn')?.addEventListener('click', () => signInWithPopup(auth, provider));
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
     document.getElementById('btn-pdf-download')?.addEventListener('click', downloadOverallPDF);
@@ -59,28 +60,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-add-vatti')?.addEventListener('click', addVattiLoan);
     document.getElementById('btn-send-tx')?.addEventListener('click', processVoiceOrText);
     document.getElementById('btn-mic-speech')?.addEventListener('click', startVoiceRecognition);
+
+    // Edit Modal Buttons
+    document.getElementById('btn-save-edit')?.addEventListener('click', saveTxEdit);
+    document.getElementById('btn-close-edit')?.addEventListener('click', closeEditModal);
+    document.getElementById('btn-vatti-save-edit')?.addEventListener('click', saveVattiLoanEdit);
+    document.getElementById('btn-vatti-close-edit')?.addEventListener('click', closeVattiEditModal);
 });
 
-// CATEGORY TAB SWITCHER FUNCTION
+// CATEGORY SWITCHER
 function selectCategoryTab(category) {
     selectedCategoryTab = category;
     
-    // 1. Tab active toggle
     document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
     let activeTab = document.getElementById(`tab-${category}`);
     if (activeTab) {
         activeTab.classList.add('active');
-        // Smooth scroll tab into view
         activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
 
-    // 2. Heading label change
     let heading = document.getElementById('list-heading');
     if (heading) {
         heading.textContent = category === "ALL" ? "அனைத்துப் பதிவுகள்" : `${category} பதிவுகள்`;
     }
 
-    // 3. View switch
     let genView = document.getElementById('general-view');
     let vattiView = document.getElementById('vatti-view');
 
@@ -95,7 +98,7 @@ function selectCategoryTab(category) {
     }
 }
 
-// STATE SAVE & SYNC
+// SAVE & SYNC
 function saveState() {
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
     localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
@@ -137,7 +140,7 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// MONTH FILTER
+// MONTH FILTERING
 function populateMonthDropdown() {
     let selectEl = document.getElementById('month-filter-select');
     if (!selectEl) return;
@@ -180,7 +183,7 @@ function filterByMonthAndTab(list) {
     return result;
 }
 
-// ADD TRANSACTIONS
+// ADD TRANSACTIONS VIA TEXT / VOICE
 function processVoiceOrText() {
     let input = document.getElementById('voice-text-input');
     if (!input || !input.value.trim()) return;
@@ -193,14 +196,22 @@ function processVoiceOrText() {
 
     let category = "பொதுச் செலவு";
     let isExpense = true;
-    let source = "வீடு";
+    let source = "சம்பளம்"; // Default source
 
-    if (text.includes("சம்பளம்")) source = "சம்பளம்";
+    if (text.includes("வீடு")) source = "வீடு";
+    else if (text.includes("கொல்லை")) source = "கொல்லை";
+    
     if (text.includes("எம்கே") || text.includes("mk")) category = "MK செலவு";
     else if (text.includes("எஸ்கே") || text.includes("sk")) category = "SK செலவு";
     else if (text.includes("கொல்லை")) category = "கொல்லை";
+    else if (text.includes("வீடு")) category = "வீடு";
 
-    if (text.includes("வரவு") || text.includes("தந்தார்கள்") || text.includes("வந்தது")) { isExpense = false; category = "வரவு"; }
+    // Income Detection (எ.கா: சம்பளம் 20000 வந்தது)
+    if (text.includes("வரவு") || text.includes("தந்தார்கள்") || text.includes("வந்தது") || text.includes("சம்பளம்")) { 
+        isExpense = false; 
+        category = "வரவு (சம்பளம்)";
+        if (text.includes("சம்பளம்")) source = "சம்பளம்";
+    }
 
     transactions.unshift({
         id: Date.now(),
@@ -216,48 +227,35 @@ function processVoiceOrText() {
     saveState();
 }
 
-function editTx(id) {
-    let t = transactions.find(x => x.id === id);
-    if (!t) return;
-
-    let newText = prompt("பதிவை மாற்று:", t.text);
-    if (newText === null) return;
-    let newAmount = prompt("தொகையை மாற்று (₹):", t.amount);
-    if (newAmount === null) return;
-
-    t.text = newText.trim() || t.text;
-    t.amount = parseFloat(newAmount) || t.amount;
-    saveState();
-}
-
-function deleteTx(id) {
-    if (confirm("இந்த பதிவை நீக்க விரும்புகிறீர்களா?")) {
-        transactions = transactions.filter(t => t.id !== id);
-        saveState();
-    }
-}
-
-// DASHBOARD CALCULATIONS
+// DASHBOARD TOP CARDS BALANCE CALCULATOR (FIXED INCOMES & EXPENSES)
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
     
-    // Compute category totals
     transactions.forEach(t => {
-        let src = t.source || "வீடு";
-        if (!t.isExpense) totals[src] += t.amount;
-        else {
-            totals[src] -= t.amount;
-            if (totals[t.category] !== undefined) totals[t.category] += t.amount;
+        let amount = parseFloat(t.amount) || 0;
+        let src = t.source || "சம்பளம்";
+        
+        if (!t.isExpense) {
+            // Income / வரவு (+) -> Adds to salary/home cards
+            if (totals[src] !== undefined) totals[src] += amount;
+            else totals["சம்பளம்"] += amount;
+        } else {
+            // Expense / செலவு (-) -> Subtracts from source card
+            if (totals[src] !== undefined) totals[src] -= amount;
+            if (totals[t.category] !== undefined && t.category !== src) {
+                totals[t.category] += amount;
+            }
         }
     });
 
-    let totalVatti = 0;
+    // Interest Business total calculation
+    let totalVattiPrincipal = 0;
     for (let name in vattiAccounts) {
         if (Array.isArray(vattiAccounts[name])) {
-            vattiAccounts[name].forEach(l => totalVatti += (l.amount || 0));
+            vattiAccounts[name].forEach(l => totalVattiPrincipal += (parseFloat(l.amount) || 0));
         }
     }
-    totals["வட்டி"] = totalVatti;
+    totals["வட்டி"] = totalVattiPrincipal;
 
     document.getElementById('salary-val').innerText = '₹' + Math.round(totals["சம்பளம்"]);
     document.getElementById('home-val').innerText = '₹' + Math.round(totals["வீடு"]);
@@ -323,21 +321,67 @@ function renderAllLists() {
     <div class="card-box" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
             <strong style="font-size:14px;">${t.text}</strong>
-            <div style="font-size:11px; color:#64748b; margin-top:2px;">${t.date} | ${t.category} (${t.source || 'வீடு'})</div>
+            <div style="font-size:11px; color:#64748b; margin-top:2px;">${t.date} | ${t.isExpense ? 'செலவு' : 'வரவு'} (${t.source || 'சம்பளம்'})</div>
         </div>
         <div style="text-align:right;">
             <div style="color:${t.isExpense ? '#dc2626' : '#16a34a'}; font-weight:bold; font-size:15px;">
                 ${t.isExpense ? '-' : '+'}₹${t.amount}
             </div>
             <div style="margin-top:2px;">
-                <button onclick="editTx(${t.id})" style="background:none; border:none; cursor:pointer;">✏️</button>
-                <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer;">🗑️</button>
+                <button onclick="editTx(${t.id})" style="background:none; border:none; cursor:pointer; font-size:15px;">✏️</button>
+                <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer; font-size:15px;">🗑️</button>
             </div>
         </div>
     </div>`).join('');
 }
 
-// VATTI MANAGEMENT
+// EDIT MODAL POPUP LOGIC (POPUP SCREENSHOT 4 STYLE)
+function openEditModal(id) {
+    let t = transactions.find(x => x.id === id);
+    if (!t) return;
+
+    currentEditTxId = id;
+
+    document.getElementById('edit-title').value = t.text || '';
+    document.getElementById('edit-amount').value = t.amount || 0;
+    document.getElementById('edit-source').value = t.source || 'சம்பளம்';
+    document.getElementById('edit-target').value = t.category || 'சம்பளம்';
+    document.getElementById('edit-type').value = t.isExpense ? 'expense' : 'income';
+    document.getElementById('edit-date').value = t.date || new Date().toLocaleString();
+
+    document.getElementById('edit-modal-overlay').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal-overlay').style.display = 'none';
+    currentEditTxId = null;
+}
+
+function saveTxEdit() {
+    if (!currentEditTxId) return;
+
+    let t = transactions.find(x => x.id === currentEditTxId);
+    if (!t) return;
+
+    t.text = document.getElementById('edit-title').value.trim();
+    t.amount = parseFloat(document.getElementById('edit-amount').value) || 0;
+    t.source = document.getElementById('edit-source').value;
+    t.category = document.getElementById('edit-target').value;
+    t.isExpense = document.getElementById('edit-type').value === 'expense';
+    t.date = document.getElementById('edit-date').value;
+
+    saveState();
+    closeEditModal();
+}
+
+function deleteTx(id) {
+    if (confirm("இந்த பதிவை நீக்க விரும்புகிறீர்களா?")) {
+        transactions = transactions.filter(t => t.id !== id);
+        saveState();
+    }
+}
+
+// VATTI LOAN MANAGEMENT (WITH LOAN 1, LOAN 2 EDITING)
 function addVattiLoan() {
     let name = document.getElementById('vatti-name').value.trim();
     let amount = parseFloat(document.getElementById('vatti-principal').value);
@@ -373,7 +417,10 @@ function renderVattiAccounts() {
             return `
             <div style="border-top:1px solid #cbd5e1; padding-top:6px; margin-top:6px; font-size:12px;">
                 <strong>கடன் ${idx + 1}:</strong> அசல்: ₹${l.amount} | வட்டி: ${l.rate}% 
-                <button onclick="deleteVattiLoan('${name}', ${l.id})" style="float:right; background:none; border:none; cursor:pointer;">🗑️</button>
+                <div style="float:right;">
+                    <button onclick="editVattiLoan('${name}', ${l.id})" style="background:none; border:none; cursor:pointer; font-size:14px;">✏️</button>
+                    <button onclick="deleteVattiLoan('${name}', ${l.id})" style="background:none; border:none; cursor:pointer; font-size:14px;">🗑️</button>
+                </div>
                 <div style="color:#0284c7; margin-top:2px;">மாத வட்டி: ₹${mInterest} (தேதி: ${l.date})</div>
             </div>`;
         }).join('');
@@ -392,6 +439,43 @@ function renderVattiAccounts() {
     }
 
     el.innerHTML = html;
+}
+
+// VATTI LOAN EDIT POPUP
+function openVattiEditModal(name, loanId) {
+    let loans = vattiAccounts[name];
+    if (!loans) return;
+    let l = loans.find(x => x.id === loanId);
+    if (!l) return;
+
+    currentVattiEditTarget = { name, loanId };
+    document.getElementById('vatti-edit-principal').value = l.amount || 0;
+    document.getElementById('vatti-edit-rate').value = l.rate || 0;
+    document.getElementById('vatti-edit-date').value = l.date || '';
+
+    document.getElementById('vatti-edit-modal-overlay').style.display = 'flex';
+}
+
+function closeVattiEditModal() {
+    document.getElementById('vatti-edit-modal-overlay').style.display = 'none';
+    currentVattiEditTarget = null;
+}
+
+function saveVattiLoanEdit() {
+    if (!currentVattiEditTarget) return;
+
+    let { name, loanId } = currentVattiEditTarget;
+    let loans = vattiAccounts[name];
+    if (!loans) return;
+    let l = loans.find(x => x.id === loanId);
+    if (!l) return;
+
+    l.amount = parseFloat(document.getElementById('vatti-edit-principal').value) || 0;
+    l.rate = parseFloat(document.getElementById('vatti-edit-rate').value) || 0;
+    l.date = document.getElementById('vatti-edit-date').value;
+
+    saveState();
+    closeVattiEditModal();
 }
 
 function deleteVattiLoan(name, loanId) {
