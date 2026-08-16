@@ -121,7 +121,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ========================================================
-// 5. MONTHLY FILTER & FIFO BALANCE LOGIC
+// 5. MONTHLY FILTER LOGIC
 // ========================================================
 function populateMonthDropdown() {
     let selectEl = document.getElementById('month-filter-select');
@@ -164,7 +164,7 @@ function filterByMonth(list) {
 }
 
 // ========================================================
-// 6. PROCESS TRANSACTIONS & AUTO DEBT ADJUSTMENT (TOP INSERTION)
+// 6. PROCESS TRANSACTIONS & VOICE PARSER
 // ========================================================
 function processNewTransaction(text) {
     let t = text.toLowerCase().trim();
@@ -173,12 +173,12 @@ function processNewTransaction(text) {
 
     if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
 
-    let category = "பொதுச் செலவு"; 
+    let category = "பொதுச் செலவு";
     let isExpense = true;
     let explicitSource = null;
 
-    if (t.includes("சம்பள பணத்தில்") || t.includes("சம்பள பணம்") || t.includes("சம்பளம்")) explicitSource = "சம்பளம்";
-    else if (t.includes("வீட்டு பணத்தில்") || t.includes("வீட்டு பணம்") || t.includes("வீடு")) explicitSource = "வீடு";
+    if (t.includes("சம்பளம்") || t.includes("சம்பள")) explicitSource = "சம்பளம்";
+    else if (t.includes("வீடு") || t.includes("வீட்டு") || t.includes("வீட்டிற்கு")) explicitSource = "வீடு";
 
     if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
         isExpense = false;
@@ -198,17 +198,10 @@ function processNewTransaction(text) {
         date: new Date().toLocaleString()
     };
 
-    if (explicitSource || !isExpense) {
-        tempTx.source = explicitSource || "சம்பளம்";
-        
-        // நிபந்தனை 2: புதிய பதிவுகள் மேலே சேரும் (unshift)
+    if (explicitSource) {
+        tempTx.source = explicitSource;
         transactions.unshift(tempTx);
-
-        // நிபந்தனை 1: கடன் கழிவு அட்ஜஸ்ட்மென்ட்
-        if (!isExpense) {
-            adjustPendingDebts(tempTx.source);
-        }
-
+        if (!isExpense) adjustPendingDebts(tempTx.source);
         saveState();
     } else {
         pendingVoiceTxData = tempTx;
@@ -222,7 +215,7 @@ function processNewTransaction(text) {
 window.confirmSource = function(selectedSource) {
     if (pendingVoiceTxData) {
         pendingVoiceTxData.source = selectedSource;
-        transactions.unshift(pendingVoiceTxData); // Top Insertion
+        transactions.unshift(pendingVoiceTxData);
         pendingVoiceTxData = null;
         saveState();
     }
@@ -230,12 +223,11 @@ window.confirmSource = function(selectedSource) {
     if (modal) modal.style.display = "none";
 };
 
-// கடனைப் புதிய வரவு வந்ததும் ஆட்டோ-அட்ஜஸ்ட் செய்யும் லாஜிக்
 function adjustPendingDebts(sourceName) {
     let pendingDebts = transactions.filter(t => t.category === "கடன் செலவு" && t.isExpense && !t.adjusted);
     pendingDebts.forEach(debt => {
         debt.source = sourceName;
-        debt.adjusted = true; // அட்ஜஸ்ட் செய்யப்பட்டதாக மாற்றுதல்
+        debt.adjusted = true;
     });
 }
 
@@ -247,11 +239,12 @@ function updateDashboardUI() {
     let filteredTxs = filterByMonth(transactions);
 
     filteredTxs.forEach(t => {
+        let src = t.source || "வீடு";
         if (!t.isExpense) {
-            if (t.source === "சம்பளம்") totals["சம்பளம்"] += t.amount;
+            if (src === "சம்பளம்") totals["சம்பளம்"] += t.amount;
             else totals["வீடு"] += t.amount;
         } else {
-            if (t.source === "சம்பளம்") totals["சம்பளம்"] -= t.amount;
+            if (src === "சம்பளம்") totals["சம்பளம்"] -= t.amount;
             else totals["வீடு"] -= t.amount;
 
             if (t.category === "கொல்லை") totals["கொல்லை"] += t.amount;
@@ -280,7 +273,7 @@ function updateDashboardUI() {
 }
 
 // ========================================================
-// 8. SEARCH & PDF GENERATION (FULL SMART SEARCH & DOWNLOAD)
+// 8. SEARCH & DYNAMIC TOTAL DISPLAY BOX (சர்ச் பாக்ஸ் கீழே வரும் மொத்த பாக்ஸ்)
 // ========================================================
 window.searchExpenses = function() {
     let input = document.getElementById('search-query-input');
@@ -296,31 +289,50 @@ window.searchExpenses = function() {
     }
 
     let cleanQ = rawVal.toLowerCase();
+    let keywords = cleanQ.split(/\s+/);
+
     let totalIncome = 0;
     let totalExpense = 0;
     let count = 0;
 
     transactions.forEach(t => {
-        let textMatch = (t.text || '').toLowerCase().includes(cleanQ);
-        let catMatch = (t.category || '').toLowerCase().includes(cleanQ);
-        let sourceMatch = (t.source || '').toLowerCase().includes(cleanQ);
+        let fullText = `${t.text || ''} ${t.category || ''} ${t.source || ''}`.toLowerCase();
+        
+        let matchesAll = keywords.every(kw => {
+            if (kw === "வரவு") return !t.isExpense || fullText.includes("வரவு");
+            if (kw === "செலவு") return t.isExpense;
+            if (kw === "மொத்த") return true;
+            return fullText.includes(kw);
+        });
 
-        if (textMatch || catMatch || sourceMatch) {
+        if (matchesAll) {
             if (t.isExpense) totalExpense += t.amount;
             else totalIncome += t.amount;
             count++;
         }
     });
 
+    // சர்ச் பாக்ஸ்க்கு கீழே வரும் பிரத்யேக மொத்த தொகை பாக்ஸ்
     if (box) {
         box.style.display = "block";
-        let netBalance = totalIncome - totalExpense;
+        let displayTotal = 0;
+        let totalLabel = "";
+
+        if (totalIncome > 0 && totalExpense > 0) {
+            displayTotal = totalIncome - totalExpense;
+            totalLabel = `மொத்த மீதி தொகை: ₹${displayTotal}`;
+        } else if (totalIncome > 0) {
+            displayTotal = totalIncome;
+            totalLabel = `மொத்த வரவு தொகை: +₹${displayTotal}`;
+        } else {
+            displayTotal = totalExpense;
+            totalLabel = `மொத்த செலவு தொகை: -₹${displayTotal}`;
+        }
+
         box.innerHTML = `
-        <div style="background:#ffffff; border:2px solid #0284c7; border-radius:12px; padding:12px; text-align:center; box-shadow:0 4px 8px rgba(0,0,0,0.12);">
-            <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${rawVal}" தேடல் அறிக்கை (${count} பதிவுகள்)</div>
-            ${totalIncome > 0 ? `<div style="font-size:15px; color:#16a34a; font-weight:bold;">மொத்த வரவு: +₹${totalIncome}</div>` : ''}
-            ${totalExpense > 0 ? `<div style="font-size:15px; color:#dc2626; font-weight:bold;">மொத்த செலவு: -₹${totalExpense}</div>` : ''}
-            <div style="font-size:18px; color:#1e293b; font-weight:800; margin-top:4px;">மீதி தொகையின் நிலை: ₹${netBalance}</div>
+        <div style="background:#0284c7; color:#ffffff; border-radius:12px; padding:14px; text-align:center; box-shadow:0 4px 10px rgba(2, 132, 199, 0.3); margin-top:10px;">
+            <div style="font-size:13px; opacity:0.9; font-weight:600;">🔍 "${rawVal}" - தேடல் முடிவுகள் (${count} பதிவுகள்)</div>
+            <div style="font-size:22px; font-weight:900; margin-top:4px; letter-spacing:0.5px;">${totalLabel}</div>
         </div>`;
     }
 
@@ -335,10 +347,15 @@ function renderAllLists() {
     let q = searchQuery.toLowerCase().trim();
 
     if (q !== "") {
+        let keywords = q.split(/\s+/);
         list = list.filter(t => {
-            return (t.text || '').toLowerCase().includes(q) || 
-                   (t.category || '').toLowerCase().includes(q) ||
-                   (t.source || '').toLowerCase().includes(q);
+            let fullText = `${t.text || ''} ${t.category || ''} ${t.source || ''}`.toLowerCase();
+            return keywords.every(kw => {
+                if (kw === "வரவு") return !t.isExpense || fullText.includes("வரவு");
+                if (kw === "செலவு") return t.isExpense;
+                if (kw === "மொத்த") return true;
+                return fullText.includes(kw);
+            });
         });
     }
 
@@ -347,7 +364,6 @@ function renderAllLists() {
         return;
     }
 
-    // நிபந்தனை 2: சமீபத்திய பதிவுகள் மேலே (Newest Top)
     list.sort((a, b) => b.id - a.id);
 
     el.innerHTML = list.map(t => {
@@ -368,7 +384,7 @@ function renderAllLists() {
     }).join('');
 }
 
-// நிபந்தனை 3, 4, 5: PDF டவுன்லோட் வசதி
+// PDF டவுன்லோட்
 window.downloadFilteredPDF = function() {
     let element = document.getElementById('pdf-printable-area');
     let title = document.getElementById('pdf-header-title');
