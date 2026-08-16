@@ -25,9 +25,9 @@ let selectedMonthFilter = "ALL";
 let selectedCategoryTab = "ALL";
 
 let currentEditTxId = null;
-let currentVattiEditTarget = null; // { name, loanId }
+let currentVattiEditTarget = null;
+let isRemoteUpdate = false; 
 
-// Global Window functions for inline HTML events
 window.editTx = openEditModal;
 window.deleteTx = deleteTx;
 window.editVattiLoan = openVattiEditModal;
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Action & Modal Buttons
+    // Action & Form Buttons
     document.getElementById('login-btn')?.addEventListener('click', () => signInWithPopup(auth, provider));
     document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
     document.getElementById('btn-pdf-download')?.addEventListener('click', downloadOverallPDF);
@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-add-vatti')?.addEventListener('click', addVattiLoan);
     document.getElementById('btn-send-tx')?.addEventListener('click', processVoiceOrText);
     document.getElementById('btn-mic-speech')?.addEventListener('click', startVoiceRecognition);
+    document.getElementById('btn-add-manual')?.addEventListener('click', addManualTransaction);
 
     // Edit Modal Buttons
     document.getElementById('btn-save-edit')?.addEventListener('click', saveTxEdit);
@@ -68,7 +69,31 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-vatti-close-edit')?.addEventListener('click', closeVattiEditModal);
 });
 
-// CATEGORY SWITCHER
+// REFRESH UI ONLY
+function refreshUI() {
+    populateMonthDropdown();
+    updateDashboardUI();
+    renderAllLists();
+    renderVattiAccounts();
+}
+
+// SAVE & SYNC TO FIREBASE
+function saveState() {
+    localStorage.setItem('my_app_txs', JSON.stringify(transactions));
+    localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
+
+    if (currentUser && !isRemoteUpdate) {
+        setDoc(doc(db, "users", currentUser.uid), {
+            transactions: transactions,
+            vattiAccounts: vattiAccounts,
+            lastUpdated: new Date().toISOString()
+        }, { merge: true });
+    }
+
+    refreshUI();
+}
+
+// CATEGORY SWITCHER & MANUAL FORM TOGGLE
 function selectCategoryTab(category) {
     selectedCategoryTab = category;
     
@@ -86,6 +111,8 @@ function selectCategoryTab(category) {
 
     let genView = document.getElementById('general-view');
     let vattiView = document.getElementById('vatti-view');
+    let manualCard = document.getElementById('manual-entry-card');
+    let manualTitle = document.getElementById('manual-entry-title');
 
     if (category === "வட்டி பிசினஸ்") {
         genView.style.display = "none";
@@ -94,30 +121,53 @@ function selectCategoryTab(category) {
     } else {
         genView.style.display = "block";
         vattiView.style.display = "none";
+
+        // Show/Hide Manual Entry Box based on selection
+        if (category !== "ALL" && manualCard) {
+            let iconMap = { "சம்பளம்": "💼", "வீடு": "🏠", "கொல்லை": "🌱", "MK செலவு": "🛒", "SK செலவு": "🛍️" };
+            manualTitle.textContent = `${iconMap[category] || '📝'} மேனுவல் பதிவு (${category})`;
+            manualCard.style.display = "block";
+        } else if (manualCard) {
+            manualCard.style.display = "none";
+        }
+
         renderAllLists();
     }
 }
 
-// SAVE & SYNC
-function saveState() {
-    localStorage.setItem('my_app_txs', JSON.stringify(transactions));
-    localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
+// MANUAL ENTRY ADD FUNCTION (ஸ்கிரீன்ஷாட் வசதி)
+function addManualTransaction() {
+    let textInput = document.getElementById('manual-text');
+    let amtInput = document.getElementById('manual-amount');
+    let typeInput = document.getElementById('manual-type');
 
-    if (currentUser) {
-        setDoc(doc(db, "users", currentUser.uid), {
-            transactions: transactions,
-            vattiAccounts: vattiAccounts,
-            lastUpdated: new Date().toISOString()
-        }, { merge: true });
-    }
+    let text = textInput ? textInput.value.trim() : "";
+    let amount = amtInput ? parseFloat(amtInput.value) : 0;
+    let type = typeInput ? typeInput.value : "income";
 
-    populateMonthDropdown();
-    updateDashboardUI();
-    renderAllLists();
-    renderVattiAccounts();
+    if (!text || !amount) return alert("விவரம் மற்றும் தொகையை உள்ளிடவும்.");
+
+    let isExpense = (type === "expense");
+    let category = selectedCategoryTab;
+    let source = selectedCategoryTab;
+
+    transactions.unshift({
+        id: Date.now(),
+        text: text,
+        amount: amount,
+        category: category,
+        source: source,
+        isExpense: isExpense,
+        date: new Date().toLocaleString()
+    });
+
+    textInput.value = "";
+    amtInput.value = "";
+
+    saveState();
 }
 
-// AUTH
+// AUTH LISTENERS
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
@@ -128,9 +178,13 @@ onAuthStateChanged(auth, (user) => {
         onSnapshot(doc(db, "users", user.uid), (docSnap) => {
             if (docSnap.exists()) {
                 let data = docSnap.data();
+                isRemoteUpdate = true;
                 if (data.transactions) transactions = data.transactions;
                 if (data.vattiAccounts) vattiAccounts = data.vattiAccounts;
-                saveState();
+                localStorage.setItem('my_app_txs', JSON.stringify(transactions));
+                localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
+                refreshUI();
+                isRemoteUpdate = false;
             }
         });
     } else {
@@ -183,7 +237,7 @@ function filterByMonthAndTab(list) {
     return result;
 }
 
-// ADD TRANSACTIONS VIA TEXT / VOICE
+// FIXED SMART VOICE & TEXT PARSER (வீடு / சம்பளம் / கொல்லை துல்லியமான பாகுபாடு)
 function processVoiceOrText() {
     let input = document.getElementById('voice-text-input');
     if (!input || !input.value.trim()) return;
@@ -196,21 +250,27 @@ function processVoiceOrText() {
 
     let category = "பொதுச் செலவு";
     let isExpense = true;
-    let source = "சம்பளம்"; // Default source
+    let source = "சம்பளம்"; // Default
 
-    if (text.includes("வீடு")) source = "வீடு";
-    else if (text.includes("கொல்லை")) source = "கொல்லை";
-    
-    if (text.includes("எம்கே") || text.includes("mk")) category = "MK செலவு";
-    else if (text.includes("எஸ்கே") || text.includes("sk")) category = "SK செலவு";
-    else if (text.includes("கொல்லை")) category = "கொல்லை";
-    else if (text.includes("வீடு")) category = "வீடு";
+    // Source & Category Detection
+    if (text.includes("வீடு") || text.includes("வீட்டில்")) {
+        source = "வீடு";
+        category = "வீடு";
+    } else if (text.includes("கொல்லை") || text.includes-[#கொல்லையில்#]) {
+        source = "கொல்லை";
+        category = "கொல்லை";
+    } else if (text.includes("எம்கே") || text.includes("mk")) {
+        category = "MK செலவு";
+    } else if (text.includes("எஸ்கே") || text.includes("sk")) {
+        category = "SK செலவு";
+    } else if (text.includes("சம்பளம்")) {
+        source = "சம்பளம்";
+        category = "சம்பளம்";
+    }
 
-    // Income Detection (எ.கா: சம்பளம் 20000 வந்தது)
-    if (text.includes("வரவு") || text.includes("தந்தார்கள்") || text.includes("வந்தது") || text.includes("சம்பளம்")) { 
+    // Income Detection
+    if (text.includes("வரவு") || text.includes("தந்தார்கள்") || text.includes("வந்தது") || text.includes("வந்ததுன்னு")) { 
         isExpense = false; 
-        category = "வரவு (சம்பளம்)";
-        if (text.includes("சம்பளம்")) source = "சம்பளம்";
     }
 
     transactions.unshift({
@@ -227,7 +287,7 @@ function processVoiceOrText() {
     saveState();
 }
 
-// DASHBOARD TOP CARDS BALANCE CALCULATOR (FIXED INCOMES & EXPENSES)
+// DASHBOARD CALCULATOR
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
     
@@ -236,11 +296,11 @@ function updateDashboardUI() {
         let src = t.source || "சம்பளம்";
         
         if (!t.isExpense) {
-            // Income / வரவு (+) -> Adds to salary/home cards
+            // Income (+)
             if (totals[src] !== undefined) totals[src] += amount;
             else totals["சம்பளம்"] += amount;
         } else {
-            // Expense / செலவு (-) -> Subtracts from source card
+            // Expense (-)
             if (totals[src] !== undefined) totals[src] -= amount;
             if (totals[t.category] !== undefined && t.category !== src) {
                 totals[t.category] += amount;
@@ -248,7 +308,6 @@ function updateDashboardUI() {
         }
     });
 
-    // Interest Business total calculation
     let totalVattiPrincipal = 0;
     for (let name in vattiAccounts) {
         if (Array.isArray(vattiAccounts[name])) {
@@ -335,7 +394,7 @@ function renderAllLists() {
     </div>`).join('');
 }
 
-// EDIT MODAL POPUP LOGIC (POPUP SCREENSHOT 4 STYLE)
+// EDIT MODAL LOGIC
 function openEditModal(id) {
     let t = transactions.find(x => x.id === id);
     if (!t) return;
@@ -381,7 +440,7 @@ function deleteTx(id) {
     }
 }
 
-// VATTI LOAN MANAGEMENT (WITH LOAN 1, LOAN 2 EDITING)
+// VATTI MANAGEMENT
 function addVattiLoan() {
     let name = document.getElementById('vatti-name').value.trim();
     let amount = parseFloat(document.getElementById('vatti-principal').value);
