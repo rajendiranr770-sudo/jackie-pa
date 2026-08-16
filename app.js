@@ -404,41 +404,56 @@ function calculateLoanDetails(principal, rate, startDateStr) {
 }
 
 // Add Vatti Loan (Supports Multiple Loans under Same Name)
-function handleAddVattiLoan() {
-    const name = document.getElementById("vatti-name").value.trim();
-    const principal = parseFloat(document.getElementById("vatti-principal").value);
-    const rate = parseFloat(document.getElementById("vatti-rate").value);
-    const date = document.getElementById("vatti-date").value;
+// வட்டி கடன் சேர்க்கும் புதிய பங்க்ஷன் (பழைய / புதிய கணக்கு இரண்டிற்கும்)
+window.handleAddLoan = function(isNewAccount) {
+    const nameInput = document.getElementById("vatti-name");
+    const principalInput = document.getElementById("vatti-principal");
+    const rateInput = document.getElementById("vatti-rate");
+    const dateInput = document.getElementById("vatti-date");
+
+    const name = nameInput.value.trim();
+    const principal = parseFloat(principalInput.value);
+    const rate = parseFloat(rateInput.value);
+    const date = dateInput.value;
 
     if (!name || isNaN(principal) || isNaN(rate) || !date) {
         alert("எல்லா விவரங்களையும் சரியாக நிரப்பவும்!");
         return;
     }
 
-    const existingAccount = vattiAccounts.find(acc => acc.name.toLowerCase() === name.toLowerCase());
+    const newLoanItem = { principal, rate, date };
 
-    const newLoanItem = {
-        principal: principal,
-        rate: rate,
-        date: date
-    };
+    // isNewAccount 'false' ஆக இருந்தால் மட்டுமே பழைய சுரேஷ் கணக்கை தேடும்
+    const existingAccount = isNewAccount ? null : vattiAccounts.find(acc => acc.name.toLowerCase() === name.toLowerCase());
 
     if (existingAccount) {
-        // Add as additional loan
+        // 1. பழைய கணக்கில் 'கடன் 2' ஆக சேர்க்கிறது
         const updatedLoans = [...(existingAccount.loans || []), newLoanItem];
         updateDoc(doc(db, "users", currentUser.uid, "vatti_accounts", existingAccount.id), {
             loans: updatedLoans
-        }).then(() => resetVattiForm());
+        }).then(() => {
+            resetVattiForm();
+        });
     } else {
-        // Create new account
+        // 2. 'புதிய கணக்கு' பட்டன் அழுத்தினால் அதே பெயரில் புது கார்டு ஓபன் பண்ணுகிறது
         const newAcc = {
             name: name,
             loans: [newLoanItem],
             createdAt: Date.now()
         };
         addDoc(collection(db, "users", currentUser.uid, "vatti_accounts"), newAcc)
-            .then(() => resetVattiForm());
+            .then(() => {
+                resetVattiForm();
+            });
     }
+};
+
+// ஃபார்மை ரீசெட் செய்யும் உதவி பங்க்ஷன்
+function resetVattiForm() {
+    document.getElementById("vatti-name").value = "";
+    document.getElementById("vatti-principal").value = "";
+    document.getElementById("vatti-rate").value = "";
+    document.getElementById("vatti-date").value = "";
 }
 
 function resetVattiForm() {
