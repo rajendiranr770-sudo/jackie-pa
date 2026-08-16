@@ -1,6 +1,3 @@
-// ========================================================
-// 1. FIREBASE SETUP
-// ========================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -21,108 +18,62 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
 let currentUser = null;
-
-// Service Worker Registration
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.log("SW Failed:", err));
-}
-
-// ========================================================
-// 2. STATE VARIABLES
-// ========================================================
 let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
 let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
 let searchQuery = "";
 let selectedMonthFilter = "ALL";
-let pendingVoiceTxData = null;
 
-// ========================================================
-// 3. SAVE STATE & AUTO SYNC
-// ========================================================
+// STATE SAVE & SYNC
 function saveState() {
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
     localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
-    
-    if (currentUser && navigator.onLine) {
+
+    if (currentUser) {
         setDoc(doc(db, "users", currentUser.uid), {
             transactions: transactions,
             vattiAccounts: vattiAccounts,
             lastUpdated: new Date().toISOString()
-        });
+        }, { merge: true });
     }
 
     populateMonthDropdown();
     updateDashboardUI();
     renderAllLists();
+    renderVattiAccounts();
 }
 
-window.addEventListener('online', () => {
-    if (currentUser) saveState();
-});
-
-// ========================================================
-// 4. AUTHENTICATION
-// ========================================================
-window.loginWithGoogle = function() {
-    signInWithPopup(auth, provider).catch(error => alert("Login Error: " + error.message));
-};
-
-window.logoutGoogle = function() {
-    signOut(auth).then(() => alert("வெற்றிகரமாக லாக்அவுட் செய்யப்பட்டது!")).catch(error => alert(error.message));
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-
-    if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
-    if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
-
-    const searchInput = document.getElementById('search-query-input');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            searchQuery = e.target.value.trim();
-            window.searchExpenses();
-        });
-    }
-
-    window.processSearch = function() {
-        if (searchInput) searchQuery = searchInput.value.trim();
-        window.searchExpenses();
-    };
-
-    populateMonthDropdown();
-});
+// AUTH setup
+document.getElementById('login-btn')?.addEventListener('click', () => signInWithPopup(auth, provider));
+document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
 
 onAuthStateChanged(auth, (user) => {
-    const authContainer = document.getElementById('auth-container');
-    const mainApp = document.getElementById('main-app');
-    const userNameSpan = document.getElementById('user-display-name');
-
     if (user) {
         currentUser = user;
-        if (authContainer) authContainer.style.display = 'none';
-        if (mainApp) mainApp.style.display = 'block';
-        if (userNameSpan) userNameSpan.textContent = user.displayName || user.email;
+        document.getElementById('auth-container').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        document.getElementById('user-display-name').textContent = user.displayName || user.email;
 
         onSnapshot(doc(db, "users", user.uid), (docSnap) => {
             if (docSnap.exists()) {
                 let data = docSnap.data();
-                transactions = data.transactions || [];
-                vattiAccounts = data.vattiAccounts || {};
+                if (data.transactions) transactions = data.transactions;
+                if (data.vattiAccounts) vattiAccounts = data.vattiAccounts;
                 saveState();
             }
         });
     } else {
         currentUser = null;
-        if (authContainer) authContainer.style.display = 'flex';
-        if (mainApp) mainApp.style.display = 'none';
+        document.getElementById('auth-container').style.display = 'flex';
+        document.getElementById('main-app').style.display = 'none';
     }
 });
 
-// ========================================================
-// 5. MONTHLY FILTER LOGIC
-// ========================================================
+// SCROLL TO VATTI
+window.scrollToVatti = function() {
+    document.getElementById('vatti-section')?.scrollIntoView({ behavior: 'smooth' });
+};
+
+// MONTH FILTER
 function populateMonthDropdown() {
     let selectEl = document.getElementById('month-filter-select');
     if (!selectEl) return;
@@ -131,21 +82,15 @@ function populateMonthDropdown() {
     transactions.forEach(t => {
         if (t.date) {
             let d = new Date(t.date);
-            if (!isNaN(d)) {
-                let monthYear = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
-                months.add(monthYear);
-            }
+            if (!isNaN(d)) months.add(d.toLocaleString('en-US', { month: 'short', year: 'numeric' }));
         }
     });
 
-    let currentSelection = selectEl.value || "ALL";
+    let curr = selectEl.value || "ALL";
     selectEl.innerHTML = `<option value="ALL">எல்லா மாதங்களும் (All)</option>`;
-    
-    months.forEach(m => {
-        selectEl.innerHTML += `<option value="${m}">${m}</option>`;
-    });
+    months.forEach(m => selectEl.innerHTML += `<option value="${m}">${m}</option>`);
+    selectEl.value = curr;
 
-    selectEl.value = currentSelection;
     selectEl.onchange = (e) => {
         selectedMonthFilter = e.target.value;
         renderAllLists();
@@ -158,181 +103,130 @@ function filterByMonth(list) {
     return list.filter(t => {
         if (!t.date) return false;
         let d = new Date(t.date);
-        let monthYear = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
-        return monthYear === selectedMonthFilter;
+        return d.toLocaleString('en-US', { month: 'short', year: 'numeric' }) === selectedMonthFilter;
     });
 }
 
-// ========================================================
-// 6. PROCESS TRANSACTIONS & VOICE PARSER
-// ========================================================
-function processNewTransaction(text) {
-    let t = text.toLowerCase().trim();
-    let numMatch = t.match(/(\d[\d,]*(\.\d+)?)/);
+// TRANSACTION PROCESSING
+window.processVoiceOrText = function() {
+    let input = document.getElementById('voice-text-input');
+    if (!input || !input.value.trim()) return;
+
+    let text = input.value.trim();
+    let numMatch = text.match(/(\d[\d,]*(\.\d+)?)/);
     let amount = numMatch ? parseFloat(numMatch[1].replace(/,/g, '')) : 0;
 
-    if (!amount) return alert("சரியான தொகையை உள்ளிடவும்.");
+    if (!amount) return alert("சரியான தொகையைக் குறிப்பிடவும்.");
 
     let category = "பொதுச் செலவு";
     let isExpense = true;
-    let explicitSource = null;
+    let source = "வீடு";
 
-    if (t.includes("சம்பளம்") || t.includes("சம்பள")) explicitSource = "சம்பளம்";
-    else if (t.includes("வீடு") || t.includes("வீட்டு") || t.includes("வீட்டிற்கு")) explicitSource = "வீடு";
+    if (text.includes("சம்பளம்")) source = "சம்பளம்";
+    if (text.includes("எம்கே") || text.includes("mk")) category = "MK செலவு";
+    else if (text.includes("எஸ்கே") || text.includes("sk")) category = "SK செலவு";
+    else if (text.includes("கொல்லை")) category = "கொல்லை";
 
-    if (t.includes("தந்தார்கள்") || t.includes("கொடுத்தார்கள்") || t.includes("வந்தது") || t.includes("வரவு") || t.includes("கிடைத்தது")) {
-        isExpense = false;
-        category = "வரவு";
-    } 
-    else if (t.includes("எஸ்கே") || t.includes("sk")) category = "SK செலவு";
-    else if (t.includes("எம்கே") || t.includes("mk")) category = "MK செலவு";
-    else if (t.includes("கொல்லை")) category = "கொல்லை";
-    else if (t.includes("கடன்")) category = "கடன் செலவு";
+    if (text.includes("வரவு") || text.includes("தந்தார்கள்")) { isExpense = false; category = "வரவு"; }
 
-    let tempTx = {
+    transactions.unshift({
         id: Date.now(),
         text: text,
         amount: amount,
         category: category,
+        source: source,
         isExpense: isExpense,
         date: new Date().toLocaleString()
-    };
+    });
 
-    if (explicitSource) {
-        tempTx.source = explicitSource;
-        transactions.unshift(tempTx);
-        if (!isExpense) adjustPendingDebts(tempTx.source);
-        saveState();
-    } else {
-        pendingVoiceTxData = tempTx;
-        let modalText = document.getElementById("sourceModalText");
-        if (modalText) modalText.innerText = `"${text}" - ₹${amount}`;
-        let modal = document.getElementById("sourceModal");
-        if (modal) modal.style.display = "flex";
-    }
-}
-
-window.confirmSource = function(selectedSource) {
-    if (pendingVoiceTxData) {
-        pendingVoiceTxData.source = selectedSource;
-        transactions.unshift(pendingVoiceTxData);
-        pendingVoiceTxData = null;
-        saveState();
-    }
-    let modal = document.getElementById("sourceModal");
-    if (modal) modal.style.display = "none";
+    input.value = '';
+    saveState();
 };
 
-function adjustPendingDebts(sourceName) {
-    let pendingDebts = transactions.filter(t => t.category === "கடன் செலவு" && t.isExpense && !t.adjusted);
-    pendingDebts.forEach(debt => {
-        debt.source = sourceName;
-        debt.adjusted = true;
-    });
-}
+// EDIT TRANSACTION (✏️ வசதி)
+window.editTx = function(id) {
+    let t = transactions.find(x => x.id === id);
+    if (!t) return;
 
-// ========================================================
-// 7. DASHBOARD & BALANCE CALCULATION
-// ========================================================
+    let newText = prompt("பதிவை மாற்று:", t.text);
+    if (newText === null) return;
+    let newAmount = prompt("தொகையை மாற்று (₹):", t.amount);
+    if (newAmount === null) return;
+
+    t.text = newText.trim() || t.text;
+    t.amount = parseFloat(newAmount) || t.amount;
+    saveState();
+};
+
+// DELETE TRANSACTION (🗑️ வசதி)
+window.deleteTx = function(id) {
+    if (confirm("இந்த பதிவை நீக்க விரும்புகிறீர்களா?")) {
+        transactions = transactions.filter(t => t.id !== id);
+        saveState();
+    }
+};
+
+// DASHBOARD CALCULATIONS
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
-    let filteredTxs = filterByMonth(transactions);
+    let filtered = filterByMonth(transactions);
 
-    filteredTxs.forEach(t => {
+    filtered.forEach(t => {
         let src = t.source || "வீடு";
-        if (!t.isExpense) {
-            if (src === "சம்பளம்") totals["சம்பளம்"] += t.amount;
-            else totals["வீடு"] += t.amount;
-        } else {
-            if (src === "சம்பளம்") totals["சம்பளம்"] -= t.amount;
-            else totals["வீடு"] -= t.amount;
-
-            if (t.category === "கொல்லை") totals["கொல்லை"] += t.amount;
-            if (t.category === "MK செலவு") totals["MK செலவு"] += t.amount;
-            if (t.category === "SK செலவு") totals["SK செலவு"] += t.amount;
+        if (!t.isExpense) totals[src] += t.amount;
+        else {
+            totals[src] -= t.amount;
+            if (totals[t.category] !== undefined) totals[t.category] += t.amount;
         }
     });
 
-    let totalVattiOut = 0;
+    let totalVatti = 0;
     for (let name in vattiAccounts) {
-        vattiAccounts[name].forEach(l => { totalVattiOut += l.amount; });
+        if (Array.isArray(vattiAccounts[name])) {
+            vattiAccounts[name].forEach(l => totalVatti += (l.amount || 0));
+        }
     }
-    totals["வட்டி"] = totalVattiOut;
+    totals["வட்டி"] = totalVatti;
 
-    let setVal = (id, val) => {
-        let el = document.getElementById(id);
-        if (el) el.innerText = '₹' + Math.round(val);
-    };
-
-    setVal('salary-val', totals["சம்பளம்"]);
-    setVal('home-val', totals["வீடு"]);
-    setVal('kollai-val', totals["கொல்லை"]);
-    setVal('mk-val', totals["MK செலவு"]);
-    setVal('sk-val', totals["SK செலவு"]);
-    setVal('vatti-val', totals["வட்டி"]);
+    document.getElementById('salary-val').innerText = '₹' + Math.round(totals["சம்பளம்"]);
+    document.getElementById('home-val').innerText = '₹' + Math.round(totals["வீடு"]);
+    document.getElementById('kollai-val').innerText = '₹' + Math.round(totals["கொல்லை"]);
+    document.getElementById('mk-val').innerText = '₹' + Math.round(totals["MK செலவு"]);
+    document.getElementById('sk-val').innerText = '₹' + Math.round(totals["SK செலவு"]);
+    document.getElementById('vatti-val').innerText = '₹' + Math.round(totals["வட்டி"]);
 }
 
-// ========================================================
-// 8. SEARCH & DYNAMIC TOTAL DISPLAY BOX (சர்ச் பாக்ஸ் கீழே வரும் மொத்த பாக்ஸ்)
-// ========================================================
-window.searchExpenses = function() {
+// SEARCH & DYNAMIC TOTAL BOX
+window.processSearch = function() {
     let input = document.getElementById('search-query-input');
-    let rawVal = input ? input.value.trim() : searchQuery.trim();
+    searchQuery = input ? input.value.trim() : "";
     let box = document.getElementById('search-result-box');
-    
-    searchQuery = rawVal;
 
-    if (rawVal === "") {
-        if (box) { box.style.display = "none"; box.innerHTML = ""; }
+    if (!searchQuery) {
+        if (box) box.style.display = "none";
         renderAllLists();
         return;
     }
 
-    let cleanQ = rawVal.toLowerCase();
-    let keywords = cleanQ.split(/\s+/);
-
-    let totalIncome = 0;
-    let totalExpense = 0;
-    let count = 0;
+    let cleanQ = searchQuery.toLowerCase();
+    let totalExpense = 0, totalIncome = 0, count = 0;
 
     transactions.forEach(t => {
-        let fullText = `${t.text || ''} ${t.category || ''} ${t.source || ''}`.toLowerCase();
-        
-        let matchesAll = keywords.every(kw => {
-            if (kw === "வரவு") return !t.isExpense || fullText.includes("வரவு");
-            if (kw === "செலவு") return t.isExpense;
-            if (kw === "மொத்த") return true;
-            return fullText.includes(kw);
-        });
-
-        if (matchesAll) {
+        let fullText = `${t.text} ${t.category} ${t.source}`.toLowerCase();
+        if (fullText.includes(cleanQ)) {
             if (t.isExpense) totalExpense += t.amount;
             else totalIncome += t.amount;
             count++;
         }
     });
 
-    // சர்ச் பாக்ஸ்க்கு கீழே வரும் பிரத்யேக மொத்த தொகை பாக்ஸ்
     if (box) {
         box.style.display = "block";
-        let displayTotal = 0;
-        let totalLabel = "";
-
-        if (totalIncome > 0 && totalExpense > 0) {
-            displayTotal = totalIncome - totalExpense;
-            totalLabel = `மொத்த மீதி தொகை: ₹${displayTotal}`;
-        } else if (totalIncome > 0) {
-            displayTotal = totalIncome;
-            totalLabel = `மொத்த வரவு தொகை: +₹${displayTotal}`;
-        } else {
-            displayTotal = totalExpense;
-            totalLabel = `மொத்த செலவு தொகை: -₹${displayTotal}`;
-        }
-
+        let displayTotal = totalIncome > 0 ? (totalIncome - totalExpense) : totalExpense;
+        let label = totalIncome > 0 ? `மொத்த மீதி: ₹${displayTotal}` : `மொத்த செலவு: -₹${displayTotal}`;
         box.innerHTML = `
-        <div style="background:#0284c7; color:#ffffff; border-radius:12px; padding:14px; text-align:center; box-shadow:0 4px 10px rgba(2, 132, 199, 0.3); margin-top:10px;">
-            <div style="font-size:13px; opacity:0.9; font-weight:600;">🔍 "${rawVal}" - தேடல் முடிவுகள் (${count} பதிவுகள்)</div>
-            <div style="font-size:22px; font-weight:900; margin-top:4px; letter-spacing:0.5px;">${totalLabel}</div>
+        <div style="background:#0284c7; color:white; padding:12px; border-radius:10px; text-align:center; font-weight:bold;">
+            🔍 "${searchQuery}" - (${count} பதிவுகள்) <br> <span style="font-size:18px;">${label}</span>
         </div>`;
     }
 
@@ -344,98 +238,126 @@ function renderAllLists() {
     if (!el) return;
 
     let list = filterByMonth(transactions);
-    let q = searchQuery.toLowerCase().trim();
-
-    if (q !== "") {
-        let keywords = q.split(/\s+/);
-        list = list.filter(t => {
-            let fullText = `${t.text || ''} ${t.category || ''} ${t.source || ''}`.toLowerCase();
-            return keywords.every(kw => {
-                if (kw === "வரவு") return !t.isExpense || fullText.includes("வரவு");
-                if (kw === "செலவு") return t.isExpense;
-                if (kw === "மொத்த") return true;
-                return fullText.includes(kw);
-            });
-        });
+    if (searchQuery) {
+        let q = searchQuery.toLowerCase();
+        list = list.filter(t => `${t.text} ${t.category} ${t.source}`.toLowerCase().includes(q));
     }
 
     if (list.length === 0) {
-        el.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px;">பதிவுகள் எதுவும் இல்லை</div>`;
+        el.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px;">பதிவுகள் எதுவுமில்லை</div>`;
         return;
     }
 
-    list.sort((a, b) => b.id - a.id);
-
-    el.innerHTML = list.map(t => {
-        let color = t.isExpense ? "#dc2626" : "#16a34a";
-        let prefix = t.isExpense ? "- " : "+ ";
-
-        return `
-        <div class="card-box" style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong style="font-size:15px; color:#1e293b;">${t.text}</strong>
-                <span style="color:${color}; font-weight:bold; font-size:16px;">${prefix}₹${t.amount}</span>
+    el.innerHTML = list.map(t => `
+    <div class="card-box" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <strong style="font-size:15px;">${t.text}</strong>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">${t.date} | ${t.category} (${t.source || 'வீடு'})</div>
+        </div>
+        <div style="text-align:right;">
+            <div style="color:${t.isExpense ? '#dc2626' : '#16a34a'}; font-weight:bold; font-size:16px;">
+                ${t.isExpense ? '-' : '+'}₹${t.amount}
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b; margin-top:6px;">
-                <span>${t.date} | ${t.category} (${t.source || 'வீடு'})</span>
+            <div style="margin-top:4px;">
+                <button onclick="editTx(${t.id})" style="background:none; border:none; cursor:pointer;">✏️</button>
                 <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer;">🗑️</button>
             </div>
-        </div>`;
-    }).join('');
+        </div>
+    </div>`).join('');
 }
 
-// PDF டவுன்லோட்
-window.downloadFilteredPDF = function() {
-    let element = document.getElementById('pdf-printable-area');
-    let title = document.getElementById('pdf-header-title');
-    
-    if (title) title.style.display = "block";
+// VATTI LOAN BUSINESS MANAGEMENT
+window.addVattiLoan = function() {
+    let name = document.getElementById('vatti-name').value.trim();
+    let amount = parseFloat(document.getElementById('vatti-principal').value);
+    let rate = parseFloat(document.getElementById('vatti-rate').value);
+    let date = document.getElementById('vatti-date').value || new Date().toISOString().split('T')[0];
 
-    let opt = {
-        margin:       0.5,
-        filename:     `Finance_Report_${new Date().toISOString().split('T')[0]}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
+    if (!name || !amount || !rate) return alert("அனைத்து விவரங்களையும் நிரப்பவும்.");
 
-    html2pdf().set(opt).from(element).save().then(() => {
-        if (title) title.style.display = "none";
-    });
+    if (!vattiAccounts[name]) vattiAccounts[name] = [];
+    vattiAccounts[name].push({ id: Date.now(), amount, rate, date });
+
+    document.getElementById('vatti-name').value = '';
+    document.getElementById('vatti-principal').value = '';
+    document.getElementById('vatti-rate').value = '';
+
+    saveState();
 };
 
-window.deleteTx = function(id) {
-    if (confirm("இந்த பதிவை நீக்க விரும்புகிறீர்களா?")) {
-        transactions = transactions.filter(t => t.id !== id);
+function renderVattiAccounts() {
+    let el = document.getElementById('vatti-accounts-list');
+    if (!el) return;
+
+    let html = '';
+    for (let name in vattiAccounts) {
+        let loans = vattiAccounts[name];
+        if (!loans || loans.length === 0) continue;
+
+        let totP = 0, totI = 0;
+        let loansHtml = loans.map((l, idx) => {
+            totP += l.amount;
+            let mInterest = (l.amount * l.rate) / 100;
+            totI += mInterest;
+            return `
+            <div style="border-top:1px solid #e2e8f0; padding-top:8px; margin-top:8px; font-size:13px;">
+                <strong>கடன் ${idx + 1}:</strong> அசல்: ₹${l.amount} | வட்டி: ${l.rate}% 
+                <button onclick="deleteVattiLoan('${name}', ${l.id})" style="float:right; background:none; border:none; cursor:pointer;">🗑️</button>
+                <div style="color:#0284c7; margin-top:2px;">மாத வட்டி: ₹${mInterest} (தேதி: ${l.date})</div>
+            </div>`;
+        }).join('');
+
+        html += `
+        <div id="vatti-card-${name.replace(/\s+/g, '-')}" class="card-box" style="border:1px solid #bfdbfe; background:#f0f9ff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h4 style="margin:0; color:#1e40af; font-size:16px;">👤 ${name}</h4>
+                <button onclick="downloadSingleVattiPDF('${name}')" style="background:#0284c7; color:white; border:none; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer;">📄 PDF</button>
+            </div>
+            ${loansHtml}
+            <div style="background:#0f172a; color:white; padding:8px 12px; border-radius:8px; margin-top:10px; font-weight:bold; font-size:13px;">
+                மொத்த அசல்: ₹${totP} | மாத வட்டி: ₹${totI}
+            </div>
+        </div>`;
+    }
+
+    el.innerHTML = html;
+}
+
+window.deleteVattiLoan = function(name, loanId) {
+    if (confirm("இந்தக் கடனை நீக்கவா?")) {
+        vattiAccounts[name] = vattiAccounts[name].filter(l => l.id !== loanId);
+        if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
         saveState();
     }
 };
 
-window.processVoiceOrText = function() {
-    let input = document.getElementById('voice-text-input');
-    if (input && input.value.trim() !== '') {
-        processNewTransaction(input.value.trim());
-        input.value = '';
-    }
+// PDF DOWNLOADS
+window.downloadOverallPDF = function() {
+    let element = document.getElementById('main-app');
+    let opt = { margin: 10, filename: 'Overall_Finance_Report.pdf', html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+    html2pdf().set(opt).from(element).save();
 };
 
+window.downloadSingleVattiPDF = function(name) {
+    let cardId = `vatti-card-${name.replace(/\s+/g, '-')}`;
+    let element = document.getElementById(cardId);
+    if (!element) return;
+    let opt = { margin: 10, filename: `${name}_Vatti_Report.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+    html2pdf().set(opt).from(element).save();
+};
+
+// VOICE SPEECH RECOGNITION
 window.startVoiceRecognition = function() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.lang = 'ta-IN';
         recognition.onresult = function(event) {
-            let transcript = event.results[0][0].transcript;
+            let text = event.results[0][0].transcript;
             let input = document.getElementById('voice-text-input');
-            if (input) input.value = transcript;
-            processNewTransaction(transcript);
+            if (input) input.value = text;
+            window.processVoiceOrText();
         };
         recognition.start();
-    } else {
-        alert("குரல் வசதி இந்த பிரவுசரில் இல்லை");
-    }
+    } else alert("பிரவுசரில் குரல் வசதி இல்லை.");
 };
-
-// INITIAL LOAD
-updateDashboardUI();
-renderAllLists();
