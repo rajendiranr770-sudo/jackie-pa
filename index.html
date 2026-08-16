@@ -180,35 +180,34 @@
         </div>
 
         <!-- VATTI BUSINESS EXCLUSIVE TAB VIEW -->
-<div id="vatti-view" style="display:none;">
-    <h3 style="color:#1e40af; margin-bottom:10px; font-size:16px;">💰 வட்டி கடன் பதிவு நிர்வாகம்</h3>
-    
-    <div class="card-box" style="background:#f8fafc; border:1px solid #cbd5e1;">
-        <!-- 1. பெயர் -->
-        <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சுரேஷ்)" style="width:100%; padding:8px; margin-bottom:6px; border:1px solid #cbd5e1; border-radius:8px;">
-        
-        <!-- 2. அசல் & வட்டி -->
-        <div style="display:flex; gap:6px; margin-bottom:6px;">
-            <input type="number" id="vatti-principal" placeholder="அசல் தொகை (₹)" style="flex:1; min-width:0; padding:8px; border:1px solid #cbd5e1; border-radius:8px;">
-            <input type="number" id="vatti-rate" placeholder="வட்டி %" style="flex:1; min-width:0; padding:8px; border:1px solid #cbd5e1; border-radius:8px;">
-        </div>
+        <div id="vatti-view" style="display:none;">
+            <h3 style="color:#1e40af; margin-bottom:10px; font-size:16px;">💰 வட்டி கடன் பதிவு நிர்வாகம்</h3>
+            
+            <div class="card-box" style="background:#f8fafc; border:1px solid #cbd5e1;">
+                <!-- 1. பெயர் -->
+                <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சுரேஷ்)" style="width:100%; padding:8px; margin-bottom:6px; border:1px solid #cbd5e1; border-radius:8px;">
+                
+                <!-- 2. அசல் & வட்டி -->
+                <div style="display:flex; gap:6px; margin-bottom:6px;">
+                    <input type="number" id="vatti-principal" placeholder="அசல் தொகை (₹)" style="flex:1; min-width:0; padding:8px; border:1px solid #cbd5e1; border-radius:8px;">
+                    <input type="number" id="vatti-rate" placeholder="வட்டி %" style="flex:1; min-width:0; padding:8px; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
 
-        <!-- 3. தேதி (தனியாக) -->
-        <div style="margin-bottom:6px;">
-            <input type="date" id="vatti-date" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px;">
-        </div>
+                <!-- 3. தேதி -->
+                <div style="margin-bottom:6px;">
+                    <input type="date" id="vatti-date" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
 
-        <!-- 4. பட்டன்கள் (தேதிக்கு கீழே தனியாக) -->
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button type="button" onclick="handleAddLoan(false)" style="flex: 1; background: #2563eb; color: white; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer;">
-                + கடன் சேர்
-            </button>
-            <button type="button" onclick="handleAddLoan(true)" style="flex: 1; background: #059669; color: white; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer;">
-                ✨ புதிய கணக்கு
-            </button>
-        </div>
-    </div>
-</div>
+                <!-- 4. பட்டன்கள் -->
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button type="button" onclick="handleAddLoan(false)" style="flex: 1; background: #2563eb; color: white; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer;">
+                        + கடன் சேர்
+                    </button>
+                    <button type="button" onclick="handleAddLoan(true)" style="flex: 1; background: #059669; color: white; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer;">
+                        ✨ புதிய கணக்கு
+                    </button>
+                </div>
+            </div>
 
             <div id="vatti-accounts-list"></div>
         </div>
@@ -225,7 +224,6 @@
     <!-- பதிவைத் திருத்து பாப்-அப் (EDIT MODAL) -->
     <div id="edit-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
         <div style="background:white; width:90%; max-width:400px; padding:20px; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-            
             <h3 style="margin-top:0; color:#0f172a; font-size:18px; border-bottom:2px solid #e2e8f0; padding-bottom:8px;">பதிவைத் திருத்து</h3>
             
             <div style="margin-bottom:12px;">
@@ -278,14 +276,12 @@
                 <button id="btn-save-edit" style="flex:1; background:#2563eb; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">சேமி</button>
                 <button id="btn-close-edit" style="flex:1; background:#475569; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">மூடு</button>
             </div>
-
         </div>
     </div>
 
     <!-- வட்டி கடன் திருத்து பாப்-அப் (VATTI EDIT MODAL) -->
     <div id="vatti-edit-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
         <div style="background:white; width:90%; max-width:400px; padding:20px; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-            
             <h3 style="margin-top:0; color:#0f172a; font-size:18px; border-bottom:2px solid #e2e8f0; padding-bottom:8px;">வட்டி கடனை திருத்து</h3>
             
             <div style="margin-bottom:12px;">
@@ -307,7 +303,6 @@
                 <button id="btn-vatti-save-edit" style="flex:1; background:#2563eb; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">சேமி</button>
                 <button id="btn-vatti-close-edit" style="flex:1; background:#475569; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">மூடு</button>
             </div>
-
         </div>
     </div>
 
