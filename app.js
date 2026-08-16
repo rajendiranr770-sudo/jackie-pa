@@ -90,16 +90,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-query-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            searchQuery = e.target.value.toLowerCase().trim();
+            searchQuery = e.target.value.trim();
             window.searchExpenses();
         });
     }
 
     window.processSearch = function() {
         if (searchInput) {
-            searchQuery = searchInput.value.toLowerCase().trim();
-            window.searchExpenses();
+            searchQuery = searchInput.value.trim();
         }
+        window.searchExpenses();
     };
 
     populateMonthDropdown();
@@ -460,45 +460,51 @@ function updateDashboardUI() {
 
 window.searchExpenses = function() {
     let input = document.getElementById('search-query-input');
-    let q = input ? input.value.trim() : searchQuery;
+    let rawVal = input ? input.value.trim() : searchQuery.trim();
     let box = document.getElementById('search-result-box');
     
-    if (!box) return;
+    searchQuery = rawVal;
 
-    if (q === "") {
-        box.style.display = "none";
-        box.innerHTML = "";
+    if (rawVal === "") {
+        if (box) {
+            box.style.display = "none";
+            box.innerHTML = "";
+        }
         renderAllLists();
         return;
     }
 
-    let cleanQ = q.toLowerCase();
+    let cleanQ = rawVal.toLowerCase();
     let totalAmt = 0;
     let count = 0;
 
     transactions.forEach(t => {
-        let textMatch = t.text.toLowerCase().includes(cleanQ);
+        let textMatch = (t.text || '').toLowerCase().includes(cleanQ);
         let catMatch = (t.category || '').toLowerCase().includes(cleanQ);
-        let amtMatch = t.amount.toString().includes(cleanQ);
+        let sourceMatch = (t.source || '').toLowerCase().includes(cleanQ);
+        let amtMatch = (t.amount || '').toString().includes(cleanQ);
 
-        if (textMatch || catMatch || amtMatch) {
-            totalAmt += (t.isExpense ? Number(t.amount) : -Number(t.amount));
+        if (textMatch || catMatch || sourceMatch || amtMatch) {
+            let amt = Number(t.amount) || 0;
+            totalAmt += (t.isExpense ? amt : -amt);
             count++;
         }
     });
 
-    box.style.display = "block";
-    if (count > 0) {
-        box.innerHTML = `
-        <div style="background:#fff; border:2px solid #0284c7; border-radius:12px; padding:12px; text-align:center; margin-top:10px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
-            <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு (${count} பதிவுகள்)</div>
-            <div style="font-size:26px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalAmt}</div>
-        </div>`;
-    } else {
-        box.innerHTML = `
-        <div style="background:#fff; border:1px solid #94a3b8; border-radius:10px; padding:10px; text-align:center; color:#64748b; margin-top:10px;">
-            🔍 "${q}" என்ற பெயரில் பதிவுகள் எதுவும் இல்லை!
-        </div>`;
+    if (box) {
+        box.style.display = "block";
+        if (count > 0) {
+            box.innerHTML = `
+            <div style="background:#ffffff; border:2px solid #0284c7; border-radius:12px; padding:12px; text-align:center; margin-top:12px; box-shadow:0 4px 8px rgba(0,0,0,0.12);">
+                <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${rawVal}" மொத்த செலவு (${count} பதிவுகள்)</div>
+                <div style="font-size:26px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalAmt}</div>
+            </div>`;
+        } else {
+            box.innerHTML = `
+            <div style="background:#fff3f3; border:1px solid #fca5a5; border-radius:10px; padding:12px; text-align:center; color:#991b1b; margin-top:12px; font-weight:bold;">
+                ⚠️ "${rawVal}" என்ற பெயரில் பதிவுகள் எதுவும் இல்லை!
+            </div>`;
+        }
     }
 
     renderAllLists();
@@ -524,9 +530,10 @@ function renderAllLists() {
 
             if (q !== "") {
                 list = list.filter(t => {
-                    return t.text.toLowerCase().includes(q) || 
-                           t.amount.toString().includes(q) ||
-                           (t.category || '').toLowerCase().includes(q);
+                    return (t.text || '').toLowerCase().includes(q) || 
+                           (t.amount || '').toString().includes(q) ||
+                           (t.category || '').toLowerCase().includes(q) ||
+                           (t.source || '').toLowerCase().includes(q);
                 });
             }
 
