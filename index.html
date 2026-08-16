@@ -191,7 +191,15 @@
                 </div>
                 <div style="display:flex; gap:6px;">
                     <input type="date" id="vatti-date" style="flex:1; min-width:0; padding:8px; border:1px solid #cbd5e1; border-radius:8px;">
-                    <button id="btn-add-vatti" style="background:#2563eb; color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer;">+ கடன் சேர்</button>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+    <button type="button" onclick="handleAddLoan(false)" style="flex: 1; background: #2563eb; color: white; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer;">
+        + கடன் சேர்
+    </button>
+    <button type="button" onclick="handleAddLoan(true)" style="flex: 1; background: #059669; color: white; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer;">
+        ✨ புதிய கணக்கு
+    </button>
+</div>
+
                 </div>
             </div>
 
