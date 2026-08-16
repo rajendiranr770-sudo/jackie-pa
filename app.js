@@ -21,12 +21,12 @@ import {
 
 // 1. Firebase Configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
+    authDomain: "myfinanceapp-3f883.firebaseapp.com",
+    projectId: "myfinanceapp-3f883",
+    storageBucket: "myfinanceapp-3f883.firebasestorage.app",
+    messagingSenderId: "698658153791",
+    appId: "1:698658153791:web:08ea0171d24a9b0da51f8a"
 };
 
 const app = initializeApp(firebaseConfig);
