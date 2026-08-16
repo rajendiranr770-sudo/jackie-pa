@@ -116,9 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnAddManual = document.getElementById("btn-add-manual");
     if (btnAddManual) btnAddManual.addEventListener("click", handleAddManual);
 
-    const btnAddVatti = document.getElementById("btn-add-vatti");
-    if (btnAddVatti) btnAddVatti.addEventListener("click", handleAddVattiLoan);
-
     const monthSelect = document.getElementById("month-filter-select");
     if (monthSelect) monthSelect.addEventListener("change", (e) => {
         currentMonth = e.target.value;
@@ -236,7 +233,9 @@ function switchCategoryTab(cat) {
     }
 }
 
-    // ✅ புதுக் கோடு:
+// Process Bottom Input
+function processBottomInput() {
+    const inputField = document.getElementById("voice-text-input");
     let rawText = inputField.value.trim();
     if (!rawText) return;
 
@@ -403,8 +402,7 @@ function calculateLoanDetails(principal, rate, startDateStr) {
     };
 }
 
-// Add Vatti Loan (Supports Multiple Loans under Same Name)
-// வட்டி கடன் சேர்க்கும் புதிய பங்க்ஷன் (பழைய / புதிய கணக்கு இரண்டிற்கும்)
+// Add Vatti Loan
 window.handleAddLoan = function(isNewAccount) {
     const nameInput = document.getElementById("vatti-name");
     const principalInput = document.getElementById("vatti-principal");
@@ -422,12 +420,9 @@ window.handleAddLoan = function(isNewAccount) {
     }
 
     const newLoanItem = { principal, rate, date };
-
-    // isNewAccount 'false' ஆக இருந்தால் மட்டுமே பழைய சுரேஷ் கணக்கை தேடும்
     const existingAccount = isNewAccount ? null : vattiAccounts.find(acc => acc.name.toLowerCase() === name.toLowerCase());
 
     if (existingAccount) {
-        // 1. பழைய கணக்கில் 'கடன் 2' ஆக சேர்க்கிறது
         const updatedLoans = [...(existingAccount.loans || []), newLoanItem];
         updateDoc(doc(db, "users", currentUser.uid, "vatti_accounts", existingAccount.id), {
             loans: updatedLoans
@@ -435,7 +430,6 @@ window.handleAddLoan = function(isNewAccount) {
             resetVattiForm();
         });
     } else {
-        // 2. 'புதிய கணக்கு' பட்டன் அழுத்தினால் அதே பெயரில் புது கார்டு ஓபன் பண்ணுகிறது
         const newAcc = {
             name: name,
             loans: [newLoanItem],
@@ -448,14 +442,7 @@ window.handleAddLoan = function(isNewAccount) {
     }
 };
 
-// ஃபார்மை ரீசெட் செய்யும் உதவி பங்க்ஷன்
-function resetVattiForm() {
-    document.getElementById("vatti-name").value = "";
-    document.getElementById("vatti-principal").value = "";
-    document.getElementById("vatti-rate").value = "";
-    document.getElementById("vatti-date").value = "";
-}
-
+// Form Reset Helper
 function resetVattiForm() {
     document.getElementById("vatti-name").value = "";
     document.getElementById("vatti-principal").value = "";
