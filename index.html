@@ -156,6 +156,24 @@
                 </div>
                 <div id="search-result-box" style="display:none;"></div>
             </div>
+            
+            <!-- DYNAMIC MANUAL ENTRY CARD (ஸ்கிரீன்ஷாட் படி) -->
+<div id="manual-entry-card" class="card-box" style="display:none; background:#ffffff; border:1px solid #cbd5e1; margin-bottom:15px; padding:15px; border-radius:12px;">
+    <h4 id="manual-entry-title" style="margin-top:0; color:#0f172a; font-size:16px; margin-bottom:12px;">🏡 மேனுவல் பதிவு</h4>
+    <div style="margin-bottom:10px;">
+        <input type="text" id="manual-text" placeholder="விவரம் அல்லது பெயர்" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+        <input type="number" id="manual-amount" placeholder="தொகை (₹)" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+        <select id="manual-type" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; outline:none; background:white;">
+            <option value="income">வரவு (+)</option>
+            <option value="expense">செலவு (-)</option>
+        </select>
+    </div>
+    <button id="btn-add-manual" style="width:100%; background:#2563eb; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;">சேர்</button>
+</div>
 
             <h3 style="margin: 12px 0 8px 0; color:#334155; font-size:15px;" id="list-heading">அனைத்துப் பதிவுகள்</h3>
             <div id="all-list"></div>
