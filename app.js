@@ -82,7 +82,6 @@ function convertTamilTextToNumbers(text) {
 
 // DOM Elements Initialization
 document.addEventListener("DOMContentLoaded", () => {
-    // Auth elements
     const loginBtn = document.getElementById("login-btn");
     const logoutBtn = document.getElementById("logout-btn");
     
@@ -100,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Category Tabs & Cards Event Listener
     document.querySelectorAll(".filter-tab, .stat-card").forEach(elem => {
-        elem.addEventListener("click", (e) => {
+        elem.addEventListener("click", () => {
             let cat = elem.getAttribute("data-category") || elem.id.replace("card-", "");
             if (cat) switchCategoryTab(cat);
         });
@@ -172,7 +171,6 @@ onAuthStateChanged(auth, (user) => {
 function listenToData() {
     if (!currentUser) return;
 
-    // Listen General Transactions
     const qTx = query(
         collection(db, "users", currentUser.uid, "transactions"),
         orderBy("timestamp", "desc")
@@ -186,7 +184,6 @@ function listenToData() {
         renderGeneralTransactions();
     });
 
-    // Listen Vatti Accounts
     const qVatti = query(
         collection(db, "users", currentUser.uid, "vatti_accounts"),
         orderBy("createdAt", "desc")
@@ -233,17 +230,17 @@ function switchCategoryTab(cat) {
     }
 }
 
-// Process Bottom Input
+// Smart Bottom Input Parser (FIXED FOR INCOME vs EXPENSE)
 function processBottomInput() {
     const inputField = document.getElementById("voice-text-input");
     let rawText = inputField.value.trim();
     if (!rawText) return;
 
-    // 1. கமாக்களை (,) நீக்கிவிட்டு தமிழ் வார்த்தைகளை எண்ணாக மாற்றுகிறோம்
-    let cleanText = rawText.replace(/,/g, ''); 
+    // Remove ₹ and commas, convert Tamil words to digits
+    let cleanText = rawText.replace(/₹/g, '').replace(/,/g, ''); 
     let processedText = convertTamilTextToNumbers(cleanText);
 
-    // 2. Regex மூலம் முழு தொகையை எடுக்கிறோம்
+    // Extract Amount
     const amtMatch = processedText.match(/\d+/);
     if (!amtMatch) {
         alert("தொகையை சரியாக குறிப்பிடவும்!");
@@ -251,36 +248,29 @@ function processBottomInput() {
     }
 
     const amount = parseFloat(amtMatch[0]);
-
-    // Enhanced Category Parsing
-    let targetCategory = "பொதுச் செலவு";
-    let type = "expense";
-    let sourceCategory = "சம்பளம்";
-
     let lowerText = processedText.toLowerCase();
 
-    if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பளம் வந்தது") || lowerText.includes("salary")) {
-        targetCategory = "சம்பளம்";
+    // Smart Type Parsing (Income vs Expense)
+    let type = "expense"; 
+    const incomeKeywords = ["வந்தது", "வந்திருச்சு", "வரவு", "கிரெடிட்", "வருமானம்", "கிடைத்தது", "credit", "received", "got"];
+    
+    if (incomeKeywords.some(keyword => lowerText.includes(keyword))) {
         type = "income";
-        sourceCategory = "சம்பளம்";
-    } else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டிலிருந்து") || lowerText.includes("வீட்டு")) {
+    }
+
+    // Smart Category Parsing
+    let targetCategory = "பொதுச் செலவு";
+
+    if (lowerText.includes("சம்பளம்") || lowerText.includes("salary")) {
+        targetCategory = "சம்பளம்";
+    } else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டில்") || lowerText.includes("home")) {
         targetCategory = "வீடு";
-        if (lowerText.includes("வந்தது") || lowerText.includes("வரவு") || lowerText.includes("பணம் வந்தது")) {
-            type = "income";
-        }
-        sourceCategory = "வீடு";
     } else if (lowerText.includes("கொல்லை") || lowerText.includes("தோட்டம்")) {
         targetCategory = "கொல்லை";
-        if (lowerText.includes("வந்தது") || lowerText.includes("வரவு")) {
-            type = "income";
-        }
-        sourceCategory = "கொல்லை";
     } else if (lowerText.includes("எம் கே") || lowerText.includes("mk")) {
         targetCategory = "MK செலவு";
-        sourceCategory = "MK செலவு";
     } else if (lowerText.includes("எஸ் கே") || lowerText.includes("sk")) {
         targetCategory = "SK செலவு";
-        sourceCategory = "SK செலவு";
     }
 
     const now = new Date();
@@ -293,7 +283,7 @@ function processBottomInput() {
         title: rawText,
         amount: amount,
         type: type,
-        source: sourceCategory,
+        source: targetCategory,
         targetCategory: targetCategory,
         dateStr: formattedDate,
         timestamp: Date.now()
@@ -306,7 +296,7 @@ function processBottomInput() {
         .catch(err => alert("Error: " + err.message));
 }
 
-// Voice Recognition setup
+// Voice Recognition
 function startVoiceRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -328,16 +318,11 @@ function startVoiceRecognition() {
         processBottomInput();
     };
 
-    recognition.onerror = () => {
-        micBtn.innerText = "🎙️ பேசு";
-    };
-
-    recognition.onend = () => {
-        micBtn.innerText = "🎙️ பேசு";
-    };
+    recognition.onerror = () => { micBtn.innerText = "🎙️ பேசு"; };
+    recognition.onend = () => { micBtn.innerText = "🎙️ பேசு"; };
 }
 
-// Handle Add Manual Entry
+// Manual Entry
 function handleAddManual() {
     const text = document.getElementById("manual-text").value.trim();
     const amount = parseFloat(document.getElementById("manual-amount").value);
@@ -371,12 +356,11 @@ function handleAddManual() {
         });
 }
 
-// Calculate Date Differences & Interests Accurate Logic
+// Vatti Calculation Logic
 function calculateLoanDetails(principal, rate, startDateStr) {
     const startDate = new Date(startDateStr);
     const today = new Date();
     
-    // Time difference in Days
     const timeDiff = today.getTime() - startDate.getTime();
     let totalDays = Math.floor(timeDiff / (1000 * 3600 * 24));
     if (totalDays < 0) totalDays = 0;
@@ -384,22 +368,11 @@ function calculateLoanDetails(principal, rate, startDateStr) {
     const months = Math.floor(totalDays / 30);
     const remDays = totalDays % 30;
 
-    // Monthly Interest amount
     const monthlyInterest = (principal * rate) / 100;
-    
-    // Per day Interest amount
     const dailyInterest = monthlyInterest / 30;
-
-    // Total calculated interest
     const totalInterest = Math.round((totalDays * dailyInterest));
 
-    return {
-        totalDays,
-        months,
-        remDays,
-        monthlyInterest,
-        totalInterest
-    };
+    return { totalDays, months, remDays, monthlyInterest, totalInterest };
 }
 
 // Add Vatti Loan
@@ -426,9 +399,7 @@ window.handleAddLoan = function(isNewAccount) {
         const updatedLoans = [...(existingAccount.loans || []), newLoanItem];
         updateDoc(doc(db, "users", currentUser.uid, "vatti_accounts", existingAccount.id), {
             loans: updatedLoans
-        }).then(() => {
-            resetVattiForm();
-        });
+        }).then(() => resetVattiForm());
     } else {
         const newAcc = {
             name: name,
@@ -436,13 +407,10 @@ window.handleAddLoan = function(isNewAccount) {
             createdAt: Date.now()
         };
         addDoc(collection(db, "users", currentUser.uid, "vatti_accounts"), newAcc)
-            .then(() => {
-                resetVattiForm();
-            });
+            .then(() => resetVattiForm());
     }
 };
 
-// Form Reset Helper
 function resetVattiForm() {
     document.getElementById("vatti-name").value = "";
     document.getElementById("vatti-principal").value = "";
@@ -465,7 +433,6 @@ function renderVattiAccounts() {
     vattiAccounts.forEach(acc => {
         let totalAccPrincipal = 0;
         let totalAccInterest = 0;
-
         let loansHTML = "";
 
         (acc.loans || []).forEach((loan, idx) => {
@@ -474,8 +441,8 @@ function renderVattiAccounts() {
             totalAccInterest += calc.totalInterest;
 
             loansHTML += `
-                <div style="border-left:3px solid #2563eb; background:#f8fafc; padding:8px 10px; margin-bottom:8px; border-radius:0 8px 8px 0; position:relative;">
-                    <div style="font-weight:bold; color:#1e293b; font-size:13px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="border-left:3px solid #2563eb; background:#f8fafc; padding:8px 10px; margin-bottom:8px; border-radius:0 8px 8px 0;">
+                    <div style="font-weight:bold; color:#1e293b; font-size:13px; display:flex; justify-content:space-between;">
                         <span>கடன் ${idx + 1}: அசல்: ₹${loan.principal} | வட்டி: ${loan.rate}%</span>
                         <div>
                             <span style="cursor:pointer; margin-right:8px;" onclick="openEditVattiModal('${acc.id}', ${idx})">✏️</span>
@@ -515,13 +482,11 @@ function renderVattiAccounts() {
     });
 }
 
-// Click Name to Auto Fill Form for Second Loan
 window.selectVattiNameForForm = function(name) {
     document.getElementById("vatti-name").value = name;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// Delete Single Vatti Loan
 window.deleteVattiLoan = function(accId, loanIdx) {
     if (!confirm("இந்தக் கடனை நீக்கவா?")) return;
 
@@ -540,7 +505,6 @@ window.deleteVattiLoan = function(accId, loanIdx) {
     }
 };
 
-// Open Vatti Edit Modal
 window.openEditVattiModal = function(accId, loanIdx) {
     const acc = vattiAccounts.find(a => a.id === accId);
     if (!acc || !acc.loans[loanIdx]) return;
@@ -556,7 +520,6 @@ window.openEditVattiModal = function(accId, loanIdx) {
     document.getElementById("vatti-edit-modal-overlay").style.display = "flex";
 };
 
-// Save Vatti Edit
 function saveVattiLoanEdit() {
     if (!editingVattiId || editingVattiLoanIndex === null) return;
 
@@ -579,7 +542,7 @@ function saveVattiLoanEdit() {
     });
 }
 
-// Totals Calculation
+// Totals Calculation with Correct Category Mapping
 function updateTotalsAndMonths() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0 };
     let monthsSet = new Set();
@@ -605,7 +568,6 @@ function updateTotalsAndMonths() {
     document.getElementById("mk-val").innerText = `₹${totals["MK செலவு"]}`;
     document.getElementById("sk-val").innerText = `₹${totals["SK செலவு"]}`;
 
-    // Populate Months Select
     const select = document.getElementById("month-filter-select");
     if (select) {
         let optionsHTML = `<option value="ALL">எல்லா மாதங்களும் (All)</option>`;
@@ -627,7 +589,7 @@ function updateVattiTotal() {
     if (elem) elem.innerText = `₹${grandVatti}`;
 }
 
-// Render Transactions List
+// Render General List with Income/Expense UI Support
 function renderGeneralTransactions() {
     const listElem = document.getElementById("all-list");
     if (!listElem) return;
@@ -665,7 +627,7 @@ function renderGeneralTransactions() {
             <div>
                 <div style="font-weight:bold; font-size:14px; color:#0f172a;">${tx.title}</div>
                 <div style="font-size:11px; color:#64748b; margin-top:2px;">
-                    ${tx.dateStr || ''} | ${isIncome ? 'வரவு' : 'செலவு'} (${tx.targetCategory || tx.source})
+                    ${tx.dateStr || ''} | ${isIncome ? 'வரவு (Income)' : 'செலவு'} (${tx.targetCategory || tx.source})
                 </div>
             </div>
             <div style="text-align:right;">
@@ -680,14 +642,12 @@ function renderGeneralTransactions() {
     });
 }
 
-// Delete General Transaction
 window.deleteTransaction = function(id) {
     if (confirm("இந்தப் பதிவை நீக்க விரும்புகிறீர்களா?")) {
         deleteDoc(doc(db, "users", currentUser.uid, "transactions", id));
     }
 };
 
-// Edit General Transaction Modal
 window.openEditTxModal = function(id) {
     const tx = allTransactions.find(t => t.id === id);
     if (!tx) return;
@@ -723,7 +683,6 @@ function saveTransactionEdit() {
         });
 }
 
-// Search Expense Logic
 function handleExpenseSearch() {
     const queryStr = document.getElementById("search-query-input").value.trim().toLowerCase();
     const resultBox = document.getElementById("search-result-box");
@@ -751,7 +710,6 @@ function handleExpenseSearch() {
     `;
 }
 
-// PDF Download Function
 function downloadPDF() {
     const element = document.getElementById("general-view");
     const opt = {
