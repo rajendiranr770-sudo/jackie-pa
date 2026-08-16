@@ -3,138 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>என் நிதி நிர்வாகம்</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF Library -->
+    <title>நிதி பயன்பாடு</title>
+    <!-- HTML2PDF CDN Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 50; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #f1f5f9; margin: 0; padding: 12px; font-size: 14px; }
+        .card-box { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 12px; }
+        
+        /* Top Header */
+        .user-card { background: #0f172a; color: white; padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .logout-btn { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        /* Grid Cards */
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .stat-card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; cursor: pointer; }
+        .stat-card h4 { margin: 0; color: #64748b; font-size: 13px; }
+        .stat-card div { margin-top: 4px; font-size: 18px; font-weight: bold; color: #0f172a; }
+        
+        /* Dropdown & PDF Row */
+        .action-row { display: flex; gap: 10px; margin-bottom: 12px; }
+        .month-select { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #cbd5e1; background: white; font-weight: 600; }
+        .pdf-btn { background: #059669; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+
+        /* Search Box */
+        .search-container { background: #f0f9ff; border: 1px solid #bae6fd; padding: 12px; border-radius: 14px; margin-bottom: 12px; }
+        .search-title { color: #0369a1; font-weight: bold; margin-bottom: 8px; font-size: 14px; }
+        .search-input-group { display: flex; gap: 8px; }
+        .search-input-group input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
+        .search-input-group button { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        /* Bottom Fixed Input Bar (சரியான Align-ல் பேசும் பட்டனுடன்) */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px 12px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 999; }
+        .bottom-bar input { flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+        .btn-send { background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        .btn-mic { background: #16a34a; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+
+        .pb-large { padding-bottom: 70px; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 pb-24">
+<body class="pb-large">
 
-    <!-- Auth Container -->
-    <div id="auth-container" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm text-center">
-            <h2 class="text-2xl font-bold mb-4 text-slate-800">வரவேற்கிறோம்!</h2>
-            <p class="text-slate-600 mb-6">உங்கள் கணக்குகளை நிர்வகிக்க உள்நுழையவும்</p>
-            <button id="login-btn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition">
-                Google மூலம் உள்நுழைக
-            </button>
-        </div>
+    <!-- AUTH CONTAINER -->
+    <div id="auth-container" style="display:flex; justify-content:center; align-items:center; min-height:80vh;">
+        <button id="login-btn" style="background:#2563eb; color:white; border:none; padding:12px 24px; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer;">
+            Google மூலம் உள்நுழைக (Login)
+        </button>
     </div>
 
-    <!-- Main App -->
-    <div id="main-app" class="hidden max-w-md mx-auto p-4">
-        
-        <!-- Header -->
-        <div class="bg-slate-900 text-white p-4 rounded-2xl flex justify-between items-center mb-4 shadow-md">
+    <!-- MAIN APP CONTAINER -->
+    <div id="main-app" style="display:none;">
+
+        <!-- Top User Header -->
+        <div class="user-card">
             <div>
-                <span class="text-sm text-slate-400 block">வரவேற்கிறோம்,</span>
-                <span id="user-display-name" class="font-bold">பயனர்</span>
+                <div style="font-size:12px; opacity:0.8;">வரவேற்கிறோம்,</div>
+                <div id="user-display-name" style="font-size:16px; font-weight:bold;">பயனர்</div>
             </div>
-            <button id="logout-btn" class="bg-red-500/20 text-red-300 text-xs px-3 py-2 rounded-lg font-bold hover:bg-red-500/30">
-                லாக்அவுட்
-            </button>
+            <button id="logout-btn" class="logout-btn">லாக்அவுட்</button>
         </div>
 
-        <!-- Print Container for PDF -->
-        <div id="pdf-printable-area">
+        <!-- Stat Cards Grid -->
+        <div class="grid-container">
+            <div class="stat-card"><h4>சம்பளம்</h4><div id="salary-val">₹0</div></div>
+            <div class="stat-card"><h4>வீடு</h4><div id="home-val">₹0</div></div>
+            <div class="stat-card"><h4>கொல்லை</h4><div id="kollai-val">₹0</div></div>
+            <div class="stat-card"><h4>MK செலவு</h4><div id="mk-val">₹0</div></div>
+            <div class="stat-card"><h4>SK செலவு</h4><div id="sk-val">₹0</div></div>
+            <div class="stat-card" style="border-color:#bfdbfe; background:#eff6ff;" onclick="scrollToVatti()">
+                <h4 style="color:#1d4ed8;">வட்டி பிசினஸ்</h4>
+                <div id="vatti-val" style="color:#1e40af;">₹0</div>
+            </div>
+        </div>
+
+        <!-- Month Filter & Overall PDF Download -->
+        <div class="action-row">
+            <select id="month-filter-select" class="month-select">
+                <option value="ALL">எல்லா மாதங்களும் (All)</option>
+            </select>
+            <button class="pdf-btn" onclick="downloadOverallPDF()">📄 PDF</button>
+        </div>
+
+        <!-- Search Expense Section -->
+        <div class="search-container">
+            <div class="search-title">🔍 செலவு கணக்கு கேட்க / தேட</div>
+            <div class="search-input-group">
+                <input type="text" id="search-query-input" placeholder="எ.கா: சிகரெட், MK செலவு...">
+                <button onclick="processSearch()">தேடு</button>
+            </div>
+            <!-- Dynamic Total Box -->
+            <div id="search-result-box" style="display:none; margin-top:10px;"></div>
+        </div>
+
+        <!-- Transactions Container -->
+        <h3 style="margin: 16px 0 8px 0; color:#334155;">அனைத்துப் பதிவுகள்</h3>
+        <div id="all-list"></div>
+
+        <!-- Vatti Business Section -->
+        <div id="vatti-section" style="margin-top:24px; border-top:2px dashed #cbd5e1; padding-top:16px;">
+            <h3 style="color:#1e40af; margin-bottom:12px;">💰 வட்டி கடன் பதிவிட</h3>
             
-            <div id="pdf-header-title" class="hidden text-center text-xl font-bold mb-4 text-slate-900">
-                நிதி அறிக்கை (Finance Report)
-            </div>
-
-            <!-- Dashboard Cards -->
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                    <div class="text-xs text-slate-500 font-semibold">சம்பளம்</div>
-                    <div id="salary-val" class="text-lg font-extrabold text-slate-800">₹0</div>
+            <div class="card-box" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சுரேஷ்)" style="width:100%; padding:10px; margin-bottom:8px; border:1px solid #cbd5e1; border-radius:8px;">
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <input type="number" id="vatti-principal" placeholder="அசல் தொகை (₹)" style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    <input type="number" id="vatti-rate" placeholder="வட்டி % / பைசா" style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                    <div class="text-xs text-slate-500 font-semibold">வீடு</div>
-                    <div id="home-val" class="text-lg font-extrabold text-slate-800">₹0</div>
-                </div>
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                    <div class="text-xs text-slate-500 font-semibold">கொல்லை</div>
-                    <div id="kollai-val" class="text-lg font-extrabold text-slate-800">₹0</div>
-                </div>
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                    <div class="text-xs text-slate-500 font-semibold">MK செலவு</div>
-                    <div id="mk-val" class="text-lg font-extrabold text-slate-800">₹0</div>
-                </div>
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                    <div class="text-xs text-slate-500 font-semibold">SK செலவு</div>
-                    <div id="sk-val" class="text-lg font-extrabold text-slate-800">₹0</div>
-                </div>
-                <div class="bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-200">
-                    <div class="text-xs text-blue-600 font-semibold">வட்டி பிசினஸ்</div>
-                    <div id="vatti-val" class="text-lg font-extrabold text-blue-700">₹0</div>
+                <div style="display:flex; gap:8px;">
+                    <input type="date" id="vatti-date" style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    <button onclick="addVattiLoan()" style="background:#3b82f6; color:white; border:none; padding:10px 14px; border-radius:8px; font-weight:bold; cursor:pointer;">+ கடன் சேர்</button>
                 </div>
             </div>
 
-            <!-- Month Filter & PDF Button Row -->
-            <div class="flex gap-2 mb-4">
-                <select id="month-filter-select" class="flex-1 bg-white border border-slate-300 text-slate-700 rounded-xl p-2.5 font-semibold text-sm focus:outline-none shadow-sm">
-                    <option value="ALL">எல்லா மாதங்களும் (All)</option>
-                </select>
-                <button onclick="downloadFilteredPDF()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1 transition">
-                    📄 PDF
-                </button>
-            </div>
-
-            <!-- Search Section -->
-            <div class="bg-sky-50 p-4 rounded-2xl border border-sky-200 mb-4 shadow-sm">
-                <h3 class="font-bold text-sky-900 mb-2 flex items-center gap-2">
-                    🔍 செலவு கணக்கு கேட்க / தேட
-                </h3>
-                <div class="flex gap-2">
-                    <input type="text" id="search-query-input" placeholder="எ.கா: சிகரெட், MK செலவு..." class="flex-1 p-3 rounded-xl border border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm shadow-inner">
-                    <button onclick="processSearch()" class="bg-sky-600 text-white px-4 py-3 rounded-xl font-bold text-sm hover:bg-sky-700 transition">
-                        தேடு
-                    </button>
-                </div>
-
-                <!-- Dynamic Search Total Popup/Box (நீங்க கேட்ட பிரத்யேக டோட்டல் பாக்ஸ்) -->
-                <div id="search-result-box" class="mt-3 hidden"></div>
-            </div>
-
-            <!-- All Transactions List -->
-            <div class="mb-4">
-                <h3 class="font-bold text-slate-700 mb-2 text-base">அனைத்துப் பதிவுகள்</h3>
-                <div id="all-list" class="space-y-2"></div>
-            </div>
-
-        </div> <!-- End of PDF Area -->
+            <div id="vatti-accounts-list"></div>
+        </div>
 
     </div>
 
-    <!-- Bottom Input Bar -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 shadow-lg z-40">
-        <div class="max-w-md mx-auto flex gap-2">
-            <input type="text" id="voice-text-input" placeholder="எ.கா: எம் கே செலவு 50" class="flex-1 bg-slate-100 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none">
-            <button onclick="processVoiceOrText()" class="bg-blue-600 text-white font-bold px-4 py-3 rounded-xl text-sm hover:bg-blue-700 transition">
-                அனுப்பு
-            </button>
-            <button onclick="startVoiceRecognition()" class="bg-emerald-600 text-white font-bold px-4 py-3 rounded-xl text-sm hover:bg-emerald-700 transition flex items-center gap-1">
-                🎙️ பேசு
-            </button>
-        </div>
-    </div>
-
-    <!-- Source Selection Modal -->
-    <div id="sourceModal" class="modal">
-        <div class="bg-white p-6 rounded-2xl max-w-xs w-full text-center shadow-2xl">
-            <h3 class="font-bold text-slate-800 text-lg mb-2">பண ஆதாரம் தேர்வு செய்யவும்</h3>
-            <p id="sourceModalText" class="text-sm text-slate-500 mb-4"></p>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="confirmSource('சம்பளம்')" class="bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700">💼 சம்பளம்</button>
-                <button onclick="confirmSource('வீடு')" class="bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-emerald-700">🏠 வீடு</button>
-            </div>
-        </div>
+    <!-- Bottom Input Navigation Bar -->
+    <div class="bottom-bar">
+        <input type="text" id="voice-text-input" placeholder="எ.கா: எம் கே செலவு 50">
+        <button class="btn-send" onclick="processVoiceOrText()">அனுப்பு</button>
+        <button class="btn-mic" onclick="startVoiceRecognition()">🎙️ பேசு</button>
     </div>
 
     <script type="module" src="app.js"></script>
