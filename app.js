@@ -115,17 +115,17 @@ function selectCategoryTab(category) {
     let manualTitle = document.getElementById('manual-entry-title');
 
     if (category === "வட்டி பிசினஸ்") {
-        genView.style.display = "none";
-        vattiView.style.display = "block";
+        if (genView) genView.style.display = "none";
+        if (vattiView) vattiView.style.display = "block";
         renderVattiAccounts();
     } else {
-        genView.style.display = "block";
-        vattiView.style.display = "none";
+        if (genView) genView.style.display = "block";
+        if (vattiView) vattiView.style.display = "none";
 
         // Show/Hide Manual Entry Box based on selection
         if (category !== "ALL" && manualCard) {
             let iconMap = { "சம்பளம்": "💼", "வீடு": "🏠", "கொல்லை": "🌱", "MK செலவு": "🛒", "SK செலவு": "🛍️" };
-            manualTitle.textContent = `${iconMap[category] || '📝'} மேனுவல் பதிவு (${category})`;
+            if (manualTitle) manualTitle.textContent = `${iconMap[category] || '📝'} மேனுவல் பதிவு (${category})`;
             manualCard.style.display = "block";
         } else if (manualCard) {
             manualCard.style.display = "none";
@@ -135,7 +135,7 @@ function selectCategoryTab(category) {
     }
 }
 
-// MANUAL ENTRY ADD FUNCTION (ஸ்கிரீன்ஷாட் வசதி)
+// MANUAL ENTRY ADD FUNCTION
 function addManualTransaction() {
     let textInput = document.getElementById('manual-text');
     let amtInput = document.getElementById('manual-amount');
@@ -161,8 +161,8 @@ function addManualTransaction() {
         date: new Date().toLocaleString()
     });
 
-    textInput.value = "";
-    amtInput.value = "";
+    if (textInput) textInput.value = "";
+    if (amtInput) amtInput.value = "";
 
     saveState();
 }
@@ -171,9 +171,13 @@ function addManualTransaction() {
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
-        document.getElementById('auth-container').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        document.getElementById('user-display-name').textContent = user.displayName || user.email;
+        const authContainer = document.getElementById('auth-container');
+        const mainApp = document.getElementById('main-app');
+        const userDisplayName = document.getElementById('user-display-name');
+
+        if (authContainer) authContainer.style.display = 'none';
+        if (mainApp) mainApp.style.display = 'block';
+        if (userDisplayName) userDisplayName.textContent = user.displayName || user.email;
 
         onSnapshot(doc(db, "users", user.uid), (docSnap) => {
             if (docSnap.exists()) {
@@ -189,8 +193,10 @@ onAuthStateChanged(auth, (user) => {
         });
     } else {
         currentUser = null;
-        document.getElementById('auth-container').style.display = 'flex';
-        document.getElementById('main-app').style.display = 'none';
+        const authContainer = document.getElementById('auth-container');
+        const mainApp = document.getElementById('main-app');
+        if (authContainer) authContainer.style.display = 'flex';
+        if (mainApp) mainApp.style.display = 'none';
     }
 });
 
@@ -237,7 +243,7 @@ function filterByMonthAndTab(list) {
     return result;
 }
 
-// FIXED SMART VOICE & TEXT PARSER (வீடு / சம்பளம் / கொல்லை துல்லியமான பாகுபாடு)
+// SMART VOICE & TEXT PARSER
 function processVoiceOrText() {
     let input = document.getElementById('voice-text-input');
     if (!input || !input.value.trim()) return;
@@ -256,7 +262,7 @@ function processVoiceOrText() {
     if (text.includes("வீடு") || text.includes("வீட்டில்")) {
         source = "வீடு";
         category = "வீடு";
-    } else if (text.includes("கொல்லை") || text.includes-[#கொல்லையில்#]) {
+    } else if (text.includes("கொல்லை") || text.includes("கொல்லையில்")) {
         source = "கொல்லை";
         category = "கொல்லை";
     } else if (text.includes("எம்கே") || text.includes("mk")) {
@@ -316,12 +322,19 @@ function updateDashboardUI() {
     }
     totals["வட்டி"] = totalVattiPrincipal;
 
-    document.getElementById('salary-val').innerText = '₹' + Math.round(totals["சம்பளம்"]);
-    document.getElementById('home-val').innerText = '₹' + Math.round(totals["வீடு"]);
-    document.getElementById('kollai-val').innerText = '₹' + Math.round(totals["கொல்லை"]);
-    document.getElementById('mk-val').innerText = '₹' + Math.round(totals["MK செலவு"]);
-    document.getElementById('sk-val').innerText = '₹' + Math.round(totals["SK செலவு"]);
-    document.getElementById('vatti-val').innerText = '₹' + Math.round(totals["வட்டி"]);
+    const salEl = document.getElementById('salary-val');
+    const homeEl = document.getElementById('home-val');
+    const kolEl = document.getElementById('kollai-val');
+    const mkEl = document.getElementById('mk-val');
+    const skEl = document.getElementById('sk-val');
+    const vatEl = document.getElementById('vatti-val');
+
+    if (salEl) salEl.innerText = '₹' + Math.round(totals["சம்பளம்"]);
+    if (homeEl) homeEl.innerText = '₹' + Math.round(totals["வீடு"]);
+    if (kolEl) kolEl.innerText = '₹' + Math.round(totals["கொல்லை"]);
+    if (mkEl) mkEl.innerText = '₹' + Math.round(totals["MK செலவு"]);
+    if (skEl) skEl.innerText = '₹' + Math.round(totals["SK செலவு"]);
+    if (vatEl) vatEl.innerText = '₹' + Math.round(totals["வட்டி"]);
 }
 
 // SEARCH
@@ -401,18 +414,27 @@ function openEditModal(id) {
 
     currentEditTxId = id;
 
-    document.getElementById('edit-title').value = t.text || '';
-    document.getElementById('edit-amount').value = t.amount || 0;
-    document.getElementById('edit-source').value = t.source || 'சம்பளம்';
-    document.getElementById('edit-target').value = t.category || 'சம்பளம்';
-    document.getElementById('edit-type').value = t.isExpense ? 'expense' : 'income';
-    document.getElementById('edit-date').value = t.date || new Date().toLocaleString();
+    let titleEl = document.getElementById('edit-title');
+    let amtEl = document.getElementById('edit-amount');
+    let srcEl = document.getElementById('edit-source');
+    let targetEl = document.getElementById('edit-target');
+    let typeEl = document.getElementById('edit-type');
+    let dateEl = document.getElementById('edit-date');
 
-    document.getElementById('edit-modal-overlay').style.display = 'flex';
+    if (titleEl) titleEl.value = t.text || '';
+    if (amtEl) amtEl.value = t.amount || 0;
+    if (srcEl) srcEl.value = t.source || 'சம்பளம்';
+    if (targetEl) targetEl.value = t.category || 'சம்பளம்';
+    if (typeEl) typeEl.value = t.isExpense ? 'expense' : 'income';
+    if (dateEl) dateEl.value = t.date || new Date().toLocaleString();
+
+    let overlay = document.getElementById('edit-modal-overlay');
+    if (overlay) overlay.style.display = 'flex';
 }
 
 function closeEditModal() {
-    document.getElementById('edit-modal-overlay').style.display = 'none';
+    let overlay = document.getElementById('edit-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
     currentEditTxId = null;
 }
 
@@ -422,12 +444,19 @@ function saveTxEdit() {
     let t = transactions.find(x => x.id === currentEditTxId);
     if (!t) return;
 
-    t.text = document.getElementById('edit-title').value.trim();
-    t.amount = parseFloat(document.getElementById('edit-amount').value) || 0;
-    t.source = document.getElementById('edit-source').value;
-    t.category = document.getElementById('edit-target').value;
-    t.isExpense = document.getElementById('edit-type').value === 'expense';
-    t.date = document.getElementById('edit-date').value;
+    let titleEl = document.getElementById('edit-title');
+    let amtEl = document.getElementById('edit-amount');
+    let srcEl = document.getElementById('edit-source');
+    let targetEl = document.getElementById('edit-target');
+    let typeEl = document.getElementById('edit-type');
+    let dateEl = document.getElementById('edit-date');
+
+    if (titleEl) t.text = titleEl.value.trim();
+    if (amtEl) t.amount = parseFloat(amtEl.value) || 0;
+    if (srcEl) t.source = srcEl.value;
+    if (targetEl) t.category = targetEl.value;
+    if (typeEl) t.isExpense = typeEl.value === 'expense';
+    if (dateEl) t.date = dateEl.value;
 
     saveState();
     closeEditModal();
@@ -442,19 +471,24 @@ function deleteTx(id) {
 
 // VATTI MANAGEMENT
 function addVattiLoan() {
-    let name = document.getElementById('vatti-name').value.trim();
-    let amount = parseFloat(document.getElementById('vatti-principal').value);
-    let rate = parseFloat(document.getElementById('vatti-rate').value);
-    let date = document.getElementById('vatti-date').value || new Date().toISOString().split('T')[0];
+    let nameInput = document.getElementById('vatti-name');
+    let amtInput = document.getElementById('vatti-principal');
+    let rateInput = document.getElementById('vatti-rate');
+    let dateInput = document.getElementById('vatti-date');
+
+    let name = nameInput ? nameInput.value.trim() : "";
+    let amount = amtInput ? parseFloat(amtInput.value) : 0;
+    let rate = rateInput ? parseFloat(rateInput.value) : 0;
+    let date = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
 
     if (!name || !amount || !rate) return alert("அனைத்து விவரங்களையும் நிரப்பவும்.");
 
     if (!vattiAccounts[name]) vattiAccounts[name] = [];
     vattiAccounts[name].push({ id: Date.now(), amount, rate, date });
 
-    document.getElementById('vatti-name').value = '';
-    document.getElementById('vatti-principal').value = '';
-    document.getElementById('vatti-rate').value = '';
+    if (nameInput) nameInput.value = '';
+    if (amtInput) amtInput.value = '';
+    if (rateInput) rateInput.value = '';
 
     saveState();
 }
@@ -508,15 +542,22 @@ function openVattiEditModal(name, loanId) {
     if (!l) return;
 
     currentVattiEditTarget = { name, loanId };
-    document.getElementById('vatti-edit-principal').value = l.amount || 0;
-    document.getElementById('vatti-edit-rate').value = l.rate || 0;
-    document.getElementById('vatti-edit-date').value = l.date || '';
+    
+    let amtEl = document.getElementById('vatti-edit-principal');
+    let rateEl = document.getElementById('vatti-edit-rate');
+    let dateEl = document.getElementById('vatti-edit-date');
 
-    document.getElementById('vatti-edit-modal-overlay').style.display = 'flex';
+    if (amtEl) amtEl.value = l.amount || 0;
+    if (rateEl) rateEl.value = l.rate || 0;
+    if (dateEl) dateEl.value = l.date || '';
+
+    let overlay = document.getElementById('vatti-edit-modal-overlay');
+    if (overlay) overlay.style.display = 'flex';
 }
 
 function closeVattiEditModal() {
-    document.getElementById('vatti-edit-modal-overlay').style.display = 'none';
+    let overlay = document.getElementById('vatti-edit-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
     currentVattiEditTarget = null;
 }
 
@@ -529,9 +570,13 @@ function saveVattiLoanEdit() {
     let l = loans.find(x => x.id === loanId);
     if (!l) return;
 
-    l.amount = parseFloat(document.getElementById('vatti-edit-principal').value) || 0;
-    l.rate = parseFloat(document.getElementById('vatti-edit-rate').value) || 0;
-    l.date = document.getElementById('vatti-edit-date').value;
+    let amtEl = document.getElementById('vatti-edit-principal');
+    let rateEl = document.getElementById('vatti-edit-rate');
+    let dateEl = document.getElementById('vatti-edit-date');
+
+    if (amtEl) l.amount = parseFloat(amtEl.value) || 0;
+    if (rateEl) l.rate = parseFloat(rateEl.value) || 0;
+    if (dateEl) l.date = dateEl.value;
 
     saveState();
     closeVattiEditModal();
@@ -548,6 +593,7 @@ function deleteVattiLoan(name, loanId) {
 // PDF DOWNLOADS
 function downloadOverallPDF() {
     let element = document.getElementById('general-view');
+    if (!element) return;
     let opt = { margin: 10, filename: 'Overall_Finance_Report.pdf', html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
     html2pdf().set(opt).from(element).save();
 }
