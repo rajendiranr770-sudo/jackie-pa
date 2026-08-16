@@ -459,47 +459,58 @@ function updateDashboardUI() {
     let searchInputEl = document.getElementById('search-query-input');
     let q = searchInputEl ? searchInputEl.value.toLowerCase().trim() : searchQuery.toLowerCase().trim();
 
-    // 1. தேடல் மொத்த தொகையைக் காட்டும் பாக்ஸைப் பிடித் துப் புதுப்பிக்கிறோம்
+    // 1. தேடல் தொகையைக் கணக்கிடுதல்
+    let totalSearchAmt = 0;
+    if (q !== "") {
+        let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+        transactions.forEach(t => {
+            let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+            let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+            
+            let match = textClean.includes(cleanQ) || 
+                        t.text.toLowerCase().includes(q) || 
+                        t.amount.toString().includes(q) ||
+                        catClean.includes(cleanQ);
+
+            if (match) {
+                totalSearchAmt += (t.isExpense ? t.amount : -t.amount);
+            }
+        });
+    }
+
+    // 2. தேடல் ரிசல்ட் கார்டைக் காட்டுதல்
     let searchBoxEl = document.getElementById('search-result-box');
-    
+    if (searchBoxEl) {
+        if (q !== "") {
+            searchBoxEl.style.display = "block";
+            searchBoxEl.innerHTML = `
+            <div style="background:#e0f2fe; border:2px solid #0284c7; border-radius:12px; padding:15px; margin-top:12px; margin-bottom:12px; text-align:center;">
+                <div style="font-size:15px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு</div>
+                <div style="font-size:24px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalSearchAmt}</div>
+            </div>`;
+        } else {
+            searchBoxEl.style.display = "none";
+            searchBoxEl.innerHTML = "";
+        }
+    }
+
+    // 3. லிஸ்ட்களை ரெண்டர் செய்தல்
     for (let id in filterMap) {
         let el = document.getElementById(id);
         if (el) {
             let list = filterByMonth(filterMap[id]());
 
-            let totalSearchAmt = 0;
             if (q !== "") {
                 let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
-
                 list = list.filter(t => {
                     let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
                     let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
                     
-                    let match = textClean.includes(cleanQ) || 
-                                t.text.toLowerCase().includes(q) || 
-                                t.amount.toString().includes(q) ||
-                                catClean.includes(cleanQ);
-
-                    if (match) {
-                        totalSearchAmt += (t.isExpense ? t.amount : -t.amount);
-                    }
-                    return match;
+                    return textClean.includes(cleanQ) || 
+                           t.text.toLowerCase().includes(q) || 
+                           t.amount.toString().includes(q) ||
+                           catClean.includes(cleanQ);
                 });
-            }
-
-            // 'All' டேப்பில் இருக்கும்போது மட்டும் தேடல் பாக்ஸைக் காட்டுவோம்
-            if (id === 'all-list' && searchBoxEl) {
-                if (q !== "") {
-                    searchBoxEl.style.display = "block";
-                    searchBoxEl.innerHTML = `
-                    <div style="background:#e0f2fe; border:2px solid #0284c7; border-radius:10px; padding:12px; margin-top:12px; margin-bottom:5px; text-align:center;">
-                        <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு</div>
-                        <div style="font-size:22px; color:#dc2626; font-weight:800; margin-top:2px;">₹${totalSearchAmt}</div>
-                    </div>`;
-                } else {
-                    searchBoxEl.style.display = "none";
-                    searchBoxEl.innerHTML = "";
-                }
             }
 
             if (list.length === 0) {
