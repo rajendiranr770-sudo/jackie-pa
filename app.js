@@ -236,15 +236,15 @@ function switchCategoryTab(cat) {
     }
 }
 
-// Parse Text/Voice and Extract Smart Intent
-function processBottomInput() {
-    const inputField = document.getElementById("voice-text-input");
+    // ✅ புதுக் கோடு:
     let rawText = inputField.value.trim();
     if (!rawText) return;
 
-    let processedText = convertTamilTextToNumbers(rawText);
+    // 1. கமாக்களை (,) நீக்கிவிட்டு தமிழ் வார்த்தைகளை எண்ணாக மாற்றுகிறோம்
+    let cleanText = rawText.replace(/,/g, ''); 
+    let processedText = convertTamilTextToNumbers(cleanText);
 
-    // Regex for Amount Extraction
+    // 2. Regex மூலம் முழு தொகையை எடுக்கிறோம்
     const amtMatch = processedText.match(/\d+/);
     if (!amtMatch) {
         alert("தொகையை சரியாக குறிப்பிடவும்!");
