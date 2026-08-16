@@ -652,6 +652,10 @@ window.startVoiceRecognition = function() {
     }
 };
 
+window.searchExpenses = function() {
+    renderAllLists();
+};
+
 // INITIAL RENDER
 updateDashboardUI();
 renderAllLists();
