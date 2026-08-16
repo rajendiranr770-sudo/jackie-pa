@@ -86,23 +86,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) loginBtn.addEventListener('click', window.loginWithGoogle);
     if (logoutBtn) logoutBtn.addEventListener('click', window.logoutGoogle);
 
-       // Search Button & Input Event Listener
+    // Search Input Real-time Event Listener
     const searchInput = document.getElementById('search-query-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             searchQuery = e.target.value.toLowerCase().trim();
-            renderAllLists();
+            window.searchExpenses();
         });
     }
 
-    // தேடு பட்டன் கிளிக் பண்ணினாலும் ஒர்க் ஆக:
     window.processSearch = function() {
         if (searchInput) {
             searchQuery = searchInput.value.toLowerCase().trim();
-            renderAllLists();
+            window.searchExpenses();
         }
     };
- 
+
     populateMonthDropdown();
 });
 
@@ -353,6 +352,19 @@ window.addExpenseManual = function(category, descId, amtId, sourceId, dateId) {
     document.getElementById(amtId).value = '';
 };
 
+window.addMoreLoanField = function() {
+    let container = document.getElementById('vatti-inputs-container');
+    if (!container) return;
+    let newDiv = document.createElement('div');
+    newDiv.style.display = 'flex';
+    newDiv.style.gap = '8px';
+    newDiv.innerHTML = `
+        <input type="number" class="vatti-amt-input" placeholder="அசல் தொகை (₹)" style="flex:1;">
+        <input type="number" class="vatti-rate-input" placeholder="வட்டி % / பைசா" style="flex:1;">
+    `;
+    container.appendChild(newDiv);
+};
+
 window.saveVattiAccount = function() {
     let nameInput = document.getElementById('vatti-name');
     let name = nameInput ? nameInput.value.trim() || "பொது வட்டி" : "பொது வட்டி";
@@ -446,6 +458,54 @@ function updateDashboardUI() {
     setVal('vatti-val', totals["வட்டி"]);
 }
 
+window.searchExpenses = function() {
+    let input = document.getElementById('search-query-input');
+    let q = input ? input.value.trim() : searchQuery;
+    let box = document.getElementById('search-result-box');
+    
+    if (!box) return;
+
+    if (q === "") {
+        box.innerHTML = "";
+        renderAllLists();
+        return;
+    }
+
+    let cleanQ = q.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+    let totalAmt = 0;
+    let count = 0;
+
+    transactions.forEach(t => {
+        let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+        let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+
+        let match = textClean.includes(cleanQ) || 
+                    t.text.toLowerCase().includes(q.toLowerCase()) || 
+                    t.amount.toString().includes(q) ||
+                    catClean.includes(cleanQ);
+
+        if (match) {
+            totalAmt += (t.isExpense ? Number(t.amount) : -Number(t.amount));
+            count++;
+        }
+    });
+
+    if (count > 0) {
+        box.innerHTML = `
+        <div style="background:#fff; border:2px solid #0284c7; border-radius:10px; padding:12px; text-align:center;">
+            <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு (${count} பதிவுகள்)</div>
+            <div style="font-size:24px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalAmt}</div>
+        </div>`;
+    } else {
+        box.innerHTML = `
+        <div style="background:#fff; border:1px solid #94a3b8; border-radius:10px; padding:10px; text-align:center; color:#64748b;">
+            🔍 "${q}" என்ற பெயரில் பதிவுகள் எதுவும் இல்லை!
+        </div>`;
+    }
+
+    renderAllLists();
+};
+
 function renderAllLists() {
     const filterMap = {
         'all-list': () => transactions,
@@ -459,43 +519,13 @@ function renderAllLists() {
     let searchInputEl = document.getElementById('search-query-input');
     let q = searchInputEl ? searchInputEl.value.toLowerCase().trim() : searchQuery.toLowerCase().trim();
 
-    // 1. தேடல் தொகையைக் கணக்கிடுதல் & Alert மெசேஜ் காட்டுதல்
-    if (q !== "") {
-        let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
-        let totalSearchAmt = 0;
-        let matchCount = 0;
-
-        transactions.forEach(t => {
-            let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
-            let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
-            
-            let match = textClean.includes(cleanQ) || 
-                        t.text.toLowerCase().includes(q) || 
-                        t.amount.toString().includes(q) ||
-                        catClean.includes(cleanQ);
-
-            if (match) {
-                totalSearchAmt += (t.isExpense ? Number(t.amount) : -Number(t.amount));
-                matchCount++;
-            }
-        });
-
-        // பட்டன் அமுக்கியதும் போன் ஸ்கிரீன்ல பாப்அப் மெசேஜ் வரும்
-        if (matchCount > 0) {
-            alert(`🔍 "${q}" தேடல் முடிவு:\n\nமொத்த செலவு: ₹${totalSearchAmt}`);
-        } else {
-            alert(`🔍 "${q}" என்ற பெயரில் பதிவுகள் எதுவும் இல்லை!`);
-        }
-    }
-
-    // 2. லிஸ்ட்களை ரெண்டர் செய்தல்
     for (let id in filterMap) {
         let el = document.getElementById(id);
         if (el) {
             let list = filterByMonth(filterMap[id]());
 
             if (q !== "") {
-                let cleanQ = q.replace(/[ாடடிடீடுடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+                let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
                 list = list.filter(t => {
                     let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
                     let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
@@ -632,6 +662,47 @@ window.deleteTx = function(id) {
     }
 };
 
+window.openVattiEditModal = function(name, index) {
+    if (!vattiAccounts[name] || !vattiAccounts[name][index]) return;
+    editingVattiInfo = { name, index };
+    let loan = vattiAccounts[name][index];
+
+    if (document.getElementById('edit-vatti-amt')) document.getElementById('edit-vatti-amt').value = loan.amount;
+    if (document.getElementById('edit-vatti-rate')) document.getElementById('edit-vatti-rate').value = loan.rate;
+    if (document.getElementById('edit-vatti-date')) document.getElementById('edit-vatti-date').value = loan.date;
+
+    let modal = document.getElementById('vattiEditModal');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.closeVattiEditModal = function() {
+    let modal = document.getElementById('vattiEditModal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.saveVattiEdit = function() {
+    if (!editingVattiInfo) return;
+    let { name, index } = editingVattiInfo;
+    let loan = vattiAccounts[name][index];
+    if (loan) {
+        loan.amount = parseFloat(document.getElementById('edit-vatti-amt').value) || loan.amount;
+        loan.rate = parseFloat(document.getElementById('edit-vatti-rate').value);
+        let date = document.getElementById('edit-vatti-date').value;
+        if (date) loan.date = date;
+
+        saveState();
+    }
+    window.closeVattiEditModal();
+};
+
+window.deleteVattiLoan = function(name, index) {
+    if (confirm("இந்த வட்டி பதிவை நீக்க விரும்புகிறீர்களா?")) {
+        vattiAccounts[name].splice(index, 1);
+        if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
+        saveState();
+    }
+};
+
 window.processVoiceOrText = function() {
     let input = document.getElementById('voice-text-input');
     if (input && input.value.trim() !== '') {
@@ -655,10 +726,6 @@ window.startVoiceRecognition = function() {
     } else {
         alert("குரல் வசதி இந்த பிரவுசரில் இல்லை");
     }
-};
-
-window.searchExpenses = function() {
-    renderAllLists();
 };
 
 // INITIAL RENDER
