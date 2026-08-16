@@ -1,623 +1,763 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    getAuth, 
+    GoogleAuthProvider, 
+    signInWithPopup, 
+    signOut, 
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    onSnapshot, 
+    deleteDoc, 
+    doc, 
+    updateDoc, 
+    query, 
+    where, 
+    orderBy 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// 1. Firebase Configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
-    authDomain: "myfinanceapp-3f883.firebaseapp.com",
-    databaseURL: "https://myfinanceapp-3f883-default-rtdb.firebaseio.com",
-    projectId: "myfinanceapp-3f883",
-    storageBucket: "myfinanceapp-3f883.firebasestorage.app",
-    messagingSenderId: "698658153791",
-    appId: "1:698658153791:web:08ea0171d24a9b0da51f8a"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
+// State Variables
 let currentUser = null;
-let transactions = JSON.parse(localStorage.getItem('my_app_txs')) || [];
-let vattiAccounts = JSON.parse(localStorage.getItem('my_app_vatti')) || {};
-let searchQuery = "";
-let selectedMonthFilter = "ALL";
-let selectedCategoryTab = "ALL";
+let currentCategory = "ALL";
+let currentMonth = "ALL";
 
-let currentEditTxId = null;
-let currentVattiEditTarget = null;
-let isRemoteUpdate = false; 
+let allTransactions = [];
+let vattiAccounts = [];
 
-window.editTx = openEditModal;
-window.deleteTx = deleteTx;
-window.editVattiLoan = openVattiEditModal;
-window.deleteVattiLoan = deleteVattiLoan;
-window.downloadSingleVattiPDF = downloadSingleVattiPDF;
+let editingTxId = null;
+let editingVattiId = null;
+let editingVattiLoanIndex = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Category Tabs click
-    document.querySelectorAll('.filter-tab').forEach(btn => {
-        btn.addEventListener('click', () => {
-            let cat = btn.getAttribute('data-category');
-            selectCategoryTab(cat);
-        });
-    });
+// Tamil Text Numbers to Numeric Values
+function convertTamilTextToNumbers(text) {
+    if (!text) return text;
+    let str = text.toLowerCase();
+    
+    // Convert Tamil Numeric Digits
+    const tamilDigits = {'௦':'0','௧':'1','௨':'2','௩':'3','௪':'4','௫':'5','௬':'6','௭':'7','௮':'8','௯':'9'};
+    str = str.replace(/[௦-௯]/g, m => tamilDigits[m]);
 
-    // Top Stat Cards click
-    const categories = ['சம்பளம்', 'வீடு', 'கொல்லை', 'MK செலவு', 'SK செலவு', 'வட்டி பிசினஸ்'];
-    categories.forEach(cat => {
-        let card = document.getElementById(`card-${cat}`);
-        if (card) {
-            card.addEventListener('click', () => selectCategoryTab(cat));
+    // Words Map
+    const wordMap = [
+        { w: "ஒரு லட்சம்", v: 100000 }, { w: "லட்சம்", v: 100000 },
+        { w: "அம்பதாயிரம்", v: 50000 }, { w: "ஐம்பதாயிரம்", v: 50000 },
+        { w: "நாற்பதாயிரம்", v: 40000 }, { w: "முப்பதாயிரம்", v: 30000 },
+        { w: "இருபதாயிரம்", v: 20000 }, { w: "பத்தாயிரம்", v: 10000 },
+        { w: "ஒன்பதாயிரம்", v: 9000 }, { w: "எட்டாயிரம்", v: 8000 },
+        { w: "ஏழாயிரம்", v: 7000 }, { w: "ஆறாயிரம்", v: 6000 },
+        { w: "ஐயாயிரம்", v: 5000 }, { w: "நாலாயிரம்", v: 4000 },
+        { w: "மூன்றாயிரம்", v: 3000 }, { w: "இரண்டாயிரம்", v: 2000 },
+        { w: "ஆயிரம்", v: 1000 },
+        { w: "நூறு", v: 100 }, { w: "இருநூறு", v: 200 }, { w: "முந்நூறு", v: 300 },
+        { w: "நானூறு", v: 400 }, { w: "ஐநூறு", v: 500 }, { w: "அறுநூறு", v: 600 },
+        { w: "எழுநூறு", v: 700 }, { w: "எண்ணூறு", v: 800 }, { w: "தொள்ளாயிரம்", v: 900 }
+    ];
+
+    wordMap.forEach(item => {
+        if (str.includes(item.w)) {
+            str = str.replace(new RegExp(item.w, 'g'), ` ${item.v} `);
         }
     });
 
-    // Action & Form Buttons
-    document.getElementById('login-btn')?.addEventListener('click', () => signInWithPopup(auth, provider));
-    document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
-    document.getElementById('btn-pdf-download')?.addEventListener('click', downloadOverallPDF);
-    document.getElementById('btn-search')?.addEventListener('click', processSearch);
-    document.getElementById('btn-add-vatti')?.addEventListener('click', addVattiLoan);
-    document.getElementById('btn-send-tx')?.addEventListener('click', processVoiceOrText);
-    document.getElementById('btn-mic-speech')?.addEventListener('click', startVoiceRecognition);
-    document.getElementById('btn-add-manual')?.addEventListener('click', addManualTransaction);
+    return str;
+}
+
+// DOM Elements Initialization
+document.addEventListener("DOMContentLoaded", () => {
+    // Auth elements
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    
+    if (loginBtn) {
+        loginBtn.addEventListener("click", () => {
+            signInWithPopup(auth, provider).catch(err => alert("Login Error: " + err.message));
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            signOut(auth);
+        });
+    }
+
+    // Category Tabs & Cards Event Listener
+    document.querySelectorAll(".filter-tab, .stat-card").forEach(elem => {
+        elem.addEventListener("click", (e) => {
+            let cat = elem.getAttribute("data-category") || elem.id.replace("card-", "");
+            if (cat) switchCategoryTab(cat);
+        });
+    });
+
+    // Inputs & Action Buttons
+    const btnSendTx = document.getElementById("btn-send-tx");
+    if (btnSendTx) btnSendTx.addEventListener("click", processBottomInput);
+
+    const btnMicSpeech = document.getElementById("btn-mic-speech");
+    if (btnMicSpeech) btnMicSpeech.addEventListener("click", startVoiceRecognition);
+
+    const btnAddManual = document.getElementById("btn-add-manual");
+    if (btnAddManual) btnAddManual.addEventListener("click", handleAddManual);
+
+    const btnAddVatti = document.getElementById("btn-add-vatti");
+    if (btnAddVatti) btnAddVatti.addEventListener("click", handleAddVattiLoan);
+
+    const monthSelect = document.getElementById("month-filter-select");
+    if (monthSelect) monthSelect.addEventListener("change", (e) => {
+        currentMonth = e.target.value;
+        renderGeneralTransactions();
+    });
+
+    const btnSearch = document.getElementById("btn-search");
+    if (btnSearch) btnSearch.addEventListener("click", handleExpenseSearch);
+
+    const btnPdf = document.getElementById("btn-pdf-download");
+    if (btnPdf) btnPdf.addEventListener("click", downloadPDF);
 
     // Edit Modal Buttons
-    document.getElementById('btn-save-edit')?.addEventListener('click', saveTxEdit);
-    document.getElementById('btn-close-edit')?.addEventListener('click', closeEditModal);
-    document.getElementById('btn-vatti-save-edit')?.addEventListener('click', saveVattiLoanEdit);
-    document.getElementById('btn-vatti-close-edit')?.addEventListener('click', closeVattiEditModal);
-});
-
-// REFRESH UI ONLY
-function refreshUI() {
-    populateMonthDropdown();
-    updateDashboardUI();
-    renderAllLists();
-    renderVattiAccounts();
-}
-
-// SAVE & SYNC TO FIREBASE
-function saveState() {
-    localStorage.setItem('my_app_txs', JSON.stringify(transactions));
-    localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
-
-    if (currentUser && !isRemoteUpdate) {
-        setDoc(doc(db, "users", currentUser.uid), {
-            transactions: transactions,
-            vattiAccounts: vattiAccounts,
-            lastUpdated: new Date().toISOString()
-        }, { merge: true });
-    }
-
-    refreshUI();
-}
-
-// CATEGORY SWITCHER & MANUAL FORM TOGGLE
-function selectCategoryTab(category) {
-    selectedCategoryTab = category;
+    const btnSaveEdit = document.getElementById("btn-save-edit");
+    if (btnSaveEdit) btnSaveEdit.addEventListener("click", saveTransactionEdit);
     
-    document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
-    let activeTab = document.getElementById(`tab-${category}`);
-    if (activeTab) {
-        activeTab.classList.add('active');
-        activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-
-    let heading = document.getElementById('list-heading');
-    if (heading) {
-        heading.textContent = category === "ALL" ? "அனைத்துப் பதிவுகள்" : `${category} பதிவுகள்`;
-    }
-
-    let genView = document.getElementById('general-view');
-    let vattiView = document.getElementById('vatti-view');
-    let manualCard = document.getElementById('manual-entry-card');
-    let manualTitle = document.getElementById('manual-entry-title');
-
-    if (category === "வட்டி பிசினஸ்") {
-        if (genView) genView.style.display = "none";
-        if (vattiView) vattiView.style.display = "block";
-        renderVattiAccounts();
-    } else {
-        if (genView) genView.style.display = "block";
-        if (vattiView) vattiView.style.display = "none";
-
-        // Show/Hide Manual Entry Box based on selection
-        if (category !== "ALL" && manualCard) {
-            let iconMap = { "சம்பளம்": "💼", "வீடு": "🏠", "கொல்லை": "🌱", "MK செலவு": "🛒", "SK செலவு": "🛍️" };
-            if (manualTitle) manualTitle.textContent = `${iconMap[category] || '📝'} மேனுவல் பதிவு (${category})`;
-            manualCard.style.display = "block";
-        } else if (manualCard) {
-            manualCard.style.display = "none";
-        }
-
-        renderAllLists();
-    }
-}
-
-// MANUAL ENTRY ADD FUNCTION
-function addManualTransaction() {
-    let textInput = document.getElementById('manual-text');
-    let amtInput = document.getElementById('manual-amount');
-    let typeInput = document.getElementById('manual-type');
-
-    let text = textInput ? textInput.value.trim() : "";
-    let amount = amtInput ? parseFloat(amtInput.value) : 0;
-    let type = typeInput ? typeInput.value : "income";
-
-    if (!text || !amount) return alert("விவரம் மற்றும் தொகையை உள்ளிடவும்.");
-
-    let isExpense = (type === "expense");
-    let category = selectedCategoryTab;
-    let source = selectedCategoryTab;
-
-    transactions.unshift({
-        id: Date.now(),
-        text: text,
-        amount: amount,
-        category: category,
-        source: source,
-        isExpense: isExpense,
-        date: new Date().toLocaleString()
+    const btnCloseEdit = document.getElementById("btn-close-edit");
+    if (btnCloseEdit) btnCloseEdit.addEventListener("click", () => {
+        document.getElementById("edit-modal-overlay").style.display = "none";
     });
 
-    if (textInput) textInput.value = "";
-    if (amtInput) amtInput.value = "";
+    // Vatti Edit Modal Buttons
+    const btnVattiSaveEdit = document.getElementById("btn-vatti-save-edit");
+    if (btnVattiSaveEdit) btnVattiSaveEdit.addEventListener("click", saveVattiLoanEdit);
 
-    saveState();
-}
+    const btnVattiCloseEdit = document.getElementById("btn-vatti-close-edit");
+    if (btnVattiCloseEdit) btnVattiCloseEdit.addEventListener("click", () => {
+        document.getElementById("vatti-edit-modal-overlay").style.display = "none";
+    });
+});
 
-// AUTH LISTENERS
+// Authentication Observer
 onAuthStateChanged(auth, (user) => {
+    const authContainer = document.getElementById("auth-container");
+    const mainApp = document.getElementById("main-app");
+
     if (user) {
         currentUser = user;
-        const authContainer = document.getElementById('auth-container');
-        const mainApp = document.getElementById('main-app');
-        const userDisplayName = document.getElementById('user-display-name');
+        if (authContainer) authContainer.style.display = "none";
+        if (mainApp) mainApp.style.display = "block";
 
-        if (authContainer) authContainer.style.display = 'none';
-        if (mainApp) mainApp.style.display = 'block';
-        if (userDisplayName) userDisplayName.textContent = user.displayName || user.email;
+        const userNameElem = document.getElementById("user-display-name");
+        if (userNameElem) userNameElem.innerText = user.displayName || user.email.split("@")[0];
 
-        onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-            if (docSnap.exists()) {
-                let data = docSnap.data();
-                isRemoteUpdate = true;
-                if (data.transactions) transactions = data.transactions;
-                if (data.vattiAccounts) vattiAccounts = data.vattiAccounts;
-                localStorage.setItem('my_app_txs', JSON.stringify(transactions));
-                localStorage.setItem('my_app_vatti', JSON.stringify(vattiAccounts));
-                refreshUI();
-                isRemoteUpdate = false;
-            }
-        });
+        listenToData();
     } else {
         currentUser = null;
-        const authContainer = document.getElementById('auth-container');
-        const mainApp = document.getElementById('main-app');
-        if (authContainer) authContainer.style.display = 'flex';
-        if (mainApp) mainApp.style.display = 'none';
+        if (authContainer) authContainer.style.display = "flex";
+        if (mainApp) mainApp.style.display = "none";
     }
 });
 
-// MONTH FILTERING
-function populateMonthDropdown() {
-    let selectEl = document.getElementById('month-filter-select');
-    if (!selectEl) return;
+// Realtime Firestore Listener
+function listenToData() {
+    if (!currentUser) return;
 
-    let months = new Set();
-    transactions.forEach(t => {
-        if (t.date) {
-            let d = new Date(t.date);
-            if (!isNaN(d)) months.add(d.toLocaleString('en-US', { month: 'short', year: 'numeric' }));
-        }
+    // Listen General Transactions
+    const qTx = query(
+        collection(db, "users", currentUser.uid, "transactions"),
+        orderBy("timestamp", "desc")
+    );
+    onSnapshot(qTx, (snapshot) => {
+        allTransactions = [];
+        snapshot.forEach(docSnap => {
+            allTransactions.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        updateTotalsAndMonths();
+        renderGeneralTransactions();
     });
 
-    let curr = selectEl.value || "ALL";
-    selectEl.innerHTML = `<option value="ALL">எல்லா மாதங்களும் (All)</option>`;
-    months.forEach(m => selectEl.innerHTML += `<option value="${m}">${m}</option>`);
-    selectEl.value = curr;
+    // Listen Vatti Accounts
+    const qVatti = query(
+        collection(db, "users", currentUser.uid, "vatti_accounts"),
+        orderBy("createdAt", "desc")
+    );
+    onSnapshot(qVatti, (snapshot) => {
+        vattiAccounts = [];
+        snapshot.forEach(docSnap => {
+            vattiAccounts.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        updateVattiTotal();
+        renderVattiAccounts();
+    });
+}
 
-    selectEl.onchange = (e) => {
-        selectedMonthFilter = e.target.value;
-        renderAllLists();
-        updateDashboardUI();
+// Category Tab Switcher
+function switchCategoryTab(cat) {
+    currentCategory = cat;
+
+    document.querySelectorAll(".filter-tab").forEach(tab => {
+        if (tab.getAttribute("data-category") === cat) tab.classList.add("active");
+        else tab.classList.remove("active");
+    });
+
+    const generalView = document.getElementById("general-view");
+    const vattiView = document.getElementById("vatti-view");
+    const manualCard = document.getElementById("manual-entry-card");
+
+    if (cat === "வட்டி பிசினஸ்") {
+        if (generalView) generalView.style.display = "none";
+        if (vattiView) vattiView.style.display = "block";
+    } else {
+        if (vattiView) vattiView.style.display = "none";
+        if (generalView) generalView.style.display = "block";
+
+        if (cat === "ALL") {
+            if (manualCard) manualCard.style.display = "none";
+            document.getElementById("list-heading").innerText = "அனைத்துப் பதிவுகள்";
+        } else {
+            if (manualCard) manualCard.style.display = "block";
+            document.getElementById("manual-entry-title").innerText = `🏡 மேனுவல் பதிவு - ${cat}`;
+            document.getElementById("list-heading").innerText = `${cat} - பதிவுகள்`;
+        }
+        renderGeneralTransactions();
+    }
+}
+
+// Parse Text/Voice and Extract Smart Intent
+function processBottomInput() {
+    const inputField = document.getElementById("voice-text-input");
+    let rawText = inputField.value.trim();
+    if (!rawText) return;
+
+    let processedText = convertTamilTextToNumbers(rawText);
+
+    // Regex for Amount Extraction
+    const amtMatch = processedText.match(/\d+/);
+    if (!amtMatch) {
+        alert("தொகையை சரியாக குறிப்பிடவும்!");
+        return;
+    }
+
+    const amount = parseFloat(amtMatch[0]);
+
+    // Enhanced Category Parsing
+    let targetCategory = "பொதுச் செலவு";
+    let type = "expense";
+    let sourceCategory = "சம்பளம்";
+
+    let lowerText = processedText.toLowerCase();
+
+    if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பளம் வந்தது") || lowerText.includes("salary")) {
+        targetCategory = "சம்பளம்";
+        type = "income";
+        sourceCategory = "சம்பளம்";
+    } else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டிலிருந்து") || lowerText.includes("வீட்டு")) {
+        targetCategory = "வீடு";
+        if (lowerText.includes("வந்தது") || lowerText.includes("வரவு") || lowerText.includes("பணம் வந்தது")) {
+            type = "income";
+        }
+        sourceCategory = "வீடு";
+    } else if (lowerText.includes("கொல்லை") || lowerText.includes("தோட்டம்")) {
+        targetCategory = "கொல்லை";
+        if (lowerText.includes("வந்தது") || lowerText.includes("வரவு")) {
+            type = "income";
+        }
+        sourceCategory = "கொல்லை";
+    } else if (lowerText.includes("எம் கே") || lowerText.includes("mk")) {
+        targetCategory = "MK செலவு";
+        sourceCategory = "MK செலவு";
+    } else if (lowerText.includes("எஸ் கே") || lowerText.includes("sk")) {
+        targetCategory = "SK செலவு";
+        sourceCategory = "SK செலவு";
+    }
+
+    const now = new Date();
+    const formattedDate = now.toLocaleString("en-US", { 
+        month: "numeric", day: "numeric", year: "numeric", 
+        hour: "numeric", minute: "numeric", second: "numeric", hour12: true 
+    });
+
+    const newTx = {
+        title: rawText,
+        amount: amount,
+        type: type,
+        source: sourceCategory,
+        targetCategory: targetCategory,
+        dateStr: formattedDate,
+        timestamp: Date.now()
+    };
+
+    addDoc(collection(db, "users", currentUser.uid, "transactions"), newTx)
+        .then(() => {
+            inputField.value = "";
+        })
+        .catch(err => alert("Error: " + err.message));
+}
+
+// Voice Recognition setup
+function startVoiceRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("உங்கள் பிரவுசரில் Voice Recognition இயங்காது.");
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ta-IN';
+    recognition.start();
+
+    const micBtn = document.getElementById("btn-mic-speech");
+    micBtn.innerText = "🎙️ கேட்கிறது...";
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById("voice-text-input").value = transcript;
+        micBtn.innerText = "🎙️ பேசு";
+        processBottomInput();
+    };
+
+    recognition.onerror = () => {
+        micBtn.innerText = "🎙️ பேசு";
+    };
+
+    recognition.onend = () => {
+        micBtn.innerText = "🎙️ பேசு";
     };
 }
 
-function filterByMonthAndTab(list) {
-    let result = list;
+// Handle Add Manual Entry
+function handleAddManual() {
+    const text = document.getElementById("manual-text").value.trim();
+    const amount = parseFloat(document.getElementById("manual-amount").value);
+    const type = document.getElementById("manual-type").value;
 
-    if (selectedMonthFilter !== "ALL") {
-        result = result.filter(t => {
-            if (!t.date) return false;
-            let d = new Date(t.date);
-            return d.toLocaleString('en-US', { month: 'short', year: 'numeric' }) === selectedMonthFilter;
+    if (!text || isNaN(amount)) {
+        alert("விவரம் மற்றும் தொகையைச் சரியாக உள்ளிடவும்!");
+        return;
+    }
+
+    const now = new Date();
+    const formattedDate = now.toLocaleString("en-US", { 
+        month: "numeric", day: "numeric", year: "numeric", 
+        hour: "numeric", minute: "numeric", second: "numeric", hour12: true 
+    });
+
+    const newTx = {
+        title: text,
+        amount: amount,
+        type: type,
+        source: currentCategory,
+        targetCategory: currentCategory,
+        dateStr: formattedDate,
+        timestamp: Date.now()
+    };
+
+    addDoc(collection(db, "users", currentUser.uid, "transactions"), newTx)
+        .then(() => {
+            document.getElementById("manual-text").value = "";
+            document.getElementById("manual-amount").value = "";
+        });
+}
+
+// Calculate Date Differences & Interests Accurate Logic
+function calculateLoanDetails(principal, rate, startDateStr) {
+    const startDate = new Date(startDateStr);
+    const today = new Date();
+    
+    // Time difference in Days
+    const timeDiff = today.getTime() - startDate.getTime();
+    let totalDays = Math.floor(timeDiff / (1000 * 3600 * 24));
+    if (totalDays < 0) totalDays = 0;
+
+    const months = Math.floor(totalDays / 30);
+    const remDays = totalDays % 30;
+
+    // Monthly Interest amount
+    const monthlyInterest = (principal * rate) / 100;
+    
+    // Per day Interest amount
+    const dailyInterest = monthlyInterest / 30;
+
+    // Total calculated interest
+    const totalInterest = Math.round((totalDays * dailyInterest));
+
+    return {
+        totalDays,
+        months,
+        remDays,
+        monthlyInterest,
+        totalInterest
+    };
+}
+
+// Add Vatti Loan (Supports Multiple Loans under Same Name)
+function handleAddVattiLoan() {
+    const name = document.getElementById("vatti-name").value.trim();
+    const principal = parseFloat(document.getElementById("vatti-principal").value);
+    const rate = parseFloat(document.getElementById("vatti-rate").value);
+    const date = document.getElementById("vatti-date").value;
+
+    if (!name || isNaN(principal) || isNaN(rate) || !date) {
+        alert("எல்லா விவரங்களையும் சரியாக நிரப்பவும்!");
+        return;
+    }
+
+    const existingAccount = vattiAccounts.find(acc => acc.name.toLowerCase() === name.toLowerCase());
+
+    const newLoanItem = {
+        principal: principal,
+        rate: rate,
+        date: date
+    };
+
+    if (existingAccount) {
+        // Add as additional loan
+        const updatedLoans = [...(existingAccount.loans || []), newLoanItem];
+        updateDoc(doc(db, "users", currentUser.uid, "vatti_accounts", existingAccount.id), {
+            loans: updatedLoans
+        }).then(() => resetVattiForm());
+    } else {
+        // Create new account
+        const newAcc = {
+            name: name,
+            loans: [newLoanItem],
+            createdAt: Date.now()
+        };
+        addDoc(collection(db, "users", currentUser.uid, "vatti_accounts"), newAcc)
+            .then(() => resetVattiForm());
+    }
+}
+
+function resetVattiForm() {
+    document.getElementById("vatti-name").value = "";
+    document.getElementById("vatti-principal").value = "";
+    document.getElementById("vatti-rate").value = "";
+    document.getElementById("vatti-date").value = "";
+}
+
+// Render Vatti Accounts View
+function renderVattiAccounts() {
+    const listContainer = document.getElementById("vatti-accounts-list");
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "";
+
+    if (vattiAccounts.length === 0) {
+        listContainer.innerHTML = "<p style='text-align:center; color:#64748b; padding:15px;'>வட்டி கடன்கள் எதுவும் இல்லை.</p>";
+        return;
+    }
+
+    vattiAccounts.forEach(acc => {
+        let totalAccPrincipal = 0;
+        let totalAccInterest = 0;
+
+        let loansHTML = "";
+
+        (acc.loans || []).forEach((loan, idx) => {
+            const calc = calculateLoanDetails(loan.principal, loan.rate, loan.date);
+            totalAccPrincipal += loan.principal;
+            totalAccInterest += calc.totalInterest;
+
+            loansHTML += `
+                <div style="border-left:3px solid #2563eb; background:#f8fafc; padding:8px 10px; margin-bottom:8px; border-radius:0 8px 8px 0; position:relative;">
+                    <div style="font-weight:bold; color:#1e293b; font-size:13px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>கடன் ${idx + 1}: அசல்: ₹${loan.principal} | வட்டி: ${loan.rate}%</span>
+                        <div>
+                            <span style="cursor:pointer; margin-right:8px;" onclick="openEditVattiModal('${acc.id}', ${idx})">✏️</span>
+                            <span style="cursor:pointer;" onclick="deleteVattiLoan('${acc.id}', ${idx})">🗑️</span>
+                        </div>
+                    </div>
+                    <div style="font-size:11px; color:#64748b; margin-top:3px;">
+                        📅 தேதி: ${loan.date} (${calc.totalDays} நாட்கள் (${calc.months} மாதம் ${calc.remDays} நாள்))
+                    </div>
+                    <div style="font-size:12px; font-weight:bold; color:#d97706; margin-top:3px;">
+                        வட்டி தொகை: ₹${calc.totalInterest} (மாத வட்டி ₹${calc.monthlyInterest})
+                    </div>
+                </div>
+            `;
+        });
+
+        const grandTotal = totalAccPrincipal + totalAccInterest;
+
+        const card = document.createElement("div");
+        card.className = "card-box";
+        card.style.border = "1px solid #e2e8f0";
+        card.style.marginBottom = "15px";
+
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; cursor:pointer;" onclick="selectVattiNameForForm('${acc.name}')">
+                <h3 style="margin:0; color:#1e40af; font-size:16px;">👤 ${acc.name}</h3>
+                <span style="font-size:11px; background:#e0e7ff; color:#3730a3; padding:2px 8px; border-radius:12px; font-weight:bold;">+ கடன் சேர்</span>
+            </div>
+            ${loansHTML}
+            <div style="background:#0f172a; color:white; padding:10px; border-radius:8px; margin-top:8px; font-size:13px;">
+                <div>மொத்த அசல்: ₹${totalAccPrincipal} | மொத்த வட்டி: ₹${totalAccInterest}</div>
+                <div style="font-size:15px; font-weight:bold; color:#4ade80; margin-top:4px;">மொத்தம்: ₹${grandTotal}</div>
+            </div>
+        `;
+
+        listContainer.appendChild(card);
+    });
+}
+
+// Click Name to Auto Fill Form for Second Loan
+window.selectVattiNameForForm = function(name) {
+    document.getElementById("vatti-name").value = name;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// Delete Single Vatti Loan
+window.deleteVattiLoan = function(accId, loanIdx) {
+    if (!confirm("இந்தக் கடனை நீக்கவா?")) return;
+
+    const acc = vattiAccounts.find(a => a.id === accId);
+    if (!acc) return;
+
+    const updatedLoans = [...acc.loans];
+    updatedLoans.splice(loanIdx, 1);
+
+    if (updatedLoans.length === 0) {
+        deleteDoc(doc(db, "users", currentUser.uid, "vatti_accounts", accId));
+    } else {
+        updateDoc(doc(db, "users", currentUser.uid, "vatti_accounts", accId), {
+            loans: updatedLoans
         });
     }
+};
 
-    if (selectedCategoryTab !== "ALL" && selectedCategoryTab !== "வட்டி பிசினஸ்") {
-        result = result.filter(t => t.category === selectedCategoryTab || t.source === selectedCategoryTab);
-    }
+// Open Vatti Edit Modal
+window.openEditVattiModal = function(accId, loanIdx) {
+    const acc = vattiAccounts.find(a => a.id === accId);
+    if (!acc || !acc.loans[loanIdx]) return;
 
-    return result;
-}
+    editingVattiId = accId;
+    editingVattiLoanIndex = loanIdx;
 
-// SMART VOICE & TEXT PARSER
-function processVoiceOrText() {
-    let input = document.getElementById('voice-text-input');
-    if (!input || !input.value.trim()) return;
+    const loan = acc.loans[loanIdx];
+    document.getElementById("vatti-edit-principal").value = loan.principal;
+    document.getElementById("vatti-edit-rate").value = loan.rate;
+    document.getElementById("vatti-edit-date").value = loan.date;
 
-    let text = input.value.trim();
-    let numMatch = text.match(/(\d[\d,]*(\.\d+)?)/);
-    let amount = numMatch ? parseFloat(numMatch[1].replace(/,/g, '')) : 0;
+    document.getElementById("vatti-edit-modal-overlay").style.display = "flex";
+};
 
-    if (!amount) return alert("சரியான தொகையைக் குறிப்பிடவும்.");
-
-    let category = "பொதுச் செலவு";
-    let isExpense = true;
-    let source = "சம்பளம்"; // Default
-
-    // Source & Category Detection
-    if (text.includes("வீடு") || text.includes("வீட்டில்")) {
-        source = "வீடு";
-        category = "வீடு";
-    } else if (text.includes("கொல்லை") || text.includes("கொல்லையில்")) {
-        source = "கொல்லை";
-        category = "கொல்லை";
-    } else if (text.includes("எம்கே") || text.includes("mk")) {
-        category = "MK செலவு";
-    } else if (text.includes("எஸ்கே") || text.includes("sk")) {
-        category = "SK செலவு";
-    } else if (text.includes("சம்பளம்")) {
-        source = "சம்பளம்";
-        category = "சம்பளம்";
-    }
-
-    // Income Detection
-    if (text.includes("வரவு") || text.includes("தந்தார்கள்") || text.includes("வந்தது") || text.includes("வந்ததுன்னு")) { 
-        isExpense = false; 
-    }
-
-    transactions.unshift({
-        id: Date.now(),
-        text: text,
-        amount: amount,
-        category: category,
-        source: source,
-        isExpense: isExpense,
-        date: new Date().toLocaleString()
-    });
-
-    input.value = '';
-    saveState();
-}
-
-// DASHBOARD CALCULATOR
-function updateDashboardUI() {
-    let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
-    
-    transactions.forEach(t => {
-        let amount = parseFloat(t.amount) || 0;
-        let src = t.source || "சம்பளம்";
-        
-        if (!t.isExpense) {
-            // Income (+)
-            if (totals[src] !== undefined) totals[src] += amount;
-            else totals["சம்பளம்"] += amount;
-        } else {
-            // Expense (-)
-            if (totals[src] !== undefined) totals[src] -= amount;
-            if (totals[t.category] !== undefined && t.category !== src) {
-                totals[t.category] += amount;
-            }
-        }
-    });
-
-    let totalVattiPrincipal = 0;
-    for (let name in vattiAccounts) {
-        if (Array.isArray(vattiAccounts[name])) {
-            vattiAccounts[name].forEach(l => totalVattiPrincipal += (parseFloat(l.amount) || 0));
-        }
-    }
-    totals["வட்டி"] = totalVattiPrincipal;
-
-    const salEl = document.getElementById('salary-val');
-    const homeEl = document.getElementById('home-val');
-    const kolEl = document.getElementById('kollai-val');
-    const mkEl = document.getElementById('mk-val');
-    const skEl = document.getElementById('sk-val');
-    const vatEl = document.getElementById('vatti-val');
-
-    if (salEl) salEl.innerText = '₹' + Math.round(totals["சம்பளம்"]);
-    if (homeEl) homeEl.innerText = '₹' + Math.round(totals["வீடு"]);
-    if (kolEl) kolEl.innerText = '₹' + Math.round(totals["கொல்லை"]);
-    if (mkEl) mkEl.innerText = '₹' + Math.round(totals["MK செலவு"]);
-    if (skEl) skEl.innerText = '₹' + Math.round(totals["SK செலவு"]);
-    if (vatEl) vatEl.innerText = '₹' + Math.round(totals["வட்டி"]);
-}
-
-// SEARCH
-function processSearch() {
-    let input = document.getElementById('search-query-input');
-    searchQuery = input ? input.value.trim() : "";
-    let box = document.getElementById('search-result-box');
-
-    if (!searchQuery) {
-        if (box) box.style.display = "none";
-        renderAllLists();
-        return;
-    }
-
-    let cleanQ = searchQuery.toLowerCase();
-    let totalExpense = 0, totalIncome = 0, count = 0;
-
-    transactions.forEach(t => {
-        let fullText = `${t.text} ${t.category} ${t.source}`.toLowerCase();
-        if (fullText.includes(cleanQ)) {
-            if (t.isExpense) totalExpense += t.amount;
-            else totalIncome += t.amount;
-            count++;
-        }
-    });
-
-    if (box) {
-        box.style.display = "block";
-        let displayTotal = totalIncome > 0 ? (totalIncome - totalExpense) : totalExpense;
-        let label = totalIncome > 0 ? `மொத்த மீதி: ₹${displayTotal}` : `மொத்த செலவு: -₹${displayTotal}`;
-        box.innerHTML = `
-        <div style="background:#0284c7; color:white; padding:10px; border-radius:10px; text-align:center; font-weight:bold; margin-top:8px;">
-            🔍 "${searchQuery}" - (${count} பதிவுகள்) <br> <span style="font-size:16px;">${label}</span>
-        </div>`;
-    }
-
-    renderAllLists();
-}
-
-function renderAllLists() {
-    let el = document.getElementById('all-list');
-    if (!el) return;
-
-    let list = filterByMonthAndTab(transactions);
-    if (searchQuery) {
-        let q = searchQuery.toLowerCase();
-        list = list.filter(t => `${t.text} ${t.category} ${t.source}`.toLowerCase().includes(q));
-    }
-
-    if (list.length === 0) {
-        el.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:15px;">பதிவுகள் எதுவும் இல்லை</div>`;
-        return;
-    }
-
-    el.innerHTML = list.map(t => `
-    <div class="card-box" style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <strong style="font-size:14px;">${t.text}</strong>
-            <div style="font-size:11px; color:#64748b; margin-top:2px;">${t.date} | ${t.isExpense ? 'செலவு' : 'வரவு'} (${t.source || 'சம்பளம்'})</div>
-        </div>
-        <div style="text-align:right;">
-            <div style="color:${t.isExpense ? '#dc2626' : '#16a34a'}; font-weight:bold; font-size:15px;">
-                ${t.isExpense ? '-' : '+'}₹${t.amount}
-            </div>
-            <div style="margin-top:2px;">
-                <button onclick="editTx(${t.id})" style="background:none; border:none; cursor:pointer; font-size:15px;">✏️</button>
-                <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer; font-size:15px;">🗑️</button>
-            </div>
-        </div>
-    </div>`).join('');
-}
-
-// EDIT MODAL LOGIC
-function openEditModal(id) {
-    let t = transactions.find(x => x.id === id);
-    if (!t) return;
-
-    currentEditTxId = id;
-
-    let titleEl = document.getElementById('edit-title');
-    let amtEl = document.getElementById('edit-amount');
-    let srcEl = document.getElementById('edit-source');
-    let targetEl = document.getElementById('edit-target');
-    let typeEl = document.getElementById('edit-type');
-    let dateEl = document.getElementById('edit-date');
-
-    if (titleEl) titleEl.value = t.text || '';
-    if (amtEl) amtEl.value = t.amount || 0;
-    if (srcEl) srcEl.value = t.source || 'சம்பளம்';
-    if (targetEl) targetEl.value = t.category || 'சம்பளம்';
-    if (typeEl) typeEl.value = t.isExpense ? 'expense' : 'income';
-    if (dateEl) dateEl.value = t.date || new Date().toLocaleString();
-
-    let overlay = document.getElementById('edit-modal-overlay');
-    if (overlay) overlay.style.display = 'flex';
-}
-
-function closeEditModal() {
-    let overlay = document.getElementById('edit-modal-overlay');
-    if (overlay) overlay.style.display = 'none';
-    currentEditTxId = null;
-}
-
-function saveTxEdit() {
-    if (!currentEditTxId) return;
-
-    let t = transactions.find(x => x.id === currentEditTxId);
-    if (!t) return;
-
-    let titleEl = document.getElementById('edit-title');
-    let amtEl = document.getElementById('edit-amount');
-    let srcEl = document.getElementById('edit-source');
-    let targetEl = document.getElementById('edit-target');
-    let typeEl = document.getElementById('edit-type');
-    let dateEl = document.getElementById('edit-date');
-
-    if (titleEl) t.text = titleEl.value.trim();
-    if (amtEl) t.amount = parseFloat(amtEl.value) || 0;
-    if (srcEl) t.source = srcEl.value;
-    if (targetEl) t.category = targetEl.value;
-    if (typeEl) t.isExpense = typeEl.value === 'expense';
-    if (dateEl) t.date = dateEl.value;
-
-    saveState();
-    closeEditModal();
-}
-
-function deleteTx(id) {
-    if (confirm("இந்த பதிவை நீக்க விரும்புகிறீர்களா?")) {
-        transactions = transactions.filter(t => t.id !== id);
-        saveState();
-    }
-}
-
-// VATTI MANAGEMENT
-function addVattiLoan() {
-    let nameInput = document.getElementById('vatti-name');
-    let amtInput = document.getElementById('vatti-principal');
-    let rateInput = document.getElementById('vatti-rate');
-    let dateInput = document.getElementById('vatti-date');
-
-    let name = nameInput ? nameInput.value.trim() : "";
-    let amount = amtInput ? parseFloat(amtInput.value) : 0;
-    let rate = rateInput ? parseFloat(rateInput.value) : 0;
-    let date = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
-
-    if (!name || !amount || !rate) return alert("அனைத்து விவரங்களையும் நிரப்பவும்.");
-
-    if (!vattiAccounts[name]) vattiAccounts[name] = [];
-    vattiAccounts[name].push({ id: Date.now(), amount, rate, date });
-
-    if (nameInput) nameInput.value = '';
-    if (amtInput) amtInput.value = '';
-    if (rateInput) rateInput.value = '';
-
-    saveState();
-}
-
-function renderVattiAccounts() {
-    let el = document.getElementById('vatti-accounts-list');
-    if (!el) return;
-
-    let html = '';
-    for (let name in vattiAccounts) {
-        let loans = vattiAccounts[name];
-        if (!loans || loans.length === 0) continue;
-
-        let totP = 0, totI = 0;
-        let loansHtml = loans.map((l, idx) => {
-            totP += l.amount;
-            let mInterest = (l.amount * l.rate) / 100;
-            totI += mInterest;
-            return `
-            <div style="border-top:1px solid #cbd5e1; padding-top:6px; margin-top:6px; font-size:12px;">
-                <strong>கடன் ${idx + 1}:</strong> அசல்: ₹${l.amount} | வட்டி: ${l.rate}% 
-                <div style="float:right;">
-                    <button onclick="editVattiLoan('${name}', ${l.id})" style="background:none; border:none; cursor:pointer; font-size:14px;">✏️</button>
-                    <button onclick="deleteVattiLoan('${name}', ${l.id})" style="background:none; border:none; cursor:pointer; font-size:14px;">🗑️</button>
-                </div>
-                <div style="color:#0284c7; margin-top:2px;">மாத வட்டி: ₹${mInterest} (தேதி: ${l.date})</div>
-            </div>`;
-        }).join('');
-
-        html += `
-        <div id="vatti-card-${name.replace(/\s+/g, '-')}" class="card-box" style="border:1px solid #bfdbfe; background:#f0f9ff;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; color:#1e40af; font-size:15px;">👤 ${name}</h4>
-                <button onclick="downloadSingleVattiPDF('${name}')" style="background:#0284c7; color:white; border:none; padding:4px 8px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">📄 PDF</button>
-            </div>
-            ${loansHtml}
-            <div style="background:#0f172a; color:white; padding:6px 10px; border-radius:8px; margin-top:8px; font-weight:bold; font-size:12px;">
-                மொத்த அசல்: ₹${totP} | மாத வட்டி: ₹${totI}
-            </div>
-        </div>`;
-    }
-
-    el.innerHTML = html;
-}
-
-// VATTI LOAN EDIT POPUP
-function openVattiEditModal(name, loanId) {
-    let loans = vattiAccounts[name];
-    if (!loans) return;
-    let l = loans.find(x => x.id === loanId);
-    if (!l) return;
-
-    currentVattiEditTarget = { name, loanId };
-    
-    let amtEl = document.getElementById('vatti-edit-principal');
-    let rateEl = document.getElementById('vatti-edit-rate');
-    let dateEl = document.getElementById('vatti-edit-date');
-
-    if (amtEl) amtEl.value = l.amount || 0;
-    if (rateEl) rateEl.value = l.rate || 0;
-    if (dateEl) dateEl.value = l.date || '';
-
-    let overlay = document.getElementById('vatti-edit-modal-overlay');
-    if (overlay) overlay.style.display = 'flex';
-}
-
-function closeVattiEditModal() {
-    let overlay = document.getElementById('vatti-edit-modal-overlay');
-    if (overlay) overlay.style.display = 'none';
-    currentVattiEditTarget = null;
-}
-
+// Save Vatti Edit
 function saveVattiLoanEdit() {
-    if (!currentVattiEditTarget) return;
+    if (!editingVattiId || editingVattiLoanIndex === null) return;
 
-    let { name, loanId } = currentVattiEditTarget;
-    let loans = vattiAccounts[name];
-    if (!loans) return;
-    let l = loans.find(x => x.id === loanId);
-    if (!l) return;
+    const principal = parseFloat(document.getElementById("vatti-edit-principal").value);
+    const rate = parseFloat(document.getElementById("vatti-edit-rate").value);
+    const date = document.getElementById("vatti-edit-date").value;
 
-    let amtEl = document.getElementById('vatti-edit-principal');
-    let rateEl = document.getElementById('vatti-edit-rate');
-    let dateEl = document.getElementById('vatti-edit-date');
+    const acc = vattiAccounts.find(a => a.id === editingVattiId);
+    if (!acc) return;
 
-    if (amtEl) l.amount = parseFloat(amtEl.value) || 0;
-    if (rateEl) l.rate = parseFloat(rateEl.value) || 0;
-    if (dateEl) l.date = dateEl.value;
+    const updatedLoans = [...acc.loans];
+    updatedLoans[editingVattiLoanIndex] = { principal, rate, date };
 
-    saveState();
-    closeVattiEditModal();
+    updateDoc(doc(db, "users", currentUser.uid, "vatti_accounts", editingVattiId), {
+        loans: updatedLoans
+    }).then(() => {
+        document.getElementById("vatti-edit-modal-overlay").style.display = "none";
+        editingVattiId = null;
+        editingVattiLoanIndex = null;
+    });
 }
 
-function deleteVattiLoan(name, loanId) {
-    if (confirm("இந்தக் கடனை நீக்கவா?")) {
-        vattiAccounts[name] = vattiAccounts[name].filter(l => l.id !== loanId);
-        if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
-        saveState();
+// Totals Calculation
+function updateTotalsAndMonths() {
+    let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0 };
+    let monthsSet = new Set();
+
+    allTransactions.forEach(tx => {
+        if (tx.dateStr) {
+            let mStr = tx.dateStr.split(",")[0].split("/")[0] + "/" + tx.dateStr.split(",")[0].split("/")[2];
+            monthsSet.add(mStr);
+        }
+
+        let cat = tx.targetCategory || tx.source || "பொதுச் செலவு";
+        let val = tx.amount || 0;
+
+        if (totals.hasOwnProperty(cat)) {
+            if (tx.type === "income") totals[cat] += val;
+            else totals[cat] -= val;
+        }
+    });
+
+    document.getElementById("salary-val").innerText = `₹${totals["சம்பளம்"]}`;
+    document.getElementById("home-val").innerText = `₹${totals["வீடு"]}`;
+    document.getElementById("kollai-val").innerText = `₹${totals["கொல்லை"]}`;
+    document.getElementById("mk-val").innerText = `₹${totals["MK செலவு"]}`;
+    document.getElementById("sk-val").innerText = `₹${totals["SK செலவு"]}`;
+
+    // Populate Months Select
+    const select = document.getElementById("month-filter-select");
+    if (select) {
+        let optionsHTML = `<option value="ALL">எல்லா மாதங்களும் (All)</option>`;
+        monthsSet.forEach(m => {
+            optionsHTML += `<option value="${m}" ${currentMonth === m ? 'selected' : ''}>மாதம்: ${m}</option>`;
+        });
+        select.innerHTML = optionsHTML;
     }
 }
 
-// PDF DOWNLOADS
-function downloadOverallPDF() {
-    let element = document.getElementById('general-view');
-    if (!element) return;
-    let opt = { margin: 10, filename: 'Overall_Finance_Report.pdf', html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-    html2pdf().set(opt).from(element).save();
+function updateVattiTotal() {
+    let grandVatti = 0;
+    vattiAccounts.forEach(acc => {
+        (acc.loans || []).forEach(loan => {
+            grandVatti += loan.principal;
+        });
+    });
+    const elem = document.getElementById("vatti-val");
+    if (elem) elem.innerText = `₹${grandVatti}`;
 }
 
-function downloadSingleVattiPDF(name) {
-    let cardId = `vatti-card-${name.replace(/\s+/g, '-')}`;
-    let element = document.getElementById(cardId);
-    if (!element) return;
-    let opt = { margin: 10, filename: `${name}_Vatti_Report.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-    html2pdf().set(opt).from(element).save();
+// Render Transactions List
+function renderGeneralTransactions() {
+    const listElem = document.getElementById("all-list");
+    if (!listElem) return;
+
+    listElem.innerHTML = "";
+
+    let filtered = allTransactions.filter(tx => {
+        let matchCat = (currentCategory === "ALL") || 
+                       (tx.targetCategory === currentCategory || tx.source === currentCategory);
+        let matchMonth = true;
+        if (currentMonth !== "ALL" && tx.dateStr) {
+            let mStr = tx.dateStr.split(",")[0].split("/")[0] + "/" + tx.dateStr.split(",")[0].split("/")[2];
+            matchMonth = (mStr === currentMonth);
+        }
+        return matchCat && matchMonth;
+    });
+
+    if (filtered.length === 0) {
+        listElem.innerHTML = "<p style='text-align:center; color:#64748b; padding:15px;'>பதிவுகள் இல்லை.</p>";
+        return;
+    }
+
+    filtered.forEach(tx => {
+        const item = document.createElement("div");
+        item.className = "card-box";
+        item.style.display = "flex";
+        item.style.justifyContent = "space-between";
+        item.style.alignItems = "center";
+
+        const isIncome = tx.type === "income";
+        const amtColor = isIncome ? "#16a34a" : "#dc2626";
+        const amtSign = isIncome ? "+" : "-";
+
+        item.innerHTML = `
+            <div>
+                <div style="font-weight:bold; font-size:14px; color:#0f172a;">${tx.title}</div>
+                <div style="font-size:11px; color:#64748b; margin-top:2px;">
+                    ${tx.dateStr || ''} | ${isIncome ? 'வரவு' : 'செலவு'} (${tx.targetCategory || tx.source})
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:15px; font-weight:bold; color:${amtColor};">${amtSign}₹${tx.amount}</div>
+                <div style="margin-top:4px;">
+                    <span style="cursor:pointer; margin-right:6px;" onclick="openEditTxModal('${tx.id}')">✏️</span>
+                    <span style="cursor:pointer;" onclick="deleteTransaction('${tx.id}')">🗑️</span>
+                </div>
+            </div>
+        `;
+        listElem.appendChild(item);
+    });
 }
 
-// VOICE SPEECH RECOGNITION
-function startVoiceRecognition() {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'ta-IN';
-        recognition.onresult = function(event) {
-            let text = event.results[0][0].transcript;
-            let input = document.getElementById('voice-text-input');
-            if (input) input.value = text;
-            processVoiceOrText();
-        };
-        recognition.start();
-    } else alert("பிரவுசரில் குரல் வசதி இல்லை.");
+// Delete General Transaction
+window.deleteTransaction = function(id) {
+    if (confirm("இந்தப் பதிவை நீக்க விரும்புகிறீர்களா?")) {
+        deleteDoc(doc(db, "users", currentUser.uid, "transactions", id));
+    }
+};
+
+// Edit General Transaction Modal
+window.openEditTxModal = function(id) {
+    const tx = allTransactions.find(t => t.id === id);
+    if (!tx) return;
+
+    editingTxId = id;
+
+    document.getElementById("edit-title").value = tx.title || '';
+    document.getElementById("edit-amount").value = tx.amount || 0;
+    document.getElementById("edit-source").value = tx.source || 'சம்பளம்';
+    document.getElementById("edit-target").value = tx.targetCategory || 'பொதுச் செலவு';
+    document.getElementById("edit-type").value = tx.type || 'expense';
+    document.getElementById("edit-date").value = tx.dateStr || '';
+
+    document.getElementById("edit-modal-overlay").style.display = "flex";
+};
+
+function saveTransactionEdit() {
+    if (!editingTxId) return;
+
+    const updatedData = {
+        title: document.getElementById("edit-title").value.trim(),
+        amount: parseFloat(document.getElementById("edit-amount").value),
+        source: document.getElementById("edit-source").value,
+        targetCategory: document.getElementById("edit-target").value,
+        type: document.getElementById("edit-type").value,
+        dateStr: document.getElementById("edit-date").value
+    };
+
+    updateDoc(doc(db, "users", currentUser.uid, "transactions", editingTxId), updatedData)
+        .then(() => {
+            document.getElementById("edit-modal-overlay").style.display = "none";
+            editingTxId = null;
+        });
+}
+
+// Search Expense Logic
+function handleExpenseSearch() {
+    const queryStr = document.getElementById("search-query-input").value.trim().toLowerCase();
+    const resultBox = document.getElementById("search-result-box");
+
+    if (!queryStr) {
+        resultBox.style.display = "none";
+        return;
+    }
+
+    let filtered = allTransactions.filter(tx => 
+        (tx.title && tx.title.toLowerCase().includes(queryStr)) ||
+        (tx.targetCategory && tx.targetCategory.toLowerCase().includes(queryStr))
+    );
+
+    let totalAmt = filtered.reduce((acc, t) => acc + (t.amount || 0), 0);
+
+    resultBox.style.display = "block";
+    resultBox.innerHTML = `
+        <div style="font-weight:bold; color:#0369a1; font-size:13px; margin-top:8px;">
+            🔍 '${queryStr}' தேடல் முடிவுகள் (${filtered.length} பதிவுகள்):
+        </div>
+        <div style="font-size:14px; font-weight:bold; color:#0284c7; margin-top:4px;">
+            மொத்தத் தொகை: ₹${totalAmt}
+        </div>
+    `;
+}
+
+// PDF Download Function
+function downloadPDF() {
+    const element = document.getElementById("general-view");
+    const opt = {
+        margin:       0.5,
+        filename:     `Finance_Report_${new Date().toLocaleDateString()}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
 }
