@@ -4,42 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>நிதி பயன்பாடு</title>
-    <!-- HTML2PDF CDN Library -->
+    <!-- HTML2PDF CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #f1f5f9; margin: 0; padding: 12px; font-size: 14px; }
         .card-box { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 12px; }
         
-        /* Top Header */
-        .user-card { background: #0f172a; color: white; padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        /* User Header */
+        .user-card { background: #0f172a; color: white; padding: 14px 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .logout-btn { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         
-        /* Grid Cards */
+        /* Grid Stat Cards */
         .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .stat-card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; cursor: pointer; }
-        .stat-card h4 { margin: 0; color: #64748b; font-size: 13px; }
+        .stat-card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; cursor: pointer; transition: transform 0.1s; }
+        .stat-card:active { transform: scale(0.98); }
+        .stat-card h4 { margin: 0; color: #475569; font-size: 13px; font-weight: 600; }
         .stat-card div { margin-top: 4px; font-size: 18px; font-weight: bold; color: #0f172a; }
-        
-        /* Dropdown & PDF Row */
+
+        /* Horizontal Scrollable Category Filter Tabs (பழைய ஆப் மாதிரி நவுச்சு பாக்குற வசதி) */
+        .tab-scroll-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
+        .tab-scroll-container::-webkit-scrollbar { display: none; }
+        .filter-tab { flex: 0 0 auto; background: white; border: 1px solid #cbd5e1; border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .filter-tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+
+        /* Action Row: Month & PDF */
         .action-row { display: flex; gap: 10px; margin-bottom: 12px; }
         .month-select { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #cbd5e1; background: white; font-weight: 600; }
         .pdf-btn { background: #059669; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 
-        /* Search Box */
+        /* Search Section */
         .search-container { background: #f0f9ff; border: 1px solid #bae6fd; padding: 12px; border-radius: 14px; margin-bottom: 12px; }
         .search-title { color: #0369a1; font-weight: bold; margin-bottom: 8px; font-size: 14px; }
         .search-input-group { display: flex; gap: 8px; }
-        .search-input-group input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
-        .search-input-group button { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .search-input-group input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+        .search-input-group button { background: #0284c7; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; }
 
-        /* Bottom Fixed Input Bar (சரியான Align-ல் பேசும் பட்டனுடன்) */
-        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px 12px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 999; }
-        .bottom-bar input { flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
-        .btn-send { background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        /* Bottom Fixed Bar (பழைய பச்சை நிற பேசு பட்டனுடன்) */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 8px 12px; border-top: 1px solid #cbd5e1; display: flex; gap: 8px; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 999; }
+        .bottom-bar input { flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 14px; }
+        .btn-send { background: #2563eb; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; }
         .btn-mic { background: #16a34a; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 
-        .pb-large { padding-bottom: 70px; }
+        .pb-large { padding-bottom: 75px; }
     </style>
 </head>
 <body class="pb-large">
@@ -58,25 +65,35 @@
         <div class="user-card">
             <div>
                 <div style="font-size:12px; opacity:0.8;">வரவேற்கிறோம்,</div>
-                <div id="user-display-name" style="font-size:16px; font-weight:bold;">பயனர்</div>
+                <div id="user-display-name" style="font-size:16px; font-weight:bold;">RUBA ABI</div>
             </div>
             <button id="logout-btn" class="logout-btn">லாக்அவுட்</button>
         </div>
 
-        <!-- Stat Cards Grid -->
+        <!-- Stat Cards Grid (கிளிக் பண்ணா கீழே Tab Filter மாறும்) -->
         <div class="grid-container">
-            <div class="stat-card"><h4>சம்பளம்</h4><div id="salary-val">₹0</div></div>
-            <div class="stat-card"><h4>வீடு</h4><div id="home-val">₹0</div></div>
-            <div class="stat-card"><h4>கொல்லை</h4><div id="kollai-val">₹0</div></div>
-            <div class="stat-card"><h4>MK செலவு</h4><div id="mk-val">₹0</div></div>
-            <div class="stat-card"><h4>SK செலவு</h4><div id="sk-val">₹0</div></div>
+            <div class="stat-card" onclick="selectCategoryTab('சம்பளம்')"><h4>சம்பளம்</h4><div id="salary-val">₹0</div></div>
+            <div class="stat-card" onclick="selectCategoryTab('வீடு')"><h4>வீடு</h4><div id="home-val">₹0</div></div>
+            <div class="stat-card" onclick="selectCategoryTab('கொல்லை')"><h4>கொல்லை</h4><div id="kollai-val">₹0</div></div>
+            <div class="stat-card" onclick="selectCategoryTab('MK செலவு')"><h4>MK செலவு</h4><div id="mk-val">₹0</div></div>
+            <div class="stat-card" onclick="selectCategoryTab('SK செலவு')"><h4>SK செலவு</h4><div id="sk-val">₹0</div></div>
             <div class="stat-card" style="border-color:#bfdbfe; background:#eff6ff;" onclick="scrollToVatti()">
                 <h4 style="color:#1d4ed8;">வட்டி பிசினஸ்</h4>
                 <div id="vatti-val" style="color:#1e40af;">₹0</div>
             </div>
         </div>
 
-        <!-- Month Filter & Overall PDF Download -->
+        <!-- Horizontal Scroll Category Filter Tabs (பழைய ஆப் ஸ்டைல்) -->
+        <div class="tab-scroll-container">
+            <button class="filter-tab active" id="tab-ALL" onclick="selectCategoryTab('ALL')">📊 All</button>
+            <button class="filter-tab" id="tab-சம்பளம்" onclick="selectCategoryTab('சம்பளம்')">💼 சம்பளம்</button>
+            <button class="filter-tab" id="tab-வீடு" onclick="selectCategoryTab('வீடு')">🏠 வீடு</button>
+            <button class="filter-tab" id="tab-கொல்லை" onclick="selectCategoryTab('கொல்லை')">🌱 கொல்லை</button>
+            <button class="filter-tab" id="tab-MK செலவு" onclick="selectCategoryTab('MK செலவு')">🛒 MK செலவு</button>
+            <button class="filter-tab" id="tab-SK செலவு" onclick="selectCategoryTab('SK செலவு')">🛍️ SK செலவு</button>
+        </div>
+
+        <!-- Month Filter & Overall PDF Button -->
         <div class="action-row">
             <select id="month-filter-select" class="month-select">
                 <option value="ALL">எல்லா மாதங்களும் (All)</option>
@@ -89,13 +106,13 @@
             <div class="search-title">🔍 செலவு கணக்கு கேட்க / தேட</div>
             <div class="search-input-group">
                 <input type="text" id="search-query-input" placeholder="எ.கா: சிகரெட், MK செலவு...">
-                <button onclick="processSearch()">தேடு</button>
+                <button onclick="processSearch()">தேடு / கணக்கு பார்</button>
             </div>
-            <!-- Dynamic Total Box -->
-            <div id="search-result-box" style="display:none; margin-top:10px;"></div>
+            <!-- Dynamic Total Result Box -->
+            <div id="search-result-box" style="display:none;"></div>
         </div>
 
-        <!-- Transactions Container -->
+        <!-- Transactions Header & List -->
         <h3 style="margin: 16px 0 8px 0; color:#334155;">அனைத்துப் பதிவுகள்</h3>
         <div id="all-list"></div>
 
@@ -103,7 +120,7 @@
         <div id="vatti-section" style="margin-top:24px; border-top:2px dashed #cbd5e1; padding-top:16px;">
             <h3 style="color:#1e40af; margin-bottom:12px;">💰 வட்டி கடன் பதிவிட</h3>
             
-            <div class="card-box" style="background:#f8fafc; border:1px solid #e2e8f0;">
+            <div class="card-box" style="background:#f8fafc; border:1px solid #cbd5e1;">
                 <input type="text" id="vatti-name" placeholder="நபர் பெயர் (எ.கா: சுரேஷ்)" style="width:100%; padding:10px; margin-bottom:8px; border:1px solid #cbd5e1; border-radius:8px;">
                 <div style="display:flex; gap:8px; margin-bottom:8px;">
                     <input type="number" id="vatti-principal" placeholder="அசல் தொகை (₹)" style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
@@ -111,7 +128,7 @@
                 </div>
                 <div style="display:flex; gap:8px;">
                     <input type="date" id="vatti-date" style="flex:1; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
-                    <button onclick="addVattiLoan()" style="background:#3b82f6; color:white; border:none; padding:10px 14px; border-radius:8px; font-weight:bold; cursor:pointer;">+ கடன் சேர்</button>
+                    <button onclick="addVattiLoan()" style="background:#2563eb; color:white; border:none; padding:10px 14px; border-radius:8px; font-weight:bold; cursor:pointer;">+ கடன் சேர்</button>
                 </div>
             </div>
 
@@ -120,7 +137,7 @@
 
     </div>
 
-    <!-- Bottom Input Navigation Bar -->
+    <!-- Bottom Input Navigation Bar (பச்சை நிற பேசும் பட்டன் உடனே) -->
     <div class="bottom-bar">
         <input type="text" id="voice-text-input" placeholder="எ.கா: எம் கே செலவு 50">
         <button class="btn-send" onclick="processVoiceOrText()">அனுப்பு</button>
