@@ -24,6 +24,77 @@ let searchQuery = "";
 let selectedMonthFilter = "ALL";
 let selectedCategoryTab = "ALL";
 
+// Global Window functions for inline click events
+window.editTx = editTx;
+window.deleteTx = deleteTx;
+window.deleteVattiLoan = deleteVattiLoan;
+window.downloadSingleVattiPDF = downloadSingleVattiPDF;
+
+// Attach click events on DOM Content Loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Event listener for tab buttons
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            let cat = btn.getAttribute('data-category');
+            selectCategoryTab(cat);
+        });
+    });
+
+    // Event listener for top stat cards
+    const categories = ['சம்பளம்', 'வீடு', 'கொல்லை', 'MK செலவு', 'SK செலவு', 'வட்டி பிசினஸ்'];
+    categories.forEach(cat => {
+        let card = document.getElementById(`card-${cat}`);
+        if (card) {
+            card.addEventListener('click', () => {
+                selectCategoryTab(cat);
+            });
+        }
+    });
+
+    // Action buttons
+    document.getElementById('login-btn')?.addEventListener('click', () => signInWithPopup(auth, provider));
+    document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
+    document.getElementById('btn-pdf-download')?.addEventListener('click', downloadOverallPDF);
+    document.getElementById('btn-search')?.addEventListener('click', processSearch);
+    document.getElementById('btn-add-vatti')?.addEventListener('click', addVattiLoan);
+    document.getElementById('btn-send-tx')?.addEventListener('click', processVoiceOrText);
+    document.getElementById('btn-mic-speech')?.addEventListener('click', startVoiceRecognition);
+});
+
+// CATEGORY TAB SWITCHER FUNCTION
+function selectCategoryTab(category) {
+    selectedCategoryTab = category;
+    
+    // 1. Tab active toggle
+    document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+    let activeTab = document.getElementById(`tab-${category}`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+        // Smooth scroll tab into view
+        activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+
+    // 2. Heading label change
+    let heading = document.getElementById('list-heading');
+    if (heading) {
+        heading.textContent = category === "ALL" ? "அனைத்துப் பதிவுகள்" : `${category} பதிவுகள்`;
+    }
+
+    // 3. View switch
+    let genView = document.getElementById('general-view');
+    let vattiView = document.getElementById('vatti-view');
+
+    if (category === "வட்டி பிசினஸ்") {
+        genView.style.display = "none";
+        vattiView.style.display = "block";
+        renderVattiAccounts();
+    } else {
+        genView.style.display = "block";
+        vattiView.style.display = "none";
+        renderAllLists();
+    }
+}
+
 // STATE SAVE & SYNC
 function saveState() {
     localStorage.setItem('my_app_txs', JSON.stringify(transactions));
@@ -43,10 +114,7 @@ function saveState() {
     renderVattiAccounts();
 }
 
-// AUTH setup
-document.getElementById('login-btn')?.addEventListener('click', () => signInWithPopup(auth, provider));
-document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
-
+// AUTH
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
@@ -68,22 +136,6 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById('main-app').style.display = 'none';
     }
 });
-
-// CATEGORY TAB SWITCHER (கார்ட் அல்லது டேப் கிளிக் பண்ணும்போது)
-window.selectCategoryTab = function(category) {
-    selectedCategoryTab = category;
-    
-    document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
-    let activeTab = document.getElementById(`tab-${category}`);
-    if (activeTab) activeTab.classList.add('active');
-
-    renderAllLists();
-};
-
-// SCROLL TO VATTI
-window.scrollToVatti = function() {
-    document.getElementById('vatti-section')?.scrollIntoView({ behavior: 'smooth' });
-};
 
 // MONTH FILTER
 function populateMonthDropdown() {
@@ -113,7 +165,6 @@ function populateMonthDropdown() {
 function filterByMonthAndTab(list) {
     let result = list;
 
-    // Month Filter
     if (selectedMonthFilter !== "ALL") {
         result = result.filter(t => {
             if (!t.date) return false;
@@ -122,16 +173,15 @@ function filterByMonthAndTab(list) {
         });
     }
 
-    // Category Tab Filter
-    if (selectedCategoryTab !== "ALL") {
+    if (selectedCategoryTab !== "ALL" && selectedCategoryTab !== "வட்டி பிசினஸ்") {
         result = result.filter(t => t.category === selectedCategoryTab || t.source === selectedCategoryTab);
     }
 
     return result;
 }
 
-// TRANSACTION PROCESSING
-window.processVoiceOrText = function() {
+// ADD TRANSACTIONS
+function processVoiceOrText() {
     let input = document.getElementById('voice-text-input');
     if (!input || !input.value.trim()) return;
 
@@ -164,10 +214,9 @@ window.processVoiceOrText = function() {
 
     input.value = '';
     saveState();
-};
+}
 
-// EDIT TRANSACTION (✏️ வசதி)
-window.editTx = function(id) {
+function editTx(id) {
     let t = transactions.find(x => x.id === id);
     if (!t) return;
 
@@ -179,22 +228,21 @@ window.editTx = function(id) {
     t.text = newText.trim() || t.text;
     t.amount = parseFloat(newAmount) || t.amount;
     saveState();
-};
+}
 
-// DELETE TRANSACTION (🗑️ வசதி)
-window.deleteTx = function(id) {
+function deleteTx(id) {
     if (confirm("இந்த பதிவை நீக்க விரும்புகிறீர்களா?")) {
         transactions = transactions.filter(t => t.id !== id);
         saveState();
     }
-};
+}
 
 // DASHBOARD CALCULATIONS
 function updateDashboardUI() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி": 0 };
-    let filtered = filterByMonthAndTab(transactions);
-
-    filtered.forEach(t => {
+    
+    // Compute category totals
+    transactions.forEach(t => {
         let src = t.source || "வீடு";
         if (!t.isExpense) totals[src] += t.amount;
         else {
@@ -219,8 +267,8 @@ function updateDashboardUI() {
     document.getElementById('vatti-val').innerText = '₹' + Math.round(totals["வட்டி"]);
 }
 
-// SEARCH & DYNAMIC TOTAL BOX
-window.processSearch = function() {
+// SEARCH
+function processSearch() {
     let input = document.getElementById('search-query-input');
     searchQuery = input ? input.value.trim() : "";
     let box = document.getElementById('search-result-box');
@@ -248,13 +296,13 @@ window.processSearch = function() {
         let displayTotal = totalIncome > 0 ? (totalIncome - totalExpense) : totalExpense;
         let label = totalIncome > 0 ? `மொத்த மீதி: ₹${displayTotal}` : `மொத்த செலவு: -₹${displayTotal}`;
         box.innerHTML = `
-        <div style="background:#0284c7; color:white; padding:12px; border-radius:10px; text-align:center; font-weight:bold; margin-top:10px;">
-            🔍 "${searchQuery}" - (${count} பதிவுகள்) <br> <span style="font-size:18px;">${label}</span>
+        <div style="background:#0284c7; color:white; padding:10px; border-radius:10px; text-align:center; font-weight:bold; margin-top:8px;">
+            🔍 "${searchQuery}" - (${count} பதிவுகள்) <br> <span style="font-size:16px;">${label}</span>
         </div>`;
     }
 
     renderAllLists();
-};
+}
 
 function renderAllLists() {
     let el = document.getElementById('all-list');
@@ -274,14 +322,14 @@ function renderAllLists() {
     el.innerHTML = list.map(t => `
     <div class="card-box" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <strong style="font-size:15px;">${t.text}</strong>
-            <div style="font-size:12px; color:#64748b; margin-top:4px;">${t.date} | ${t.category} (${t.source || 'வீடு'})</div>
+            <strong style="font-size:14px;">${t.text}</strong>
+            <div style="font-size:11px; color:#64748b; margin-top:2px;">${t.date} | ${t.category} (${t.source || 'வீடு'})</div>
         </div>
         <div style="text-align:right;">
-            <div style="color:${t.isExpense ? '#dc2626' : '#16a34a'}; font-weight:bold; font-size:16px;">
+            <div style="color:${t.isExpense ? '#dc2626' : '#16a34a'}; font-weight:bold; font-size:15px;">
                 ${t.isExpense ? '-' : '+'}₹${t.amount}
             </div>
-            <div style="margin-top:4px;">
+            <div style="margin-top:2px;">
                 <button onclick="editTx(${t.id})" style="background:none; border:none; cursor:pointer;">✏️</button>
                 <button onclick="deleteTx(${t.id})" style="background:none; border:none; cursor:pointer;">🗑️</button>
             </div>
@@ -290,7 +338,7 @@ function renderAllLists() {
 }
 
 // VATTI MANAGEMENT
-window.addVattiLoan = function() {
+function addVattiLoan() {
     let name = document.getElementById('vatti-name').value.trim();
     let amount = parseFloat(document.getElementById('vatti-principal').value);
     let rate = parseFloat(document.getElementById('vatti-rate').value);
@@ -306,7 +354,7 @@ window.addVattiLoan = function() {
     document.getElementById('vatti-rate').value = '';
 
     saveState();
-};
+}
 
 function renderVattiAccounts() {
     let el = document.getElementById('vatti-accounts-list');
@@ -323,7 +371,7 @@ function renderVattiAccounts() {
             let mInterest = (l.amount * l.rate) / 100;
             totI += mInterest;
             return `
-            <div style="border-top:1px solid #cbd5e1; padding-top:8px; margin-top:8px; font-size:13px;">
+            <div style="border-top:1px solid #cbd5e1; padding-top:6px; margin-top:6px; font-size:12px;">
                 <strong>கடன் ${idx + 1}:</strong> அசல்: ₹${l.amount} | வட்டி: ${l.rate}% 
                 <button onclick="deleteVattiLoan('${name}', ${l.id})" style="float:right; background:none; border:none; cursor:pointer;">🗑️</button>
                 <div style="color:#0284c7; margin-top:2px;">மாத வட்டி: ₹${mInterest} (தேதி: ${l.date})</div>
@@ -333,11 +381,11 @@ function renderVattiAccounts() {
         html += `
         <div id="vatti-card-${name.replace(/\s+/g, '-')}" class="card-box" style="border:1px solid #bfdbfe; background:#f0f9ff;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; color:#1e40af; font-size:16px;">👤 ${name}</h4>
-                <button onclick="downloadSingleVattiPDF('${name}')" style="background:#0284c7; color:white; border:none; padding:4px 10px; border-radius:6px; font-weight:bold; cursor:pointer;">📄 PDF</button>
+                <h4 style="margin:0; color:#1e40af; font-size:15px;">👤 ${name}</h4>
+                <button onclick="downloadSingleVattiPDF('${name}')" style="background:#0284c7; color:white; border:none; padding:4px 8px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">📄 PDF</button>
             </div>
             ${loansHtml}
-            <div style="background:#0f172a; color:white; padding:8px 12px; border-radius:8px; margin-top:10px; font-weight:bold; font-size:13px;">
+            <div style="background:#0f172a; color:white; padding:6px 10px; border-radius:8px; margin-top:8px; font-weight:bold; font-size:12px;">
                 மொத்த அசல்: ₹${totP} | மாத வட்டி: ₹${totI}
             </div>
         </div>`;
@@ -346,31 +394,31 @@ function renderVattiAccounts() {
     el.innerHTML = html;
 }
 
-window.deleteVattiLoan = function(name, loanId) {
+function deleteVattiLoan(name, loanId) {
     if (confirm("இந்தக் கடனை நீக்கவா?")) {
         vattiAccounts[name] = vattiAccounts[name].filter(l => l.id !== loanId);
         if (vattiAccounts[name].length === 0) delete vattiAccounts[name];
         saveState();
     }
-};
+}
 
 // PDF DOWNLOADS
-window.downloadOverallPDF = function() {
-    let element = document.getElementById('main-app');
+function downloadOverallPDF() {
+    let element = document.getElementById('general-view');
     let opt = { margin: 10, filename: 'Overall_Finance_Report.pdf', html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
     html2pdf().set(opt).from(element).save();
-};
+}
 
-window.downloadSingleVattiPDF = function(name) {
+function downloadSingleVattiPDF(name) {
     let cardId = `vatti-card-${name.replace(/\s+/g, '-')}`;
     let element = document.getElementById(cardId);
     if (!element) return;
     let opt = { margin: 10, filename: `${name}_Vatti_Report.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
     html2pdf().set(opt).from(element).save();
-};
+}
 
 // VOICE SPEECH RECOGNITION
-window.startVoiceRecognition = function() {
+function startVoiceRecognition() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
@@ -379,8 +427,8 @@ window.startVoiceRecognition = function() {
             let text = event.results[0][0].transcript;
             let input = document.getElementById('voice-text-input');
             if (input) input.value = text;
-            window.processVoiceOrText();
+            processVoiceOrText();
         };
         recognition.start();
     } else alert("பிரவுசரில் குரல் வசதி இல்லை.");
-};
+}
