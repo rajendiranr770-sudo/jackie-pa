@@ -466,35 +466,33 @@ window.searchExpenses = function() {
     if (!box) return;
 
     if (q === "") {
+        box.style.display = "none";
         box.innerHTML = "";
         renderAllLists();
         return;
     }
 
-    let cleanQ = q.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+    let cleanQ = q.toLowerCase();
     let totalAmt = 0;
     let count = 0;
 
     transactions.forEach(t => {
-        let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
-        let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
+        let textMatch = t.text.toLowerCase().includes(cleanQ);
+        let catMatch = (t.category || '').toLowerCase().includes(cleanQ);
+        let amtMatch = t.amount.toString().includes(cleanQ);
 
-        let match = textClean.includes(cleanQ) || 
-                    t.text.toLowerCase().includes(q.toLowerCase()) || 
-                    t.amount.toString().includes(q) ||
-                    catClean.includes(cleanQ);
-
-        if (match) {
+        if (textMatch || catMatch || amtMatch) {
             totalAmt += (t.isExpense ? Number(t.amount) : -Number(t.amount));
             count++;
         }
     });
 
+    box.style.display = "block";
     if (count > 0) {
         box.innerHTML = `
-        <div style="background:#fff; border:2px solid #0284c7; border-radius:10px; padding:12px; text-align:center; margin-top:10px;">
+        <div style="background:#fff; border:2px solid #0284c7; border-radius:12px; padding:12px; text-align:center; margin-top:10px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
             <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு (${count} பதிவுகள்)</div>
-            <div style="font-size:24px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalAmt}</div>
+            <div style="font-size:26px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalAmt}</div>
         </div>`;
     } else {
         box.innerHTML = `
@@ -525,15 +523,10 @@ function renderAllLists() {
             let list = filterByMonth(filterMap[id]());
 
             if (q !== "") {
-                let cleanQ = q.replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
                 list = list.filter(t => {
-                    let textClean = t.text.toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
-                    let catClean = (t.category || '').toLowerCase().replace(/[ாடடிடீடுடூடெடேடைடொடோடௌட்]/g, 'ட');
-                    
-                    return textClean.includes(cleanQ) || 
-                           t.text.toLowerCase().includes(q) || 
+                    return t.text.toLowerCase().includes(q) || 
                            t.amount.toString().includes(q) ||
-                           catClean.includes(cleanQ);
+                           (t.category || '').toLowerCase().includes(q);
                 });
             }
 
