@@ -492,13 +492,13 @@ window.searchExpenses = function() {
 
     if (count > 0) {
         box.innerHTML = `
-        <div style="background:#fff; border:2px solid #0284c7; border-radius:10px; padding:12px; text-align:center;">
+        <div style="background:#fff; border:2px solid #0284c7; border-radius:10px; padding:12px; text-align:center; margin-top:10px;">
             <div style="font-size:14px; color:#0369a1; font-weight:bold;">🔍 "${q}" மொத்த செலவு (${count} பதிவுகள்)</div>
             <div style="font-size:24px; color:#dc2626; font-weight:800; margin-top:4px;">₹${totalAmt}</div>
         </div>`;
     } else {
         box.innerHTML = `
-        <div style="background:#fff; border:1px solid #94a3b8; border-radius:10px; padding:10px; text-align:center; color:#64748b;">
+        <div style="background:#fff; border:1px solid #94a3b8; border-radius:10px; padding:10px; text-align:center; color:#64748b; margin-top:10px;">
             🔍 "${q}" என்ற பெயரில் பதிவுகள் எதுவும் இல்லை!
         </div>`;
     }
