@@ -18,7 +18,7 @@ import {
     orderBy 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// 1. Firebase Configuration
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
     authDomain: "myfinanceapp-3f883.firebaseapp.com",
@@ -33,7 +33,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// Global State Variables
+// Global Variables
 let currentUser = null;
 let currentCategory = "ALL";
 let currentMonth = "ALL";
@@ -43,12 +43,12 @@ let vattiAccounts = [];
 let isSearchActive = false;
 let searchFilteredTransactions = [];
 
-let pendingTransactionData = null; // Pending Data for Source Popup
+let pendingTxData = null; // Temporary Hold for Confirmation Modal
 let editingTxId = null;
 let editingVattiId = null;
 let editingVattiLoanIndex = null;
 
-// Tamil Text Numbers to Numeric Conversion
+// Tamil Text to Numeric Conversion Engine
 function convertTamilTextToNumbers(text) {
     if (!text) return text;
     let str = text.toLowerCase();
@@ -58,7 +58,7 @@ function convertTamilTextToNumbers(text) {
 
     const wordMap = [
         { w: "ஒரு லட்சம்", v: 100000 }, { w: "லட்சம்", v: 100000 },
-        { w: "அம்பதாயிரம்", v: 50000 }, { w: "ஐம்பதாயிரம்", v: 50000 },
+        { w: "ஐம்பதாயிரம்", v: 50000 }, { w: "அம்பதாயிரம்", v: 50000 },
         { w: "நாற்பதாயிரம்", v: 40000 }, { w: "முப்பதாயிரம்", v: 30000 },
         { w: "இருபதாயிரம்", v: 20000 }, { w: "பத்தாயிரம்", v: 10000 },
         { w: "ஒன்பதாயிரம்", v: 9000 }, { w: "எட்டாயிரம்", v: 8000 },
@@ -80,9 +80,9 @@ function convertTamilTextToNumbers(text) {
     return str;
 }
 
-// DOM Initialization & Dynamic Source Modal Setup
+// DOM Setup
 document.addEventListener("DOMContentLoaded", () => {
-    setupFundSourceModalHTML();
+    setupConfirmationModalHTML();
 
     const loginBtn = document.getElementById("login-btn");
     const logoutBtn = document.getElementById("logout-btn");
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnPdf = document.getElementById("btn-pdf-download");
     if (btnPdf) btnPdf.addEventListener("click", downloadPDF);
 
-    // Edit Modal Events
+    // Edit Modals
     const btnSaveEdit = document.getElementById("btn-save-edit");
     if (btnSaveEdit) btnSaveEdit.addEventListener("click", saveTransactionEdit);
     
@@ -127,7 +127,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("edit-modal-overlay").style.display = "none";
     });
 
-    // Vatti Edit Modal Events
     const btnVattiSaveEdit = document.getElementById("btn-vatti-save-edit");
     if (btnVattiSaveEdit) btnVattiSaveEdit.addEventListener("click", saveVattiLoanEdit);
 
@@ -137,29 +136,43 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// Create HTML Dynamic Overlay for Fund Source Modal
-function setupFundSourceModalHTML() {
-    if (document.getElementById("fund-source-modal-overlay")) return;
+// Dynamic Pop-up Modal Setup
+function setupConfirmationModalHTML() {
+    if (document.getElementById("smart-confirm-modal-overlay")) return;
 
     const modalHTML = `
-        <div class="modal-overlay" id="fund-source-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
+        <div class="modal-overlay" id="smart-confirm-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
             <div class="modal-body" style="background:white; padding:20px; text-align:center; border-radius:12px; width:90%; max-width:380px;">
-                <h3 style="color:#0f172a; margin-bottom:8px;">பண ஆதாரம் தேர்வு செய்யவும்</h3>
-                <p id="fund-source-text-preview" style="color:#475569; font-size:14px; margin-bottom:20px;"></p>
-                <div style="display:flex; gap:10px; justify-content:center;">
-                    <button id="btn-select-salary" style="flex:1; background:#2563eb; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">💼 சம்பளம்</button>
-                    <button id="btn-select-home" style="flex:1; background:#16a34a; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">🏠 வீடு</button>
+                <h3 style="color:#0f172a; margin-bottom:6px;">விவரம் உறுதி செய்யவும்</h3>
+                <p id="confirm-modal-text" style="color:#475569; font-size:14px; margin-bottom:15px; font-weight:bold;"></p>
+                
+                <div id="step-type-box" style="margin-bottom:15px;">
+                    <label style="font-size:12px; color:#64748b; display:block; margin-bottom:5px;">இது வரவா அல்லது செலவா?</label>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-set-income" style="flex:1; background:#16a34a; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">+ வரவு (Income)</button>
+                        <button id="btn-set-expense" style="flex:1; background:#dc2626; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">- செலவு (Expense)</button>
+                    </div>
+                </div>
+
+                <div id="step-source-box" style="margin-bottom:15px; display:none;">
+                    <label style="font-size:12px; color:#64748b; display:block; margin-bottom:5px;">எந்தக் கணக்கில் சேர்க்க வேண்டும்?</label>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-set-salary" style="flex:1; background:#2563eb; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">💼 சம்பளம்</button>
+                        <button id="btn-set-home" style="flex:1; background:#059669; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">🏠 வீடு</button>
+                    </div>
                 </div>
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML("beforeend", modalHTML);
 
-    document.getElementById("btn-select-salary").addEventListener("click", () => confirmFundSource("சம்பளம்"));
-    document.getElementById("btn-select-home").addEventListener("click", () => confirmFundSource("வீடு"));
+    document.getElementById("btn-set-income").addEventListener("click", () => handleTypeSelection("income"));
+    document.getElementById("btn-set-expense").addEventListener("click", () => handleTypeSelection("expense"));
+    document.getElementById("btn-set-salary").addEventListener("click", () => finalizeConfirmation("சம்பளம்"));
+    document.getElementById("btn-set-home").addEventListener("click", () => finalizeConfirmation("வீடு"));
 }
 
-// Authentication Observer & Persistent Realtime Connection
+// Authentication & Firestore Observer
 onAuthStateChanged(auth, (user) => {
     const authContainer = document.getElementById("auth-container");
     const mainApp = document.getElementById("main-app");
@@ -212,7 +225,7 @@ function listenToData() {
 
 function switchCategoryTab(cat) {
     currentCategory = cat;
-    isSearchActive = false; // Reset Search state on tab change
+    isSearchActive = false;
 
     document.querySelectorAll(".filter-tab").forEach(tab => {
         if (tab.getAttribute("data-category") === cat) tab.classList.add("active");
@@ -242,7 +255,7 @@ function switchCategoryTab(cat) {
     }
 }
 
-// Smart Bottom Input Parser with Source Prompt Check
+// Smart Voice/Text Input Logic
 function processBottomInput() {
     const inputField = document.getElementById("voice-text-input");
     let rawText = inputField.value.trim();
@@ -260,34 +273,25 @@ function processBottomInput() {
     const amount = parseFloat(amtMatch[0]);
     let lowerText = processedText.toLowerCase();
 
-    // Type Logic
-    let type = "expense"; 
-    const incomeKeywords = ["வந்தது", "வந்திருச்சு", "வரவு", "கிரெடிட்", "வருமானம்", "கிடைத்தது", "credit", "received", "got"];
-    if (incomeKeywords.some(keyword => lowerText.includes(keyword))) {
-        type = "income";
-    }
+    // Type Checking
+    let type = null; 
+    const incomeKeywords = ["வந்தது", "வந்திருச்சு", "வரவு", "கிரெடிட்", "வருமானம்", "கிடைத்தது", "received", "got"];
+    const expenseKeywords = ["செலவு", "கொடுத்தது", "வாங்கியது", "போச்சு", "டெபிட்", "செலவழித்தது", "paid"];
 
-    // Target Category Detection
-    let targetCategory = "பொதுச் செலவு";
-    if (lowerText.includes("சம்பளம்") || lowerText.includes("salary")) {
-        targetCategory = "சம்பளம்";
-    } else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டில்") || lowerText.includes("home")) {
-        targetCategory = "வீடு";
-    } else if (lowerText.includes("கொல்லை") || lowerText.includes("தோட்டம்")) {
-        targetCategory = "கொல்லை";
-    } else if (lowerText.includes("எம் கே") || lowerText.includes("எம்கே") || lowerText.includes("mk")) {
-        targetCategory = "MK செலவு";
-    } else if (lowerText.includes("எஸ் கே") || lowerText.includes("எஸ்கே") || lowerText.includes("sk")) {
-        targetCategory = "SK செலவு";
-    }
+    if (incomeKeywords.some(k => lowerText.includes(k))) type = "income";
+    else if (expenseKeywords.some(k => lowerText.includes(k))) type = "expense";
 
-    // Check Source Fund Specified (சம்பளம் / வீடு)
+    // Source Checking (சம்பளம் / வீடு)
     let sourceFund = null;
-    if (lowerText.includes("சம்பள பணத்") || lowerText.includes("சம்பளப் பணத்") || lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) {
-        sourceFund = "சம்பளம்";
-    } else if (lowerText.includes("வீட்டு பணத்") || lowerText.includes("வீட்டுப் பணத்") || lowerText.includes("வீடு") || lowerText.includes("வீட்டு")) {
-        sourceFund = "வீடு";
-    }
+    if (lowerText.includes("சம்பள") || lowerText.includes("salary")) sourceFund = "சம்பளம்";
+    else if (lowerText.includes("வீட்டு") || lowerText.includes("வீடு") || lowerText.includes("home")) sourceFund = "வீடு";
+
+    // Target Category Checking
+    let targetCategory = "பொதுச் செலவு";
+    if (lowerText.includes("கொல்லை") || lowerText.includes("தோட்டம்")) targetCategory = "கொல்லை";
+    else if (lowerText.includes("எம் கே") || lowerText.includes("எம்கே") || lowerText.includes("mk")) targetCategory = "MK செலவு";
+    else if (lowerText.includes("எஸ் கே") || lowerText.includes("எஸ்கே") || lowerText.includes("sk")) targetCategory = "SK செலவு";
+    else if (sourceFund) targetCategory = sourceFund;
 
     const now = new Date();
     const formattedDate = now.toLocaleString("en-US", { 
@@ -295,7 +299,7 @@ function processBottomInput() {
         hour: "numeric", minute: "numeric", second: "numeric", hour12: true 
     });
 
-    const txObject = {
+    pendingTxData = {
         title: rawText,
         amount: amount,
         type: type,
@@ -305,35 +309,63 @@ function processBottomInput() {
         timestamp: Date.now()
     };
 
-    // If Expense & No Source Identified -> Show Modal
-    if (type === "expense" && !sourceFund) {
-        pendingTransactionData = txObject;
-        document.getElementById("fund-source-text-preview").innerText = `"${rawText}" - ₹${amount}`;
-        document.getElementById("fund-source-modal-overlay").style.display = "flex";
+    // Auto-Clear Input Immediately after reading
+    inputField.value = "";
+
+    // If Type or Source Missing -> Trigger Modal Prompt
+    if (!type || !sourceFund) {
+        showSmartModal(type, sourceFund);
     } else {
-        if (!sourceFund) txObject.source = targetCategory;
-        saveTransactionToFirestore(txObject);
+        saveTransactionToFirestore(pendingTxData);
     }
 }
 
-// Save Transaction & Auto-Clear Input
+// Show Pop-up for Missing Data
+function showSmartModal(type, source) {
+    document.getElementById("confirm-modal-text").innerText = `"${pendingTxData.title}" - ₹${pendingTxData.amount}`;
+    const typeBox = document.getElementById("step-type-box");
+    const sourceBox = document.getElementById("step-source-box");
+
+    if (!type) {
+        typeBox.style.display = "block";
+        sourceBox.style.display = "none";
+    } else {
+        typeBox.style.display = "none";
+        sourceBox.style.display = "block";
+    }
+
+    document.getElementById("smart-confirm-modal-overlay").style.display = "flex";
+}
+
+function handleTypeSelection(selectedType) {
+    pendingTxData.type = selectedType;
+    document.getElementById("step-type-box").style.display = "none";
+
+    if (!pendingTxData.source) {
+        document.getElementById("step-source-box").style.display = "block";
+    } else {
+        document.getElementById("smart-confirm-modal-overlay").style.display = "none";
+        saveTransactionToFirestore(pendingTxData);
+    }
+}
+
+function finalizeConfirmation(selectedSource) {
+    pendingTxData.source = selectedSource;
+    if (pendingTxData.targetCategory === "பொதுச் செலவு") {
+        pendingTxData.targetCategory = selectedSource;
+    }
+
+    document.getElementById("smart-confirm-modal-overlay").style.display = "none";
+    saveTransactionToFirestore(pendingTxData);
+}
+
+// Save Transaction
 function saveTransactionToFirestore(txObject) {
     addDoc(collection(db, "users", currentUser.uid, "transactions"), txObject)
         .then(() => {
-            const inputField = document.getElementById("voice-text-input");
-            if (inputField) inputField.value = ""; // Clear Input Box
+            pendingTxData = null;
         })
         .catch(err => alert("சேமிப்பதில் பிழை: " + err.message));
-}
-
-// Source Selection Modal Callback
-function confirmFundSource(selectedSource) {
-    if (!pendingTransactionData) return;
-    pendingTransactionData.source = selectedSource;
-
-    document.getElementById("fund-source-modal-overlay").style.display = "none";
-    saveTransactionToFirestore(pendingTransactionData);
-    pendingTransactionData = null;
 }
 
 // Voice Recognition
@@ -362,7 +394,7 @@ function startVoiceRecognition() {
     recognition.onend = () => { micBtn.innerText = "🎙️ பேசு"; };
 }
 
-// Manual Entry & Clear Form
+// Manual Entry Logic
 function handleAddManual() {
     const textInput = document.getElementById("manual-text");
     const amountInput = document.getElementById("manual-amount");
@@ -385,7 +417,7 @@ function handleAddManual() {
         title: text,
         amount: amount,
         type: type,
-        source: currentCategory === "ALL" ? "பொதுச் செலவு" : currentCategory,
+        source: currentCategory === "ALL" ? "சம்பளம்" : currentCategory,
         targetCategory: currentCategory === "ALL" ? "பொதுச் செலவு" : currentCategory,
         dateStr: formattedDate,
         timestamp: Date.now()
@@ -396,7 +428,7 @@ function handleAddManual() {
     amountInput.value = "";
 }
 
-// Search Logic: Hide standard list and show Search Results + Search PDF Option
+// Search Logic & Independent PDF Download
 function handleExpenseSearch() {
     const searchInput = document.getElementById("search-query-input");
     const queryStr = searchInput.value.trim().toLowerCase();
@@ -426,10 +458,11 @@ function handleExpenseSearch() {
             <div style="font-size:16px; font-weight:bold; color:#0284c7; margin-top:6px;">
                 மொத்தத் தொகை: ₹${totalAmt}
             </div>
-            <button onclick="downloadSearchPDF('${queryStr}')" style="margin-top:10px; background:#0284c7; color:white; border:none; padding:8px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; width:100%;">📄 தேடல் பதிவுகளை PDF டவுன்லோட் செய்</button>
+            <button id="btn-search-pdf-dl" style="margin-top:10px; background:#0284c7; color:white; border:none; padding:8px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; width:100%;">📄 தேடல் பதிவுகளை PDF டவுன்லோட் செய்</button>
         </div>
     `;
 
+    document.getElementById("btn-search-pdf-dl").addEventListener("click", () => downloadSearchPDF(queryStr));
     document.getElementById("list-heading").innerText = `🔍 தேடல் முடிவுகள்: ${queryStr}`;
     renderGeneralTransactions();
 }
@@ -499,7 +532,7 @@ function downloadSearchPDF(queryStr) {
     html2pdf().set(opt).from(pdfContainer).save();
 }
 
-// Vatti Calculation Logic
+// Vatti Business Logic
 function calculateLoanDetails(principal, rate, startDateStr) {
     const startDate = new Date(startDateStr);
     const today = new Date();
@@ -683,7 +716,7 @@ function saveVattiLoanEdit() {
     });
 }
 
-// Totals Calculation Engine
+// Totals Engine
 function updateTotalsAndMonths() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0 };
     let monthsSet = new Set();
@@ -696,19 +729,16 @@ function updateTotalsAndMonths() {
 
         let val = tx.amount || 0;
 
-        // Deduct from Source Fund (சம்பளம் / வீடு)
+        // Deduct/Add Source Balance
         if (tx.source && (tx.source === "சம்பளம்" || tx.source === "வீடு")) {
-            if (tx.type === "income") {
-                totals[tx.source] += val;
-            } else {
-                totals[tx.source] -= val;
-            }
+            if (tx.type === "income") totals[tx.source] += val;
+            else totals[tx.source] -= val;
         }
 
-        // Target Expense Accumulation for MK, SK & Kollai
+        // Accumulate Target Expense Sums
         if (tx.targetCategory && tx.targetCategory !== tx.source) {
             if (totals.hasOwnProperty(tx.targetCategory)) {
-                totals[tx.targetCategory] += val; // Total Expense Accumulated (Positive sum)
+                totals[tx.targetCategory] += val;
             }
         }
     });
@@ -740,7 +770,7 @@ function updateVattiTotal() {
     if (elem) elem.innerText = `₹${grandVatti}`;
 }
 
-// Render General List OR Search Results List
+// Main Transaction Rendering Logic
 function renderGeneralTransactions() {
     const listElem = document.getElementById("all-list");
     if (!listElem) return;
@@ -750,7 +780,7 @@ function renderGeneralTransactions() {
     let sourceList = isSearchActive ? searchFilteredTransactions : allTransactions;
 
     let filtered = sourceList.filter(tx => {
-        if (isSearchActive) return true; // Direct Search mode bypasses tab filters
+        if (isSearchActive) return true;
         
         let matchCat = (currentCategory === "ALL") || 
                        (tx.targetCategory === currentCategory || tx.source === currentCategory);
