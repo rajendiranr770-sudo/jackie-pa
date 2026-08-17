@@ -15,7 +15,6 @@ import {
     doc, 
     updateDoc, 
     query, 
-    where, 
     orderBy 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -34,7 +33,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// State Variables
+// Global State Variables
 let currentUser = null;
 let currentCategory = "ALL";
 let currentMonth = "ALL";
@@ -42,20 +41,19 @@ let currentMonth = "ALL";
 let allTransactions = [];
 let vattiAccounts = [];
 
+let pendingTransactionData = null; // Pending Data for Source Popup
 let editingTxId = null;
 let editingVattiId = null;
 let editingVattiLoanIndex = null;
 
-// Tamil Text Numbers to Numeric Values
+// Tamil Text Numbers to Numeric Conversion
 function convertTamilTextToNumbers(text) {
     if (!text) return text;
     let str = text.toLowerCase();
     
-    // Convert Tamil Numeric Digits
     const tamilDigits = {'௦':'0','௧':'1','௨':'2','௩':'3','௪':'4','௫':'5','௬':'6','௭':'7','௮':'8','௯':'9'};
     str = str.replace(/[௦-௯]/g, m => tamilDigits[m]);
 
-    // Words Map
     const wordMap = [
         { w: "ஒரு லட்சம்", v: 100000 }, { w: "லட்சம்", v: 100000 },
         { w: "அம்பதாயிரம்", v: 50000 }, { w: "ஐம்பதாயிரம்", v: 50000 },
@@ -80,24 +78,16 @@ function convertTamilTextToNumbers(text) {
     return str;
 }
 
-// DOM Elements Initialization
+// DOM Initialization & Dynamic Source Modal Setup
 document.addEventListener("DOMContentLoaded", () => {
+    setupFundSourceModalHTML();
+
     const loginBtn = document.getElementById("login-btn");
     const logoutBtn = document.getElementById("logout-btn");
     
-    if (loginBtn) {
-        loginBtn.addEventListener("click", () => {
-            signInWithPopup(auth, provider).catch(err => alert("Login Error: " + err.message));
-        });
-    }
+    if (loginBtn) loginBtn.addEventListener("click", () => signInWithPopup(auth, provider).catch(err => alert(err.message)));
+    if (logoutBtn) logoutBtn.addEventListener("click", () => signOut(auth));
 
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
-            signOut(auth);
-        });
-    }
-
-    // Category Tabs & Cards Event Listener
     document.querySelectorAll(".filter-tab, .stat-card").forEach(elem => {
         elem.addEventListener("click", () => {
             let cat = elem.getAttribute("data-category") || elem.id.replace("card-", "");
@@ -105,7 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Inputs & Action Buttons
     const btnSendTx = document.getElementById("btn-send-tx");
     if (btnSendTx) btnSendTx.addEventListener("click", processBottomInput);
 
@@ -127,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnPdf = document.getElementById("btn-pdf-download");
     if (btnPdf) btnPdf.addEventListener("click", downloadPDF);
 
-    // Edit Modal Buttons
+    // Edit Modal Events
     const btnSaveEdit = document.getElementById("btn-save-edit");
     if (btnSaveEdit) btnSaveEdit.addEventListener("click", saveTransactionEdit);
     
@@ -136,7 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("edit-modal-overlay").style.display = "none";
     });
 
-    // Vatti Edit Modal Buttons
+    // Vatti Edit Modal Events
     const btnVattiSaveEdit = document.getElementById("btn-vatti-save-edit");
     if (btnVattiSaveEdit) btnVattiSaveEdit.addEventListener("click", saveVattiLoanEdit);
 
@@ -146,7 +135,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// Authentication Observer
+// Create HTML Dynamic Overlay for Fund Source Modal
+function setupFundSourceModalHTML() {
+    if (document.getElementById("fund-source-modal-overlay")) return;
+
+    const modalHTML = `
+        <div class="modal-overlay" id="fund-source-modal-overlay">
+            <div class="modal-body" style="text-align: center; border-radius: 12px;">
+                <h3 style="color: #0f172a; margin-bottom: 8px;">பண ஆதாரம் தேர்வு செய்யவும்</h3>
+                <p id="fund-source-text-preview" style="color: #475569; font-size: 14px; margin-bottom: 20px;"></p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="btn-select-salary" style="flex:1; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">💼 சம்பளம்</button>
+                    <button id="btn-select-home" style="flex:1; background: #16a34a; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">🏠 வீடு</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+    document.getElementById("btn-select-salary").addEventListener("click", () => confirmFundSource("சம்பளம்"));
+    document.getElementById("btn-select-home").addEventListener("click", () => confirmFundSource("வீடு"));
+}
+
+// Authentication Observer & Persistent Realtime Connection
 onAuthStateChanged(auth, (user) => {
     const authContainer = document.getElementById("auth-container");
     const mainApp = document.getElementById("main-app");
@@ -167,7 +178,6 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Realtime Firestore Listener
 function listenToData() {
     if (!currentUser) return;
 
@@ -198,7 +208,6 @@ function listenToData() {
     });
 }
 
-// Category Tab Switcher
 function switchCategoryTab(cat) {
     currentCategory = cat;
 
@@ -230,17 +239,15 @@ function switchCategoryTab(cat) {
     }
 }
 
-// Smart Bottom Input Parser (FIXED FOR INCOME vs EXPENSE)
+// Smart Bottom Input Parser with Source Prompt Check
 function processBottomInput() {
     const inputField = document.getElementById("voice-text-input");
     let rawText = inputField.value.trim();
     if (!rawText) return;
 
-    // Remove ₹ and commas, convert Tamil words to digits
     let cleanText = rawText.replace(/₹/g, '').replace(/,/g, ''); 
     let processedText = convertTamilTextToNumbers(cleanText);
 
-    // Extract Amount
     const amtMatch = processedText.match(/\d+/);
     if (!amtMatch) {
         alert("தொகையை சரியாக குறிப்பிடவும்!");
@@ -250,27 +257,33 @@ function processBottomInput() {
     const amount = parseFloat(amtMatch[0]);
     let lowerText = processedText.toLowerCase();
 
-    // Smart Type Parsing (Income vs Expense)
+    // Type Logic
     let type = "expense"; 
     const incomeKeywords = ["வந்தது", "வந்திருச்சு", "வரவு", "கிரெடிட்", "வருமானம்", "கிடைத்தது", "credit", "received", "got"];
-    
     if (incomeKeywords.some(keyword => lowerText.includes(keyword))) {
         type = "income";
     }
 
-    // Smart Category Parsing
+    // Target Category Detection
     let targetCategory = "பொதுச் செலவு";
-
     if (lowerText.includes("சம்பளம்") || lowerText.includes("salary")) {
         targetCategory = "சம்பளம்";
     } else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டில்") || lowerText.includes("home")) {
         targetCategory = "வீடு";
     } else if (lowerText.includes("கொல்லை") || lowerText.includes("தோட்டம்")) {
         targetCategory = "கொல்லை";
-    } else if (lowerText.includes("எம் கே") || lowerText.includes("mk")) {
+    } else if (lowerText.includes("எம் கே") || lowerText.includes("எம்கே") || lowerText.includes("mk")) {
         targetCategory = "MK செலவு";
-    } else if (lowerText.includes("எஸ் கே") || lowerText.includes("sk")) {
+    } else if (lowerText.includes("எஸ் கே") || lowerText.includes("எஸ்கே") || lowerText.includes("sk")) {
         targetCategory = "SK செலவு";
+    }
+
+    // Check Source Fund Specified (சம்பளம் / வீடு)
+    let sourceFund = null;
+    if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) {
+        sourceFund = "சம்பளம்";
+    } else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு")) {
+        sourceFund = "வீடு";
     }
 
     const now = new Date();
@@ -279,21 +292,45 @@ function processBottomInput() {
         hour: "numeric", minute: "numeric", second: "numeric", hour12: true 
     });
 
-    const newTx = {
+    const txObject = {
         title: rawText,
         amount: amount,
         type: type,
-        source: targetCategory,
+        source: sourceFund,
         targetCategory: targetCategory,
         dateStr: formattedDate,
         timestamp: Date.now()
     };
 
-    addDoc(collection(db, "users", currentUser.uid, "transactions"), newTx)
+    // If Expense & No Source Identified -> Show Modal
+    if (type === "expense" && !sourceFund) {
+        pendingTransactionData = txObject;
+        document.getElementById("fund-source-text-preview").innerText = `"${rawText}" - ₹${amount}`;
+        document.getElementById("fund-source-modal-overlay").style.display = "flex";
+    } else {
+        if (!sourceFund) txObject.source = targetCategory;
+        saveTransactionToFirestore(txObject);
+    }
+}
+
+// Save Transaction & Auto-Clear Input
+function saveTransactionToFirestore(txObject) {
+    addDoc(collection(db, "users", currentUser.uid, "transactions"), txObject)
         .then(() => {
-            inputField.value = "";
+            const inputField = document.getElementById("voice-text-input");
+            if (inputField) inputField.value = ""; // Auto-Delete / Clear Input Field
         })
-        .catch(err => alert("Error: " + err.message));
+        .catch(err => alert("சேமிப்பதில் பிழை: " + err.message));
+}
+
+// Source Selection Modal Callback
+function confirmFundSource(selectedSource) {
+    if (!pendingTransactionData) return;
+    pendingTransactionData.source = selectedSource;
+
+    document.getElementById("fund-source-modal-overlay").style.display = "none";
+    saveTransactionToFirestore(pendingTransactionData);
+    pendingTransactionData = null;
 }
 
 // Voice Recognition
@@ -343,17 +380,15 @@ function handleAddManual() {
         title: text,
         amount: amount,
         type: type,
-        source: currentCategory,
-        targetCategory: currentCategory,
+        source: currentCategory === "ALL" ? "பொதுச் செலவு" : currentCategory,
+        targetCategory: currentCategory === "ALL" ? "பொதுச் செலவு" : currentCategory,
         dateStr: formattedDate,
         timestamp: Date.now()
     };
 
-    addDoc(collection(db, "users", currentUser.uid, "transactions"), newTx)
-        .then(() => {
-            document.getElementById("manual-text").value = "";
-            document.getElementById("manual-amount").value = "";
-        });
+    saveTransactionToFirestore(newTx);
+    document.getElementById("manual-text").value = "";
+    document.getElementById("manual-amount").value = "";
 }
 
 // Vatti Calculation Logic
@@ -375,7 +410,6 @@ function calculateLoanDetails(principal, rate, startDateStr) {
     return { totalDays, months, remDays, monthlyInterest, totalInterest };
 }
 
-// Add Vatti Loan
 window.handleAddLoan = function(isNewAccount) {
     const nameInput = document.getElementById("vatti-name");
     const principalInput = document.getElementById("vatti-principal");
@@ -418,7 +452,6 @@ function resetVattiForm() {
     document.getElementById("vatti-date").value = "";
 }
 
-// Render Vatti Accounts View
 function renderVattiAccounts() {
     const listContainer = document.getElementById("vatti-accounts-list");
     if (!listContainer) return;
@@ -542,7 +575,7 @@ function saveVattiLoanEdit() {
     });
 }
 
-// Totals Calculation with Correct Category Mapping
+// Corrected Totals Calculation Engine
 function updateTotalsAndMonths() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0 };
     let monthsSet = new Set();
@@ -553,12 +586,22 @@ function updateTotalsAndMonths() {
             monthsSet.add(mStr);
         }
 
-        let cat = tx.targetCategory || tx.source || "பொதுச் செலவு";
         let val = tx.amount || 0;
 
-        if (totals.hasOwnProperty(cat)) {
-            if (tx.type === "income") totals[cat] += val;
-            else totals[cat] -= val;
+        // Deduct from Source Fund (சம்பளம் / வீடு)
+        if (tx.source && (tx.source === "சம்பளம்" || tx.source === "வீடு")) {
+            if (tx.type === "income") {
+                totals[tx.source] += val;
+            } else {
+                totals[tx.source] -= val;
+            }
+        }
+
+        // Target Expense Accumulation for MK, SK & Kollai
+        if (tx.targetCategory && tx.targetCategory !== tx.source) {
+            if (totals.hasOwnProperty(tx.targetCategory)) {
+                totals[tx.targetCategory] += val; // Total Expense Accumulated (Positive sum)
+            }
         }
     });
 
@@ -589,7 +632,7 @@ function updateVattiTotal() {
     if (elem) elem.innerText = `₹${grandVatti}`;
 }
 
-// Render General List with Income/Expense UI Support
+// Render General List
 function renderGeneralTransactions() {
     const listElem = document.getElementById("all-list");
     if (!listElem) return;
@@ -623,11 +666,13 @@ function renderGeneralTransactions() {
         const amtColor = isIncome ? "#16a34a" : "#dc2626";
         const amtSign = isIncome ? "+" : "-";
 
+        let sourceInfo = tx.source ? ` [பணம்: ${tx.source}]` : '';
+
         item.innerHTML = `
             <div>
                 <div style="font-weight:bold; font-size:14px; color:#0f172a;">${tx.title}</div>
                 <div style="font-size:11px; color:#64748b; margin-top:2px;">
-                    ${tx.dateStr || ''} | ${isIncome ? 'வரவு (Income)' : 'செலவு'} (${tx.targetCategory || tx.source})
+                    ${tx.dateStr || ''} | ${isIncome ? 'வரவு (Income)' : 'செலவு'} (${tx.targetCategory || 'பொது'})${sourceInfo}
                 </div>
             </div>
             <div style="text-align:right;">
