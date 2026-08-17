@@ -40,6 +40,8 @@ let currentMonth = "ALL";
 
 let allTransactions = [];
 let vattiAccounts = [];
+let isSearchActive = false;
+let searchFilteredTransactions = [];
 
 let pendingTransactionData = null; // Pending Data for Source Popup
 let editingTxId = null;
@@ -140,13 +142,13 @@ function setupFundSourceModalHTML() {
     if (document.getElementById("fund-source-modal-overlay")) return;
 
     const modalHTML = `
-        <div class="modal-overlay" id="fund-source-modal-overlay">
-            <div class="modal-body" style="text-align: center; border-radius: 12px;">
-                <h3 style="color: #0f172a; margin-bottom: 8px;">பண ஆதாரம் தேர்வு செய்யவும்</h3>
-                <p id="fund-source-text-preview" style="color: #475569; font-size: 14px; margin-bottom: 20px;"></p>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button id="btn-select-salary" style="flex:1; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">💼 சம்பளம்</button>
-                    <button id="btn-select-home" style="flex:1; background: #16a34a; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">🏠 வீடு</button>
+        <div class="modal-overlay" id="fund-source-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
+            <div class="modal-body" style="background:white; padding:20px; text-align:center; border-radius:12px; width:90%; max-width:380px;">
+                <h3 style="color:#0f172a; margin-bottom:8px;">பண ஆதாரம் தேர்வு செய்யவும்</h3>
+                <p id="fund-source-text-preview" style="color:#475569; font-size:14px; margin-bottom:20px;"></p>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button id="btn-select-salary" style="flex:1; background:#2563eb; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">💼 சம்பளம்</button>
+                    <button id="btn-select-home" style="flex:1; background:#16a34a; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">🏠 வீடு</button>
                 </div>
             </div>
         </div>
@@ -210,6 +212,7 @@ function listenToData() {
 
 function switchCategoryTab(cat) {
     currentCategory = cat;
+    isSearchActive = false; // Reset Search state on tab change
 
     document.querySelectorAll(".filter-tab").forEach(tab => {
         if (tab.getAttribute("data-category") === cat) tab.classList.add("active");
@@ -280,9 +283,9 @@ function processBottomInput() {
 
     // Check Source Fund Specified (சம்பளம் / வீடு)
     let sourceFund = null;
-    if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) {
+    if (lowerText.includes("சம்பள பணத்") || lowerText.includes("சம்பளப் பணத்") || lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) {
         sourceFund = "சம்பளம்";
-    } else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு")) {
+    } else if (lowerText.includes("வீட்டு பணத்") || lowerText.includes("வீட்டுப் பணத்") || lowerText.includes("வீடு") || lowerText.includes("வீட்டு")) {
         sourceFund = "வீடு";
     }
 
@@ -318,7 +321,7 @@ function saveTransactionToFirestore(txObject) {
     addDoc(collection(db, "users", currentUser.uid, "transactions"), txObject)
         .then(() => {
             const inputField = document.getElementById("voice-text-input");
-            if (inputField) inputField.value = ""; // Auto-Delete / Clear Input Field
+            if (inputField) inputField.value = ""; // Clear Input Box
         })
         .catch(err => alert("சேமிப்பதில் பிழை: " + err.message));
 }
@@ -359,10 +362,12 @@ function startVoiceRecognition() {
     recognition.onend = () => { micBtn.innerText = "🎙️ பேசு"; };
 }
 
-// Manual Entry
+// Manual Entry & Clear Form
 function handleAddManual() {
-    const text = document.getElementById("manual-text").value.trim();
-    const amount = parseFloat(document.getElementById("manual-amount").value);
+    const textInput = document.getElementById("manual-text");
+    const amountInput = document.getElementById("manual-amount");
+    const text = textInput.value.trim();
+    const amount = parseFloat(amountInput.value);
     const type = document.getElementById("manual-type").value;
 
     if (!text || isNaN(amount)) {
@@ -387,8 +392,111 @@ function handleAddManual() {
     };
 
     saveTransactionToFirestore(newTx);
-    document.getElementById("manual-text").value = "";
-    document.getElementById("manual-amount").value = "";
+    textInput.value = "";
+    amountInput.value = "";
+}
+
+// Search Logic: Hide standard list and show Search Results + Search PDF Option
+function handleExpenseSearch() {
+    const searchInput = document.getElementById("search-query-input");
+    const queryStr = searchInput.value.trim().toLowerCase();
+    const resultBox = document.getElementById("search-result-box");
+
+    if (!queryStr) {
+        clearExpenseSearch();
+        return;
+    }
+
+    isSearchActive = true;
+    searchFilteredTransactions = allTransactions.filter(tx => 
+        (tx.title && tx.title.toLowerCase().includes(queryStr)) ||
+        (tx.targetCategory && tx.targetCategory.toLowerCase().includes(queryStr)) ||
+        (tx.source && tx.source.toLowerCase().includes(queryStr))
+    );
+
+    let totalAmt = searchFilteredTransactions.reduce((acc, t) => acc + (t.amount || 0), 0);
+
+    resultBox.style.display = "block";
+    resultBox.innerHTML = `
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; padding:12px; border-radius:10px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold; color:#0369a1; font-size:14px;">🔍 '${queryStr}' தேடல் முடிவுகள் (${searchFilteredTransactions.length})</span>
+                <button onclick="clearExpenseSearch()" style="background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold;">❌ தேடலை நீக்கு</button>
+            </div>
+            <div style="font-size:16px; font-weight:bold; color:#0284c7; margin-top:6px;">
+                மொத்தத் தொகை: ₹${totalAmt}
+            </div>
+            <button onclick="downloadSearchPDF('${queryStr}')" style="margin-top:10px; background:#0284c7; color:white; border:none; padding:8px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; width:100%;">📄 தேடல் பதிவுகளை PDF டவுன்லோட் செய்</button>
+        </div>
+    `;
+
+    document.getElementById("list-heading").innerText = `🔍 தேடல் முடிவுகள்: ${queryStr}`;
+    renderGeneralTransactions();
+}
+
+window.clearExpenseSearch = function() {
+    isSearchActive = false;
+    searchFilteredTransactions = [];
+    document.getElementById("search-query-input").value = "";
+    document.getElementById("search-result-box").style.display = "none";
+    document.getElementById("list-heading").innerText = currentCategory === "ALL" ? "அனைத்துப் பதிவுகள்" : `${currentCategory} - பதிவுகள்`;
+    renderGeneralTransactions();
+};
+
+function downloadSearchPDF(queryStr) {
+    if (searchFilteredTransactions.length === 0) {
+        alert("பதிவுகள் இல்லை!");
+        return;
+    }
+
+    let pdfContainer = document.createElement("div");
+    pdfContainer.style.padding = "20px";
+    pdfContainer.style.fontFamily = "sans-serif";
+
+    let totalAmt = searchFilteredTransactions.reduce((acc, t) => acc + (t.amount || 0), 0);
+
+    let htmlContent = `
+        <h2 style="text-align:center; color:#0f172a;">தேடல் அறிக்கை: ${queryStr}</h2>
+        <p style="text-align:center; color:#475569;">தேதி: ${new Date().toLocaleDateString()}</p>
+        <hr/>
+        <h3 style="color:#0284c7;">மொத்தத் தொகை: ₹${totalAmt}</h3>
+        <table style="width:100%; border-collapse:collapse; margin-top:15px;" border="1" cellpadding="8">
+            <thead>
+                <tr style="background:#f1f5f9;">
+                    <th>தேதி</th>
+                    <th>விவரம்</th>
+                    <th>வகை</th>
+                    <th>பணம்</th>
+                    <th>தொகை</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    searchFilteredTransactions.forEach(tx => {
+        htmlContent += `
+            <tr>
+                <td>${tx.dateStr || ''}</td>
+                <td>${tx.title || ''}</td>
+                <td>${tx.targetCategory || ''}</td>
+                <td>${tx.source || ''}</td>
+                <td>₹${tx.amount || 0}</td>
+            </tr>
+        `;
+    });
+
+    htmlContent += `</tbody></table>`;
+    pdfContainer.innerHTML = htmlContent;
+
+    const opt = {
+        margin:       0.5,
+        filename:     `Search_Report_${queryStr}_${new Date().toLocaleDateString()}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(pdfContainer).save();
 }
 
 // Vatti Calculation Logic
@@ -575,7 +683,7 @@ function saveVattiLoanEdit() {
     });
 }
 
-// Corrected Totals Calculation Engine
+// Totals Calculation Engine
 function updateTotalsAndMonths() {
     let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0 };
     let monthsSet = new Set();
@@ -632,14 +740,18 @@ function updateVattiTotal() {
     if (elem) elem.innerText = `₹${grandVatti}`;
 }
 
-// Render General List
+// Render General List OR Search Results List
 function renderGeneralTransactions() {
     const listElem = document.getElementById("all-list");
     if (!listElem) return;
 
     listElem.innerHTML = "";
 
-    let filtered = allTransactions.filter(tx => {
+    let sourceList = isSearchActive ? searchFilteredTransactions : allTransactions;
+
+    let filtered = sourceList.filter(tx => {
+        if (isSearchActive) return true; // Direct Search mode bypasses tab filters
+        
         let matchCat = (currentCategory === "ALL") || 
                        (tx.targetCategory === currentCategory || tx.source === currentCategory);
         let matchMonth = true;
@@ -728,38 +840,11 @@ function saveTransactionEdit() {
         });
 }
 
-function handleExpenseSearch() {
-    const queryStr = document.getElementById("search-query-input").value.trim().toLowerCase();
-    const resultBox = document.getElementById("search-result-box");
-
-    if (!queryStr) {
-        resultBox.style.display = "none";
-        return;
-    }
-
-    let filtered = allTransactions.filter(tx => 
-        (tx.title && tx.title.toLowerCase().includes(queryStr)) ||
-        (tx.targetCategory && tx.targetCategory.toLowerCase().includes(queryStr))
-    );
-
-    let totalAmt = filtered.reduce((acc, t) => acc + (t.amount || 0), 0);
-
-    resultBox.style.display = "block";
-    resultBox.innerHTML = `
-        <div style="font-weight:bold; color:#0369a1; font-size:13px; margin-top:8px;">
-            🔍 '${queryStr}' தேடல் முடிவுகள் (${filtered.length} பதிவுகள்):
-        </div>
-        <div style="font-size:14px; font-weight:bold; color:#0284c7; margin-top:4px;">
-            மொத்தத் தொகை: ₹${totalAmt}
-        </div>
-    `;
-}
-
 function downloadPDF() {
     const element = document.getElementById("general-view");
     const opt = {
         margin:       0.5,
-        filename:     `Finance_Report_${new Date().toLocaleDateString()}.pdf`,
+        filename:     `Full_Finance_Report_${new Date().toLocaleDateString()}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2 },
         jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
