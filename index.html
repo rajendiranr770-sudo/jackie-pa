@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance App Final</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
         body { background-color: #f1f5f9; padding: 10px; padding-bottom: 80px; }
@@ -13,28 +12,30 @@
         .btn { border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .input-box { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 5px; }
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 10px; display: flex; gap: 5px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #475569; }
+        .list-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
 
     <div id="auth-container" style="text-align: center; margin-top: 100px;">
-        <h2>Finance Tracker</h2>
+        <h2>நிதி நிர்வாகம்</h2>
         <button id="login-btn" class="btn" style="background: #2563eb; color: white;">Google லாக்-இன்</button>
     </div>
 
     <div id="main-app" style="display: none;">
         <div class="card-box" style="background: #0f172a; color: white; display: flex; justify-content: space-between;">
-            <div id="user-display">நிதி நிர்வாகம்</div>
+            <div>நிதி நிர்வாகம்</div>
             <button id="logout-btn" style="background:transparent; border:none; color:white; font-size:12px;">லாக்அவுட்</button>
         </div>
 
         <div class="grid-2">
             <div class="card-box">சம்பளம்: <b id="salary-val">₹0</b></div>
             <div class="card-box">வீடு: <b id="home-val">₹0</b></div>
+            <div class="card-box">MK செலவு: <b id="mk-val">₹0</b></div>
+            <div class="card-box">SK செலவு: <b id="sk-val">₹0</b></div>
         </div>
 
-        <div id="all-list"></div>
+        <div id="all-list" class="card-box"></div>
     </div>
 
     <div class="bottom-bar">
@@ -45,7 +46,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
@@ -61,18 +62,15 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        let currentUser = null;
-
         document.getElementById("login-btn").onclick = () => signInWithPopup(auth, provider);
         document.getElementById("logout-btn").onclick = () => signOut(auth);
         document.getElementById("btn-send-tx").onclick = processInput;
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                currentUser = user;
                 document.getElementById("auth-container").style.display = "none";
                 document.getElementById("main-app").style.display = "block";
-                listenToData();
+                listenToData(user.uid);
             } else {
                 document.getElementById("auth-container").style.display = "block";
                 document.getElementById("main-app").style.display = "none";
@@ -84,73 +82,50 @@
             const rawText = inputField.value.trim();
             if (!rawText) return;
 
-            let lowerText = rawText.toLowerCase();
-            let amountMatch = rawText.match(/\d+/);
-            let amount = amountMatch ? parseInt(amountMatch[0]) : 0;
+            let lower = rawText.toLowerCase();
+            let amount = parseInt(rawText.match(/\d+/) || 0);
             
-            // Logic 1: Determine Source (House vs Salary)
-            let source = null;
-            if (lowerText.includes("வீடு") || lowerText.includes("வீட்டிலிருந்து")) source = "வீடு";
-            else if (lowerText.includes("சம்பளம்")) source = "சம்பளம்";
+            // Logic: Source (வீடு/சம்பளம்)
+            let source = lower.includes("வீடு") ? "வீடு" : "சம்பளம்";
+            
+            // Logic: Type & Category
+            let type = (lower.includes("வந்தது") || lower.includes("வரவு")) ? "income" : "expense";
+            let category = "பொது";
+            if (lower.includes("mk")) { category = "MK செலவு"; type = "expense"; }
+            else if (lower.includes("sk")) { category = "SK செலவு"; type = "expense"; }
+            else if (lower.includes("கொல்லை")) { category = "கொல்லை"; type = "expense"; }
 
-            // Logic 2: Determine Type
-            let type = null;
-            if (lowerText.includes("வந்தது") || lowerText.includes("வரவு")) type = "income";
-            else if (lowerText.includes("செலவு") || lowerText.includes("கொடுத்தது")) type = "expense";
-
-            // Forced Category Logic
-            let targetCategory = "பொது";
-            if (lowerText.includes("mk")) { targetCategory = "MK செலவு"; type = "expense"; }
-            else if (lowerText.includes("sk")) { targetCategory = "SK செலவு"; type = "expense"; }
-            else if (lowerText.includes("கொல்லை")) { targetCategory = "கொல்லை"; type = "expense"; }
-
-            // If we have enough info, save immediately without popup
-            if (source && type) {
-                saveData({ title: rawText, amount, type, source, targetCategory, timestamp: Date.now() });
-                inputField.value = "";
-            } else {
-                alert("பணம் எங்கிருந்து? (வீடு/சம்பளம்) மற்றும் வரவா/செலவா என்று குறிப்பிட்டு சொல்லுங்கள்.");
-            }
+            saveData({ title: rawText, amount, type, source, category, timestamp: Date.now() });
+            inputField.value = "";
         }
 
-        function saveData(data) {
-            addDoc(collection(db, "users", currentUser.uid, "transactions"), data).catch(e => alert("Error: " + e.message));
+        async function saveData(data) {
+            await addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), data);
         }
 
-        function listenToData() {
-            onSnapshot(query(collection(db, "users", currentUser.uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
-                let transactions = [];
-                let totals = { "சம்பளம்": 0, "வீடு": 0 };
-                
+        function listenToData(uid) {
+            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
+                let totals = { "சம்பளம்": 0, "வீடு": 0, "MK செலவு": 0, "SK செலவு": 0 };
+                let listHTML = "";
+
                 snap.forEach(d => {
-                    let tx = { id: d.id, ...d.data() };
-                    transactions.push(tx);
-                    
-                    if (tx.source === "சம்பளம்") {
-                        if (tx.type === "income") totals["சம்பளம்"] += tx.amount;
-                        else totals["சம்பளம்"] -= tx.amount;
-                    } else if (tx.source === "வீடு") {
-                        if (tx.type === "income") totals["வீடு"] += tx.amount;
-                        else totals["வீடு"] -= tx.amount;
-                    }
+                    let tx = d.data();
+                    // Update Totals
+                    if (tx.type === "income") totals[tx.source] += tx.amount;
+                    else totals[tx.source] -= tx.amount; // பணம் குறையுது
+                    if (tx.category !== "பொது") totals[tx.category] -= tx.amount;
+
+                    listHTML += `<div class="list-item">
+                        <div><b>${tx.title}</b><br><small style="color:gray">மூலம்: ${tx.source}</small></div>
+                        <div style="color:${tx.type=='income'?'green':'red'}">${tx.type=='income'?'+':'-'}₹${tx.amount}</div>
+                    </div>`;
                 });
 
                 document.getElementById("salary-val").innerText = `₹${totals["சம்பளம்"]}`;
                 document.getElementById("home-val").innerText = `₹${totals["வீடு"]}`;
-                
-                const list = document.getElementById("all-list");
-                list.innerHTML = "";
-                transactions.forEach(tx => {
-                    const item = document.createElement("div");
-                    item.className = "card-box";
-                    item.innerHTML = `
-                        <div style="display:flex; justify-content:space-between;">
-                            <div><b>${tx.title}</b><br><span class="badge">மூலம்: ${tx.source}</span></div>
-                            <div style="color:${tx.type=='income'?'green':'red'}">${tx.type=='income'?'+':'-'}₹${tx.amount}</div>
-                        </div>
-                    `;
-                    list.appendChild(item);
-                });
+                document.getElementById("mk-val").innerText = `₹${totals["MK செலவு"]}`;
+                document.getElementById("sk-val").innerText = `₹${totals["SK செலவு"]}`;
+                document.getElementById("all-list").innerHTML = listHTML || "பதிவுகள் இல்லை.";
             });
         }
     </script>
