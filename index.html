@@ -3,44 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance App Final</title>
+    <title>Finance Master App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
-        body { background-color: #f1f5f9; padding: 10px; padding-bottom: 80px; }
-        .card-box { background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .btn { border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .input-box { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 5px; }
+        body { background-color: #f8fafc; padding: 10px; padding-bottom: 80px; }
+        .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 10px; display: flex; gap: 5px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        .list-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .input-box { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-    <div id="auth-container" style="text-align: center; margin-top: 100px;">
+    <div id="auth-box" style="text-align:center; margin-top:50px;">
         <h2>நிதி நிர்வாகம்</h2>
-        <button id="login-btn" class="btn" style="background: #2563eb; color: white;">Google லாக்-இன்</button>
+        <button id="login-btn" class="btn" style="background: #2563eb;">Google லாக்-இன்</button>
     </div>
 
-    <div id="main-app" style="display: none;">
-        <div class="card-box" style="background: #0f172a; color: white; display: flex; justify-content: space-between;">
-            <div>நிதி நிர்வாகம்</div>
-            <button id="logout-btn" style="background:transparent; border:none; color:white; font-size:12px;">லாக்அவுட்</button>
+    <div id="app-box" style="display:none;">
+        <div class="card" style="background:#1e293b; color:white;">
+            <div style="display:flex; justify-content:space-between;">
+                <span>நிதி நிர்வாகம்</span>
+                <button id="logout-btn" style="background:none; border:none; color:white;">Logout</button>
+            </div>
         </div>
 
-        <div class="grid-2">
-            <div class="card-box">சம்பளம்: <b id="salary-val">₹0</b></div>
-            <div class="card-box">வீடு: <b id="home-val">₹0</b></div>
-            <div class="card-box">MK செலவு: <b id="mk-val">₹0</b></div>
-            <div class="card-box">SK செலவு: <b id="sk-val">₹0</b></div>
+        <div class="grid-3">
+            <div class="card">சம்பளம்: <b id="val-salary">₹0</b></div>
+            <div class="card">வீடு: <b id="val-home">₹0</b></div>
+            <div class="card">MK செலவு: <b id="val-mk">₹0</b></div>
+            <div class="card">SK செலவு: <b id="val-sk">₹0</b></div>
+            <div class="card">கொல்லை: <b id="val-kollai">₹0</b></div>
+            <div class="card">வட்டி: <b id="val-vatti">₹0</b></div>
         </div>
 
-        <div id="all-list" class="card-box"></div>
+        <button id="btn-pdf" class="btn" style="background:green; width:100%; margin-bottom:10px;">📄 PDF டவுன்லோட்</button>
+        <div id="list-container" class="card"></div>
     </div>
 
     <div class="bottom-bar">
-        <input type="text" id="voice-text-input" class="input-box" placeholder="எ.கா: வீட்டிலிருந்து 5000 வந்தது">
-        <button id="btn-send-tx" class="btn" style="background:#2563eb; color:white;">அனுப்பு</button>
+        <input type="text" id="voice-input" class="input-box" placeholder="எ.கா: வீட்டிலிருந்து 5000 வந்தது">
+        <button id="btn-send" class="btn" style="background:#2563eb;">அனுப்பு</button>
+        <button id="btn-mic" class="btn" style="background:#dc2626;">🎙️</button>
     </div>
 
     <script type="module">
@@ -64,68 +70,69 @@
 
         document.getElementById("login-btn").onclick = () => signInWithPopup(auth, provider);
         document.getElementById("logout-btn").onclick = () => signOut(auth);
-        document.getElementById("btn-send-tx").onclick = processInput;
+        document.getElementById("btn-pdf").onclick = () => html2pdf().from(document.getElementById("list-container")).save();
+        document.getElementById("btn-send").onclick = processData;
+        document.getElementById("btn-mic").onclick = startVoice;
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                document.getElementById("auth-container").style.display = "none";
-                document.getElementById("main-app").style.display = "block";
-                listenToData(user.uid);
+                document.getElementById("auth-box").style.display = "none";
+                document.getElementById("app-box").style.display = "block";
+                loadData(user.uid);
             } else {
-                document.getElementById("auth-container").style.display = "block";
-                document.getElementById("main-app").style.display = "none";
+                document.getElementById("auth-box").style.display = "block";
+                document.getElementById("app-box").style.display = "none";
             }
         });
 
-        function processInput() {
-            const inputField = document.getElementById("voice-text-input");
-            const rawText = inputField.value.trim();
-            if (!rawText) return;
-
-            let lower = rawText.toLowerCase();
-            let amount = parseInt(rawText.match(/\d+/) || 0);
+        function processData() {
+            const input = document.getElementById("voice-input");
+            const val = input.value.trim();
+            if(!val) return;
             
-            // Logic: Source (வீடு/சம்பளம்)
-            let source = lower.includes("வீடு") ? "வீடு" : "சம்பளம்";
-            
-            // Logic: Type & Category
-            let type = (lower.includes("வந்தது") || lower.includes("வரவு")) ? "income" : "expense";
-            let category = "பொது";
-            if (lower.includes("mk")) { category = "MK செலவு"; type = "expense"; }
-            else if (lower.includes("sk")) { category = "SK செலவு"; type = "expense"; }
-            else if (lower.includes("கொல்லை")) { category = "கொல்லை"; type = "expense"; }
+            const amt = parseInt(val.match(/\d+/) || 0);
+            let cat = "பொது";
+            let type = "expense";
+            let src = "சம்பளம்";
 
-            saveData({ title: rawText, amount, type, source, category, timestamp: Date.now() });
-            inputField.value = "";
+            if (val.includes("வீடு")) src = "வீடு";
+            if (val.includes("MK")) cat = "MK செலவு";
+            if (val.includes("SK")) cat = "SK செலவு";
+            if (val.includes("கொல்லை")) cat = "கொல்லை";
+            if (val.includes("வந்தது") || val.includes("வரவு")) type = "income";
+
+            addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), {
+                title: val, amt, cat, type, src, time: Date.now()
+            });
+            input.value = "";
         }
 
-        async function saveData(data) {
-            await addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), data);
+        function startVoice() {
+            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            rec.lang = 'ta-IN';
+            rec.onresult = (e) => { document.getElementById("voice-input").value = e.results[0][0].transcript; };
+            rec.start();
         }
 
-        function listenToData(uid) {
-            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
-                let totals = { "சம்பளம்": 0, "வீடு": 0, "MK செலவு": 0, "SK செலவு": 0 };
-                let listHTML = "";
-
+        function loadData(uid) {
+            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("time", "desc")), (snap) => {
+                let totals = { "சம்பளம்": 0, "வீடு": 0, "MK செலவு": 0, "SK செலவு": 0, "கொல்லை": 0, "வட்டி": 0 };
+                let html = "<h3>பதிவுகள்:</h3>";
                 snap.forEach(d => {
-                    let tx = d.data();
-                    // Update Totals
-                    if (tx.type === "income") totals[tx.source] += tx.amount;
-                    else totals[tx.source] -= tx.amount; // பணம் குறையுது
-                    if (tx.category !== "பொது") totals[tx.category] -= tx.amount;
-
-                    listHTML += `<div class="list-item">
-                        <div><b>${tx.title}</b><br><small style="color:gray">மூலம்: ${tx.source}</small></div>
-                        <div style="color:${tx.type=='income'?'green':'red'}">${tx.type=='income'?'+':'-'}₹${tx.amount}</div>
-                    </div>`;
+                    let t = d.data();
+                    if(t.type === "income") totals[t.src] += t.amt;
+                    else {
+                        totals[t.src] -= t.amt;
+                        if(t.cat !== "பொது") totals[t.cat] += t.amt;
+                    }
+                    html += `<div style="border-bottom:1px solid #ccc; padding:5px;"><b>${t.title}</b> - ₹${t.amt} (${t.src})</div>`;
                 });
-
-                document.getElementById("salary-val").innerText = `₹${totals["சம்பளம்"]}`;
-                document.getElementById("home-val").innerText = `₹${totals["வீடு"]}`;
-                document.getElementById("mk-val").innerText = `₹${totals["MK செலவு"]}`;
-                document.getElementById("sk-val").innerText = `₹${totals["SK செலவு"]}`;
-                document.getElementById("all-list").innerHTML = listHTML || "பதிவுகள் இல்லை.";
+                document.getElementById("val-salary").innerText = "₹" + totals["சம்பளம்"];
+                document.getElementById("val-home").innerText = "₹" + totals["வீடு"];
+                document.getElementById("val-mk").innerText = "₹" + totals["MK செலவு"];
+                document.getElementById("val-sk").innerText = "₹" + totals["SK செலவு"];
+                document.getElementById("val-kollai").innerText = "₹" + totals["கொல்லை"];
+                document.getElementById("list-container").innerHTML = html;
             });
         }
     </script>
