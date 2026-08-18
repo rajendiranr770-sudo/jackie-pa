@@ -14,7 +14,8 @@
         .logout-btn { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         
         .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.1s; }
+        .card:active { transform: scale(0.98); }
         .card-label { font-size: 14px; color: #475569; font-weight: bold; }
         .card-value { font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 4px; }
         
@@ -24,10 +25,10 @@
         
         .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
         .month-select { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: bold; }
-        .pdf-btn { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .pdf-btn { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         
         .search-box { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
-        .search-title { color: #0369a1; font-weight: bold; font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+        .search-title { color: #0369a1; font-weight: bold; font-size: 13px; margin-bottom: 6px; }
         .search-input-group { display: flex; gap: 6px; }
         .search-input { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
         .search-btn { background: #0284c7; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; }
@@ -42,7 +43,7 @@
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 8px; display: flex; gap: 6px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
         .voice-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
         .send-btn { background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; }
-        .mic-btn { background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 4px; }
+        .mic-btn { background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -63,21 +64,22 @@
         </div>
 
         <div class="cards-grid">
-            <div class="card"><div class="card-label">சம்பளம்</div><div class="card-value" id="val-salary">₹0</div></div>
-            <div class="card"><div class="card-label">வீடு</div><div class="card-value" id="val-home">₹0</div></div>
-            <div class="card"><div class="card-label">கொல்லை</div><div class="card-value" id="val-kollai">₹0</div></div>
-            <div class="card"><div class="card-label">MK செலவு</div><div class="card-value" id="val-mk">₹0</div></div>
-            <div class="card"><div class="card-label">SK செலவு</div><div class="card-value" id="val-sk">₹0</div></div>
-            <div class="card"><div class="card-label" style="color:#2563eb;">வட்டி பிசினஸ்</div><div class="card-value" style="color:#2563eb;" id="val-vatti">₹0</div></div>
+            <div class="card" onclick="selectTab('சம்பளம்')"><div class="card-label">சம்பளம்</div><div class="card-value" id="val-salary">₹0</div></div>
+            <div class="card" onclick="selectTab('வீடு')"><div class="card-label">வீடு</div><div class="card-value" id="val-home">₹0</div></div>
+            <div class="card" onclick="selectTab('கொல்லை')"><div class="card-label">கொல்லை</div><div class="card-value" id="val-kollai">₹0</div></div>
+            <div class="card" onclick="selectTab('MK செலவு')"><div class="card-label">MK செலவு</div><div class="card-value" id="val-mk">₹0</div></div>
+            <div class="card" onclick="selectTab('SK செலவு')"><div class="card-label">SK செலவு</div><div class="card-value" id="val-sk">₹0</div></div>
+            <div class="card" onclick="selectTab('வட்டி பிசினஸ்')"><div class="card-label" style="color:#2563eb;">வட்டி பிசினஸ்</div><div class="card-value" style="color:#2563eb;" id="val-vatti">₹0</div></div>
         </div>
 
         <div class="tab-bar">
-            <button class="tab-btn active" onclick="filterTab('All', this)">📊 All</button>
-            <button class="tab-btn" onclick="filterTab('சம்பளம்', this)">💼 சம்பளம்</button>
-            <button class="tab-btn" onclick="filterTab('வீடு', this)">🏠 வீடு</button>
-            <button class="tab-btn" onclick="filterTab('கொல்லை', this)">🌱 கொல்லை</button>
-            <button class="tab-btn" onclick="filterTab('MK செலவு', this)">👤 MK</button>
-            <button class="tab-btn" onclick="filterTab('SK செலவு', this)">👤 SK</button>
+            <button class="tab-btn active" data-tab="All" onclick="filterTab('All', this)">📊 All</button>
+            <button class="tab-btn" data-tab="சம்பளம்" onclick="filterTab('சம்பளம்', this)">💼 சம்பளம்</button>
+            <button class="tab-btn" data-tab="வீடு" onclick="filterTab('வீடு', this)">🏠 வீடு</button>
+            <button class="tab-btn" data-tab="கொல்லை" onclick="filterTab('கொல்லை', this)">🌱 கொல்லை</button>
+            <button class="tab-btn" data-tab="MK செலவு" onclick="filterTab('MK செலவு', this)">👤 MK</button>
+            <button class="tab-btn" data-tab="SK செலவு" onclick="filterTab('SK செலவு', this)">👤 SK</button>
+            <button class="tab-btn" data-tab="வட்டி பிசினஸ்" onclick="filterTab('வட்டி பிசினஸ்', this)">💰 வட்டி</button>
         </div>
 
         <div class="filter-row">
@@ -149,7 +151,11 @@
                        .replace(/ஆயிரம்/g, "1000")
                        .replace(/இரண்டாயிரம்/g, "2000")
                        .replace(/மூன்றாயிரம்/g, "3000")
-                       .replace(/பதாயிரம்/g, "10000");
+                       .replace(/ஐந்நூறு/g, "500")
+                       .replace(/நானூறு/g, "400")
+                       .replace(/முந்நூறு/g, "300")
+                       .replace(/இருநூறு/g, "200")
+                       .replace(/நூறு/g, "100");
         }
 
         function processInput() {
@@ -162,14 +168,19 @@
             let amountMatch = parsedText.match(/\d+/);
             let amount = amountMatch ? parseInt(amountMatch[0]) : 0;
             
-            let source = lowerText.includes("வீடு") || lowerText.includes("வீட்டிலிருந்து") ? "வீடு" : "சம்பளம்";
+            // Accurate Source Logic
+            let source = "சம்பளம்";
+            if (lowerText.includes("வீடு") || lowerText.includes("வீட்டில்")) {
+                source = "வீடு";
+            }
+
             let type = (lowerText.includes("வந்தது") || lowerText.includes("வரவு")) ? "income" : "expense";
 
             let targetCategory = "பொது";
             if (lowerText.includes("mk") || lowerText.includes("எம் கே")) targetCategory = "MK செலவு";
             else if (lowerText.includes("sk") || lowerText.includes("எஸ் கே")) targetCategory = "SK செலவு";
             else if (lowerText.includes("கொல்லை")) targetCategory = "கொல்லை";
-            else if (lowerText.includes("வட்டி")) targetCategory = "வட்டி பிசினஸ்";
+            else if (lowerText.includes("வட்டி") || lowerText.includes("கைமாத்து")) targetCategory = "வட்டி பிசினஸ்";
 
             addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), {
                 title: rawText,
@@ -225,6 +236,13 @@
 
                 renderList();
             });
+        }
+
+        window.selectTab = function(tabName) {
+            let targetBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+            if (targetBtn) {
+                filterTab(tabName, targetBtn);
+            }
         }
 
         window.filterTab = function(category, btnElem) {
