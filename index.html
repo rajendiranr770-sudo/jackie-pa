@@ -200,19 +200,29 @@
         });
 
         // ---------------- Number Extracting Fix ----------------
-        function extractAmount(text) {
-            let replaced = text.replace(/அறுபதாயிரம்/g, "60000")
-                               .replace(/இருபதாயிரம்/g, "20000")
-                               .replace(/ஐயாயிரம்/g, "5000")
-                               .replace(/இரண்டாயிரம்/g, "2000")
-                               .replace(/ஆயிரம்/g, "1000");
-            
-            let matches = replaced.match(/\d+/g);
-            if (!matches) return 0;
-            // Get the largest number matched in string to prevent 60000 becoming 60
-            let nums = matches.map(Number);
-            return Math.max(...nums);
-        }
+         function extractAmount(text) {
+    // 1. முதல்ல கமா இருந்தா எடுத்துடுவோம் (எ.கா: 20,000 -> 20000)
+    let textVal = text.replace(/,/g, '');
+
+    // 2. முழு வார்த்தைகளை முதல்ல மாத்திடுவோம்
+    textVal = textVal.replace(/அறுபதாயிரம்/g, "60000")
+                     .replace(/இருபதாயிரம்/g, "20000")
+                     .replace(/ஐயாயிரம்/g, "5000")
+                     .replace(/இரண்டாயிரம்/g, "2000");
+
+    // 3. இதுதான் முக்கியம்: "20 ஆயிரம்" அல்லது "20ஆயிரம்" என்று இருந்தால் 
+    // அதை நம்பரா மாத்தி 1000-ஆல பெருக்கி 20000 என்று மாத்திடும்
+    textVal = textVal.replace(/(\d+)\s*ஆயிரம்/gi, (match, number) => {
+        return parseInt(number) * 1000;
+    });
+
+    // 4. கடைசியா நம்பரை மட்டும் தேடும்
+    let matches = textVal.match(/\d+/g);
+    if (!matches) return 0;
+    
+    // எல்லாத்தையும் ஜாயின் பண்ணி நம்பரா தந்துடும்
+    return parseInt(matches.join(''), 10);
+}
 
         function processInput() {
             const inputField = document.getElementById("voice-text-input");
