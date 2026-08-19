@@ -425,9 +425,38 @@
             pendingAction = null;
         };
 
-        function saveTransaction(txData) {
-            addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), txData);
+// 1. பட்டன் கிளிக் செய்யும்போது இயங்கும் ஃபங்க்ஷன்
+function confirmSource(sourceName) {
+    if (pendingAction && pendingAction.data) {
+        pendingAction.data.source = sourceName;
+        
+        if (pendingAction.data.type === "expense") {
+            pendingAction.data.category = selectedCategoryChoice || "பொது";
         }
+
+        saveTransaction(pendingAction.data);
+        closeModal();
+    }
+}
+
+// 2. ஃபயர் பேஸ் (Firebase) டேட்டாபேஸில் சேமிக்கும் ஃபங்க்ஷன்
+async function saveTransaction(data) {
+    try {
+        let user = auth.currentUser;
+        if (!user) {
+            alert("உள்நுழையப்படவில்லை!");
+            return;
+        }
+
+        await addDoc(collection(db, "users", user.uid, "transactions"), {
+            ...data,
+            timestamp: Date.now()
+        });
+    } catch (error) {
+        console.error("Error saving transaction:", error);
+        alert("சேமிப்பதில் பிழை ஏற்பட்டது!");
+    }
+}
 
         function listenToData(uid) {
             onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
