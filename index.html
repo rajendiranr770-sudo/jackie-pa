@@ -277,39 +277,71 @@
         }
 
         function processInput() {
-            const inputField = document.getElementById("voice-text-input");
-            let rawText = inputField.value.trim();
-            if (!rawText) return;
+    const inputField = document.getElementById("voice-text-input");
+    let rawText = inputField.value.trim();
+    if (!rawText) return;
 
-            let amount = extractAmount(rawText);
-            let lowerText = rawText.toLowerCase();
-            let isIncome = lowerText.includes("வரவு") || lowerText.includes("வந்தது") || lowerText.includes("தந்தாங்க") || lowerText.includes("கொடுத்தாங்க");
+    let amount = extractAmount(rawText);
+    let lowerText = rawText.toLowerCase();
 
-            let category = "பொது";
-            if (lowerText.includes("mk") || lowerText.includes("எம் கே")) category = "MK செலவு";
-            else if (lowerText.includes("sk") || lowerText.includes("எஸ் கே")) category = "SK செலவு";
-            else if (lowerText.includes("கொல்லை")) category = "கொல்லை";
-            else if (lowerText.includes("கைமாத்து")) category = "கைமாத்து";
-            else if (lowerText.includes("வட்டி")) category = "வட்டி பிசினஸ்";
+    // 1. வரவா செலவா எனக் கண்டறிதல்
+    let isIncome = lowerText.includes("வரவு") || lowerText.includes("வந்தது") || lowerText.includes("தந்தாங்க") || lowerText.includes("கிடைத்தது") || lowerText.includes("சேர்ந்தது");
 
-            let txData = {
-                title: rawText,
-                amount: amount,
-                type: isIncome ? "income" : "expense",
-                category: category,
-                timestamp: Date.now()
-            };
+    // 2. செலவு வகை (Category)
+    let category = "பொது";
+    if (lowerText.includes("mk") || lowerText.includes("எம்கே") || lowerText.includes("எம் கே")) category = "MK செலவு";
+    else if (lowerText.includes("sk") || lowerText.includes("எஸ்கே") || lowerText.includes("எஸ் கே")) category = "SK செலவு";
+    else if (lowerText.includes("கொல்லை")) category = "கொல்லை";
+    else if (lowerText.includes("கைமாத்து")) category = "கைமாத்து";
+    else if (lowerText.includes("வட்டி")) category = "வட்டி பிசினஸ்";
 
-            if (isIncome || category === "SK செலவு" || category === "கைமாத்து") {
-                pendingAction = { type: "TX", data: txData };
-                document.getElementById("modal-title").innerText = "பணம் எதிலிருந்து/எங்கு சேர வேண்டும்?";
-                document.getElementById("source-modal").style.display = "flex";
-            } else {
-                txData.source = "சம்பளம்";
-                saveTransaction(txData);
-            }
-            inputField.value = "";
+    // 3. பணம் எந்தக் கணக்கு (Source/Account)
+    let detectedSource = null;
+    if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) detectedSource = "சம்பளம்";
+    else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு")) detectedSource = "வீடு";
+
+    let txData = {
+        title: rawText,
+        amount: amount,
+        type: isIncome ? "income" : "expense",
+        category: category,
+        timestamp: Date.now()
+    };
+
+    // 4. 4 வகை பாப்-அப் பிரிக்கும் பகுதி:
+    if (isIncome) {
+        if (detectedSource !== null) {
+            // வரவு + கணக்கும் தெளிவு -> Auto Save
+            txData.source = detectedSource;
+            saveTransaction(txData);
+        } else {
+            // POP-UP 1: "5000 வந்தது" (சம்பளம் / வீடு மட்டும் கேட்கும்)
+            openModalByScenario(1, txData);
         }
+    } else {
+        // செலவு கணக்குகள்
+        if (detectedSource !== null && category !== "பொது") {
+            // கணக்கும் தெளிவு + செலவு வகையும் தெளிவு -> Auto Save
+            txData.source = detectedSource;
+            saveTransaction(txData);
+        } 
+        else if (detectedSource === null && category !== "பொது") {
+            // POP-UP 2: "எம்.கே 500 செலவு" (எந்தப் பணம்னு மட்டும் கேட்கும்)
+            openModalByScenario(2, txData);
+        } 
+        else if (detectedSource !== null && category === "பொது") {
+            // POP-UP 3: "சம்பளத்தில் 500 செலவு" (4 லோகோ மட்டும் கேட்கும்)
+            txData.source = detectedSource;
+            openModalByScenario(3, txData);
+        } 
+        else {
+            // POP-UP 4: வெறும் "500 செலவு" (4 லோகோ + 2 கணக்கு ரெண்டுமே கேட்கும்)
+            openModalByScenario(4, txData);
+        }
+    }
+
+    inputField.value = "";
+}
 
         window.triggerKaiMaathuAdd = function() {
             let name = document.getElementById("km-name").value.trim();
