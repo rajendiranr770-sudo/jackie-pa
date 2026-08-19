@@ -512,7 +512,7 @@
             });
         }
 
-        window.toggleLoanReturn = function(loanId, isChecked, isKaiMaathu, source, amount, name) {
+                window.toggleLoanReturn = function(loanId, isChecked, isKaiMaathu, source, amount, name) {
             updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId), { isReturned: isChecked });
             if (isKaiMaathu && isChecked) {
                 // Add money back to original source when checked
@@ -527,31 +527,31 @@
             }
         };
 
-function saveManualEntry() {
-    let title = document.getElementById("manual-title").value.trim();
-    let amount = parseFloat(document.getElementById("manual-amount").value);
-    let type = document.getElementById("manual-type").value;
+        function saveManualEntry() {
+            let title = document.getElementById("manual-title").value.trim();
+            let amount = parseFloat(document.getElementById("manual-amount").value);
+            let type = document.getElementById("manual-type").value;
 
-    if (!title || isNaN(amount) || amount <= 0) {
-        alert("தயவுசெய்து சரியான விவரம் மற்றும் தொகையை உள்ளிடவும்!");
-        return;
-    }
+            if (!title || isNaN(amount) || amount <= 0) {
+                alert("தயவுசெய்து சரியான விவரம் மற்றும் தொகையை உள்ளிடவும்!");
+                return;
+            }
 
-    let txData = {
-        title: title,
-        amount: amount,
-        type: type,
-        category: currentCategory,
-        source: "மேனுவல் பதிவு",
-        timestamp: Date.now()
-    };
+            let txData = {
+                title: title,
+                amount: amount,
+                type: type,
+                category: currentCategory,
+                source: "மேனுவல் பதிவு",
+                timestamp: Date.now()
+            };
 
-    saveTransaction(txData);
+            saveTransaction(txData);
 
-    document.getElementById("manual-title").value = "";
-    document.getElementById("manual-amount").value = "";
-}
-  
+            document.getElementById("manual-title").value = "";
+            document.getElementById("manual-amount").value = "";
+        }
+
         function startVoice() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 alert("Voice feature கிடைக்கவில்லை.");
@@ -560,27 +560,20 @@ function saveManualEntry() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
             recognition.lang = 'ta-IN';
-                function startVoice() {
-        if (!('webkitSpeechRecognition' in window)) {
-            alert("Voice feature not supported");
-            return;
+
+            recognition.onresult = (e) => {
+                document.getElementById("voice-text-input").value = e.results[0][0].transcript;
+                
+                // பேசி முடிச்ச அரை செகண்ட்ல தானாகவே சென்ட் ஆகும்
+                setTimeout(() => {
+                    processInput();
+                }, 500);
+            };
+
+            recognition.start();
         }
-        const SpeechRecognition = window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'ta-IN';
-        
-        recognition.onresult = (e) => {
-            document.getElementById("voice-text-input").value = e.results[0][0].transcript;
-            
-            // பேசி முடிச்ச அரை செகண்ட்ல தானாகவே சென்ட் ஆகும்
-            setTimeout(() => {
-                processInput();
-            }, 500);
-        };
-        
-        recognition.start();
-    }
 
     </script>
 </body>
 </html>
+
