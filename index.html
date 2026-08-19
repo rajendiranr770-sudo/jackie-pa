@@ -666,6 +666,88 @@
             };
             recognition.start();
         }
+
+        // ==========================================
+// பாப்-அப் கட்டுப்பாட்டு ஃபங்க்ஷன்கள் (Modal Controls)
+// ==========================================
+
+let selectedCategoryChoice = "பொது";
+
+// 4 வகை பாப்-அப் நிலைகளைக் கட்டுப்படுத்தும் ஃபங்க்ஷன்
+function openModalByScenario(popupType, txData) {
+    pendingAction = { type: "TX", data: txData };
+    
+    let catSec = document.getElementById("category-section");
+    let srcSec = document.getElementById("source-section");
+    let modalTitle = document.getElementById("modal-title");
+
+    // பழைய தேர்வுகளை ரீசெட் செய்தல்
+    catSec.style.display = "none";
+    srcSec.style.display = "none";
+    selectedCategoryChoice = txData.category || "பொது";
+    
+    // பட்டன் தேர்வுகளை ரீசெட் செய்தல்
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+
+    // POP-UP 1: "5000 வந்தது" (சம்பளமா / வீடா மட்டும் கேட்கும்)
+    if (popupType === 1) {
+        modalTitle.innerText = "பணம் எங்கு சேர வேண்டும்?";
+        srcSec.style.display = "block";
+    } 
+    // POP-UP 2: "எம்.கே 500 செலவு" (எந்தப் பணம்னு மட்டும் கேட்கும்)
+    else if (popupType === 2) {
+        modalTitle.innerText = txData.category + " - எந்தப் பணம்?";
+        srcSec.style.display = "block";
+    }
+    // POP-UP 3: "சம்பளத்தில் 500 செலவு" (4 லோகோ மட்டும் கேட்கும்)
+    else if (popupType === 3) {
+        modalTitle.innerText = "எதற்கான செலவு?";
+        catSec.style.display = "block";
+    } 
+    // POP-UP 4: வெறும் "500 செலவு" (4 லோகோ + 2 கணக்கு ரெண்டுமே கேட்கும்)
+    else if (popupType === 4) {
+        modalTitle.innerText = "விவரத்தை உறுதி செய்யவும்";
+        catSec.style.display = "block";
+        srcSec.style.display = "block";
+    }
+
+    document.getElementById("source-modal").style.display = "flex";
+}
+
+// 4 செலவு லோகோ பட்டன்களைத் தொடும்போது
+function setCategory(catName, btnElement) {
+    selectedCategoryChoice = catName;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+    btnElement.classList.add('selected');
+
+    // Pop-up 3-ல் லோகோவைத் தொட்டதும் சேவ் ஆகும்
+    if (document.getElementById("source-section").style.display === "none") {
+        pendingAction.data.category = catName;
+        saveTransaction(pendingAction.data);
+        closeModal();
+    }
+}
+
+// சம்பளம் / வீடு பட்டனைத் தொடும்போது
+function confirmSource(sourceName) {
+    if (pendingAction && pendingAction.data) {
+        pendingAction.data.source = sourceName;
+        
+        if (pendingAction.data.type === "expense") {
+            pendingAction.data.category = selectedCategoryChoice;
+        }
+
+        saveTransaction(pendingAction.data);
+        closeModal();
+    }
+}
+
+// பாப்-அப் மூட
+function closeModal() {
+    document.getElementById("source-modal").style.display = "none";
+    pendingAction = null;
+}
+
     </script>
 </body>
 </html>
