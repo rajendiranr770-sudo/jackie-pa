@@ -500,9 +500,27 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
             recognition.lang = 'ta-IN';
-            recognition.onresult = (e) => {
-                document.getElementById("voice-text-input").value = e.results[0][0].transcript;
-            };
+                function startVoice() {
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Voice feature not supported");
+            return;
+        }
+        const SpeechRecognition = window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ta-IN';
+        
+        recognition.onresult = (e) => {
+            document.getElementById("voice-text-input").value = e.results[0][0].transcript;
+            
+            // பேசி முடிச்ச அரை செகண்ட்ல தானாகவே சென்ட் ஆகும்
+            setTimeout(() => {
+                processInput();
+            }, 500);
+        };
+        
+        recognition.start();
+    }
+
             recognition.start();
         }
     </script>
