@@ -715,30 +715,432 @@ async function saveEditData() {
         
         if (collectionType === 'vatti') {
             await updateDoc(userRef, {
-                name: title,
-                principal: amount,
-                source: source
+<script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
+            authDomain: "myfinanceapp-3f883.firebaseapp.com",
+            projectId: "myfinanceapp-3f883",
+            storageBucket: "myfinanceapp-3f883.firebasestorage.app",
+            messagingSenderId: "698658153791",
+            appId: "1:698658153791:web:08ea0171d24a9b0da51f8a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let allTransactions = [];
+        let allVattiLoans = [];
+        let activeTab = "All";
+        let pendingAction = null;
+
+        document.getElementById("login-btn").onclick = () => signInWithRedirect(auth, provider);
+        document.getElementById("logout-btn").onclick = () => signOut(auth);
+        document.getElementById("btn-send-tx").onclick = processInput;
+        document.getElementById("btn-mic").onclick = startVoice;
+
+        getRedirectResult(auth).catch(err => console.error(err));
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById("auth-container").style.display = "none";
+                document.getElementById("main-app").style.display = "block";
+                document.getElementById("user-display-name").innerText = user.displayName || "User";
+                listenToData(user.uid);
+            } else {
+                document.getElementById("auth-container").style.display = "block";
+                document.getElementById("main-app").style.display = "none";
+            }
+        });
+
+        // ---------------- Number Extracting Fix ----------------
+        function extractAmount(text) {
+            let textVal = text.replace(/,/g, '');
+
+            textVal = textVal.replace(/அறுபதாயிரம்/g, "60000")
+                             .replace(/இருபதாயிரம்/g, "20000")
+                             .replace(/ஐயாயிரம்/g, "5000")
+                             .replace(/இரண்டாயிரம்/g, "2000");
+
+            textVal = textVal.replace(/(\d+)\s*ஆயிரம்/gi, (match, number) => {
+                return parseInt(number) * 1000;
             });
-        } else {
-            await updateDoc(userRef, {
-                title: title,
+
+            let matches = textVal.match(/\d+/g);
+            if (!matches) return 0;
+            
+            return parseInt(matches.join(''), 10);
+        }
+
+        function processInput() {
+            const inputField = document.getElementById("voice-text-input");
+            let rawText = inputField.value.trim();
+            if (!rawText) return;
+
+            let amount = extractAmount(rawText);
+            let lowerText = rawText.toLowerCase();
+            let isIncome = lowerText.includes("வரவு") || 
+               lowerText.includes("வந்தது") || 
+               lowerText.includes("தந்தாங்க") || 
+               lowerText.includes("தந்தான்") || 
+               lowerText.includes("தந்தாரு") || 
+               lowerText.includes("கொடுத்தாங்க") || 
+               lowerText.includes("கொடுத்தான்") || 
+               lowerText.includes("கொடுத்தாரு");
+
+            let category = "பொது";
+            if (lowerText.includes("mk") || lowerText.includes("எம் கே")) category = "MK செலவு";
+            else if (lowerText.includes("sk") || lowerText.includes("எஸ் கே")) category = "SK செலவு";
+            else if (lowerText.includes("கொல்லை")) category = "கொல்லை";
+            else if (lowerText.includes("கைமாத்து")) category = "கைமாத்து";
+            else if (lowerText.includes("வட்டி")) category = "வட்டி பிசினஸ்";
+
+            let txData = {
+                title: rawText,
                 amount: amount,
-                source: source,
+                type: isIncome ? "income" : "expense",
                 category: category,
-                type: type
+                timestamp: Date.now()
+            };
+
+            if (isIncome || category === "SK செலவு" || category === "கைமாத்து") {
+                pendingAction = { type: "TX", data: txData };
+                document.getElementById("modal-title").innerText = "பணம் எதிலிருந்து/எங்கு சேர வேண்டும்?";
+                document.getElementById("source-modal").style.display = "flex";
+            } else {
+                txData.source = "சம்பளம்";
+                saveTransaction(txData);
+            }
+
+            inputField.value = "";
+        }
+
+        window.triggerKaiMaathuAdd = function() {
+            let name = document.getElementById("km-name").value.trim();
+            let amt = parseInt(document.getElementById("km-amount").value);
+            if (!name || !amt) { alert("விவரங்களை நிரப்பவும்!"); return; }
+
+            pendingAction = {
+                type: "KM",
+                data: { personName: name, principal: amt, rate: 0, timestamp: Date.now(), isReturned: false, isKaiMaathu: true }
+            };
+            document.getElementById("modal-title").innerText = "கைமாத்து பணம் எதிலிருந்து கொடுக்கப்பட்டது?";
+            document.getElementById("source-modal").style.display = "flex";
+        };
+
+        window.resolveSource = function(selectedSource) {
+            document.getElementById("source-modal").style.display = "none";
+            if (!pendingAction) return;
+
+            if (pendingAction.type === "TX") {
+                pendingAction.data.source = selectedSource;
+                saveTransaction(pendingAction.data);
+            } else if (pendingAction.type === "KM") {
+                pendingAction.data.source = selectedSource;
+                addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), pendingAction.data);
+                
+                saveTransaction({
+                    title: `${pendingAction.data.personName}-க்கு கைமாத்து கொடுத்தது`,
+                    amount: pendingAction.data.principal,
+                    type: "expense",
+                    source: selectedSource,
+                    category: "கைமாத்து",
+                    timestamp: Date.now()
+                });
+                
+                document.getElementById("km-name").value = "";
+                document.getElementById("km-amount").value = "";
+            }
+            pendingAction = null;
+        };
+
+        function saveTransaction(txData) {
+            addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), txData);
+        }
+
+        function listenToData(uid) {
+            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
+                allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateCalculations();
+            });
+
+            onSnapshot(query(collection(db, "users", uid, "vatti"), orderBy("timestamp", "desc")), (snap) => {
+                allVattiLoans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateCalculations();
             });
         }
 
-        alert("வெற்றிகரமாக புதுப்பிக்கப்பட்டது!");
-        closeEditModal();
-        renderApp(); // ஸ்கிரீனை ரீப்ரெஷ் செய்ய
-    } catch (error) {
-        console.error("Edit Error: ", error);
-        alert("திருத்தம் செய்வதில் பிழை ஏற்பட்டது!");
-    }
-}
+        function updateCalculations() {
+            let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி பிசினஸ்": 0 };
 
-                function startVoice() {
+            allTransactions.forEach(tx => {
+                if (tx.type === "income") {
+                    totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
+                } else {
+                    totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
+                    if (tx.category && tx.category !== "பொது") {
+                        totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
+                    }
+                }
+            });
+
+            let vattiTotal = 0;
+            allVattiLoans.forEach(v => {
+                if (!v.isReturned && !v.isKaiMaathu) vattiTotal += v.principal;
+            });
+            totals["வட்டி பிசினஸ்"] = vattiTotal;
+
+            document.getElementById("val-salary").innerText = `₹${totals["சம்பளம்"]}`;
+            document.getElementById("val-home").innerText = `₹${totals["வீடு"]}`;
+            document.getElementById("val-kollai").innerText = `₹${totals["கொல்லை"]}`;
+            document.getElementById("val-mk").innerText = `₹${totals["MK செலவு"]}`;
+            document.getElementById("val-sk").innerText = `₹${totals["SK செலவு"]}`;
+            document.getElementById("val-vatti").innerText = `₹${totals["வட்டி பிசினஸ்"]}`;
+
+            renderApp();
+        }
+
+        window.selectTab = function(tabName) {
+            let targetBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+            if (targetBtn) {
+                filterTab(tabName, targetBtn);
+                document.getElementById("search-box-area").scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+
+        window.filterTab = function(tabName, btnElem) {
+            activeTab = tabName;
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            btnElem.classList.add("active");
+
+            document.getElementById("standard-view").style.display = "none";
+            document.getElementById("vatti-view").style.display = "none";
+            document.getElementById("kaimaathu-view").style.display = "none";
+
+            if (tabName === "வட்டி பிசினஸ்") {
+                document.getElementById("vatti-view").style.display = "block";
+            } else if (tabName === "கைமாத்து") {
+                document.getElementById("kaimaathu-view").style.display = "block";
+            } else {
+                document.getElementById("standard-view").style.display = "block";
+            }
+            renderApp();
+        };
+
+        function renderApp() {
+            if (activeTab === "வட்டி பிசினஸ்") renderVattiView();
+            else if (activeTab === "கைமாத்து") renderKaiMaathuView();
+            else renderStandardView();
+        }
+
+        function renderStandardView() {
+            const container = document.getElementById("tx-list-container");
+            const searchKeyword = document.getElementById("search-input").value.toLowerCase().trim();
+
+            let filtered = allTransactions.filter(tx => {
+                let matchesTab = (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
+                let matchesSearch = !searchKeyword || tx.title.toLowerCase().includes(searchKeyword);
+                return matchesTab && matchesSearch;
+            });
+
+            container.innerHTML = "";
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:gray;">பதிவுகள் எதுவும் இல்லை.</div>`;
+                return;
+            }
+
+            filtered.forEach(tx => {
+                let dateStr = new Date(tx.timestamp).toLocaleDateString("ta-IN");
+                let div = document.createElement("div");
+                div.className = `tx-card ${tx.type}`;
+                div.innerHTML = `
+                    <div style="flex:1;">
+                        <div class="tx-title">${tx.title}</div>
+                        <div class="tx-sub">${dateStr} | கணக்கு: <b>${tx.source}</b></div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
+                            ${tx.type === 'income' ? '+' : '-'}₹${tx.amount}
+                        </div>
+                        <div class="action-btns">
+                            <span onclick="openEditModal(${JSON.stringify(tx).replace(/"/g, '&quot;')}, 'transactions')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick="openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.addVattiLoan = function() {
+            let name = document.getElementById("v-name").value.trim();
+            let principal = parseInt(document.getElementById("v-principal").value);
+            let rate = parseFloat(document.getElementById("v-rate").value) || 0;
+            if (!name || !principal) { alert("விவரங்களை நிரப்பவும்!"); return; }
+
+            addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), {
+                personName: name, principal: principal, rate: rate, timestamp: Date.now(), isReturned: false, isKaiMaathu: false
+            });
+
+            document.getElementById("v-name").value = "";
+            document.getElementById("v-principal").value = "";
+            document.getElementById("v-rate").value = "";
+        };
+
+        function renderVattiView() {
+            const container = document.getElementById("vatti-persons-container");
+            container.innerHTML = "";
+            let loansList = allVattiLoans.filter(v => !v.isKaiMaathu);
+
+            loansList.forEach((l) => {
+                let days = Math.floor((Date.now() - l.timestamp) / (1000 * 60 * 60 * 24));
+                let interest = Math.round((l.principal * (l.rate / 100) * (days / 30)));
+                let div = document.createElement("div");
+                div.className = "person-card";
+                div.innerHTML = `
+                    <div class="person-header">
+                        <span>👤 ${l.personName}</span>
+                        <div>
+                            <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
+                            <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
+                        </div>
+                    </div>
+                    <div>அசல்: ₹${l.principal} | வட்டி: ${l.rate}%</div>
+                    <div style="color:#d97706; font-weight:bold; margin-top:4px;">வட்டி தொகை: ₹${interest} (${days} நாட்கள்)</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderKaiMaathuView() {
+            const container = document.getElementById("kaimaathu-container");
+            container.innerHTML = "";
+            let kmList = allVattiLoans.filter(v => v.isKaiMaathu);
+
+            kmList.forEach(l => {
+                let div = document.createElement("div");
+                div.className = "person-card";
+                div.innerHTML = `
+                    <div class="person-header">
+                        <span>🤝 ${l.personName}</span>
+                        <div>
+                            <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
+                            <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}')">
+                        </div>
+                    </div>
+                    <div>கைமாத்து தொகை: <b>₹${l.principal}</b></div>
+                    <div style="font-size:12px; color:gray; margin-top:4px;">எடுக்கப்பட்ட கணக்கு: <b>${l.source}</b></div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.toggleLoanReturn = function(loanId, isChecked, isKaiMaathu, source, amount, name) {
+            updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId), { isReturned: isChecked });
+            if (isKaiMaathu && isChecked) {
+                saveTransaction({
+                    title: `${name}-டமிருந்து கைமாத்து திரும்ப வந்தது`,
+                    amount: amount,
+                    type: "income",
+                    source: source,
+                    category: "கைமாத்து",
+                    timestamp: Date.now()
+                });
+            }
+        };
+
+        // --- எடிட் மற்றும் டெலீட் ஃபங்ஷன்களை Window-வில் இணைத்துள்ளோம் ---
+        window.openDeleteModal = function(id, collectionType = 'transactions') {
+            document.getElementById("delete-id").value = id;
+            document.getElementById("delete-collection-type").value = collectionType;
+            document.getElementById("delete-modal").style.display = "flex";
+        };
+
+        window.closeDeleteModal = function() {
+            document.getElementById("delete-modal").style.display = "none";
+        };
+
+        window.confirmDeleteData = async function() {
+            const id = document.getElementById("delete-id").value;
+            const collectionType = document.getElementById("delete-collection-type").value;
+
+            try {
+                await deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id));
+                alert("பதிவு வெற்றிகரமாக நீக்கப்பட்டது!");
+                closeDeleteModal();
+                if (typeof renderApp === "function") renderApp();
+            } catch (error) {
+                console.error("Delete Error: ", error);
+                alert("நீக்குவதில் பிழை ஏற்பட்டது!");
+            }
+        };
+
+        window.openEditModal = function(item, collectionType = 'transactions') {
+            document.getElementById("edit-id").value = item.id;
+            document.getElementById("edit-collection-type").value = collectionType;
+            document.getElementById("edit-title").value = item.title || item.personName || "";
+            document.getElementById("edit-amount").value = item.amount || item.principal || 0;
+            document.getElementById("edit-source").value = item.source || "சம்பளம்";
+            document.getElementById("edit-category").value = item.category || "பொது";
+            document.getElementById("edit-type").value = item.type || "expense";
+
+            document.getElementById("edit-modal").style.display = "flex";
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById("edit-modal").style.display = "none";
+        };
+
+        window.saveEditData = async function() {
+            const id = document.getElementById("edit-id").value;
+            const collectionType = document.getElementById("edit-collection-type").value;
+            const title = document.getElementById("edit-title").value;
+            const amount = parseFloat(document.getElementById("edit-amount").value);
+            const source = document.getElementById("edit-source").value;
+            const category = document.getElementById("edit-category").value;
+            const type = document.getElementById("edit-type").value;
+
+            if (!title || isNaN(amount)) {
+                alert("சரியான தகவலை உள்ளிடவும்!");
+                return;
+            }
+
+            try {
+                const userRef = doc(db, "users", auth.currentUser.uid, collectionType, id);
+                
+                if (collectionType === 'vatti') {
+                    await updateDoc(userRef, {
+                        personName: title,
+                        principal: amount,
+                        source: source
+                    });
+                } else {
+                    await updateDoc(userRef, {
+                        title: title,
+                        amount: amount,
+                        source: source,
+                        category: category,
+                        type: type
+                    });
+                }
+
+                alert("வெற்றிகரமாக புதுப்பிக்கப்பட்டது!");
+                closeEditModal();
+                renderApp();
+            } catch (error) {
+                console.error("Edit Error: ", error);
+                alert("திருத்தம் செய்வதில் பிழை ஏற்பட்டது!");
+            }
+        };
+
+        function startVoice() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 alert("Voice feature கிடைக்கவில்லை.");
                 return;
@@ -750,7 +1152,6 @@ async function saveEditData() {
             recognition.onresult = (e) => {
                 document.getElementById("voice-text-input").value = e.results[0][0].transcript;
                 
-                // பேசி முடிச்ச அரை செகண்ட்ல தானாகவே சென்ட் ஆகும்
                 setTimeout(() => {
                     processInput();
                 }, 500);
