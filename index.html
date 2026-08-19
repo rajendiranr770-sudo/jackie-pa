@@ -62,6 +62,34 @@
         .voice-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
         .send-btn { background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .mic-btn { background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        /* Pop-up Overlay & Card Design */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-card {
+    background: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 380px; text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.section-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; text-align: left; }
+
+/* 4 Category Buttons */
+.category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cat-btn {
+    padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; background: #f8f9fa;
+    font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s;
+}
+.cat-btn.selected { background: #e3f2fd; border-color: #2196f3; color: #1976d2; }
+
+/* 2 Source Buttons */
+.source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.src-btn {
+    padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 15px; cursor: pointer;
+}
+.btn-salary { background: #2563eb; }
+.btn-home { background: #16a34a; }
+
     </style>
 </head>
 <body>
