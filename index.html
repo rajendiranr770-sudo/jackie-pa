@@ -231,7 +231,14 @@
 
             let amount = extractAmount(rawText);
             let lowerText = rawText.toLowerCase();
-            let isIncome = lowerText.includes("வரவு") || lowerText.includes("வந்தது");
+            let isIncome = lowerText.includes("வரவு") || 
+               lowerText.includes("வந்தது") || 
+               lowerText.includes("தந்தாங்க") || 
+               lowerText.includes("தந்தான்") || 
+               lowerText.includes("தந்தாரு") || 
+               lowerText.includes("கொடுத்தாங்க") || 
+               lowerText.includes("கொடுத்தான்") || 
+               lowerText.includes("கொடுத்தாரு");
 
             let category = "பொது";
             if (lowerText.includes("mk") || lowerText.includes("எம் கே")) category = "MK செலவு";
