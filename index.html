@@ -558,7 +558,7 @@
             container.innerHTML = "";
             let loansList = allVattiLoans.filter(v => !v.isKaiMaathu);
 
-            loansList.forEach((l, i) => {
+            loansList.forEach((l) => {
                 let days = Math.floor((Date.now() - l.timestamp) / (1000 * 60 * 60 * 24));
                 let interest = Math.round((l.principal * (l.rate / 100) * (days / 30)));
                 let div = document.createElement("div");
@@ -566,7 +566,11 @@
                 div.innerHTML = `
                     <div class="person-header">
                         <span>👤 ${l.personName}</span>
-                        <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
+                        <div>
+                            <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
+                            <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
+                        </div>
                     </div>
                     <div>அசல்: ₹${l.principal} | வட்டி: ${l.rate}%</div>
                     <div style="color:#d97706; font-weight:bold; margin-top:4px;">வட்டி தொகை: ₹${interest} (${days} நாட்கள்)</div>
@@ -574,7 +578,7 @@
                 container.appendChild(div);
             });
         }
-
+        
         // 1. டெலீட் பாப்அப் ஓபன் செய்யும் ஃபங்ஷன்
 function openDeleteModal(id, collectionType = 'transactions') {
     document.getElementById("delete-id").value = id;
@@ -603,7 +607,7 @@ async function confirmDeleteData() {
     }
 }
         
-        function renderKaiMaathuView() {
+                function renderKaiMaathuView() {
             const container = document.getElementById("kaimaathu-container");
             container.innerHTML = "";
             let kmList = allVattiLoans.filter(v => v.isKaiMaathu);
@@ -614,7 +618,11 @@ async function confirmDeleteData() {
                 div.innerHTML = `
                     <div class="person-header">
                         <span>🤝 ${l.personName}</span>
-                        <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}')">
+                        <div>
+                            <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
+                            <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}')">
+                        </div>
                     </div>
                     <div>கைமாத்து தொகை: <b>₹${l.principal}</b></div>
                     <div style="font-size:12px; color:gray; margin-top:4px;">எடுக்கப்பட்ட கணக்கு: <b>${l.source}</b></div>
