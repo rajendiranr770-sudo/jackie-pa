@@ -618,6 +618,67 @@
             document.getElementById("manual-amount").value = "";
         }
 
+        // 1. எடிட் பாப்-அப் ஓபன் பண்ற ஃபங்ஷன்
+function openEditModal(item, collectionType = 'transactions') {
+    document.getElementById("edit-id").value = item.id;
+    document.getElementById("edit-collection-type").value = collectionType;
+    document.getElementById("edit-title").value = item.title || item.name || "";
+    document.getElementById("edit-amount").value = item.amount || item.principal || 0;
+    document.getElementById("edit-source").value = item.source || "சம்பளம்";
+    document.getElementById("edit-category").value = item.category || "பொது";
+    document.getElementById("edit-type").value = item.type || "expense";
+
+    document.getElementById("edit-modal").style.display = "flex";
+}
+
+// 2. பாப்-அப் மூடுற ஃபங்ஷன்
+function closeEditModal() {
+    document.getElementById("edit-modal").style.display = "none";
+}
+
+// 3. மாத்தின டேட்டாவை Firebase-ல் சேமிக்கும் ஃபங்ஷன்
+async function saveEditData() {
+    const id = document.getElementById("edit-id").value;
+    const collectionType = document.getElementById("edit-collection-type").value;
+    const title = document.getElementById("edit-title").value;
+    const amount = parseFloat(document.getElementById("edit-amount").value);
+    const source = document.getElementById("edit-source").value;
+    const category = document.getElementById("edit-category").value;
+    const type = document.getElementById("edit-type").value;
+
+    if (!title || isNaN(amount)) {
+        alert("சரியான தகவலை உள்ளிடவும்!");
+        return;
+    }
+
+    try {
+        const userRef = doc(db, "users", auth.currentUser.uid, collectionType, id);
+        
+        if (collectionType === 'vatti') {
+            await updateDoc(userRef, {
+                name: title,
+                principal: amount,
+                source: source
+            });
+        } else {
+            await updateDoc(userRef, {
+                title: title,
+                amount: amount,
+                source: source,
+                category: category,
+                type: type
+            });
+        }
+
+        alert("வெற்றிகரமாக புதுப்பிக்கப்பட்டது!");
+        closeEditModal();
+        renderApp(); // ஸ்கிரீனை ரீப்ரெஷ் செய்ய
+    } catch (error) {
+        console.error("Edit Error: ", error);
+        alert("திருத்தம் செய்வதில் பிழை ஏற்பட்டது!");
+    }
+}
+
                 function startVoice() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 alert("Voice feature கிடைக்கவில்லை.");
