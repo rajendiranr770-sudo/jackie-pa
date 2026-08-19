@@ -178,24 +178,20 @@
             <label class="modal-label">தொகை (₹):</label>
             <input type="number" id="edit-amount" class="form-input">
 
-            <label class="modal-label">பணம் எதுல இருந்து எடுக்கப்பட்டது?</label>
+                        <!-- 1. கணக்கு (Source): சம்பளம் / வீடு மட்டும் -->
+            <label class="modal-label">எந்தக் கணக்கு (Source)?</label>
             <select id="edit-source" class="form-input">
-                <option value="சம்பளம்">சம்பளம்</option>
-                <option value="வீடு">வீடு</option>
-                <option value="கொல்லை">கொல்லை</option>
-                <option value="MK செலவு">MK செலவு</option>
-                <option value="SK செலவு">SK செலவு</option>
+                <option value="சம்பளம்">💼 சம்பளம்</option>
+                <option value="வீடு">🏠 வீடு</option>
             </select>
 
-            <label class="modal-label">எதுக்கு கொண்டு போகணும்? (கேட்டகரி):</label>
+            <!-- 2. செலவு வகை (Category) -->
+            <label class="modal-label">செலவு வகை (Category):</label>
             <select id="edit-category" class="form-input">
-                <option value="சம்பளம்">சம்பளம்</option>
-                <option value="வீடு">வீடு</option>
-                <option value="கொல்லை">கொல்லை</option>
-                <option value="MK செலவு">MK செலவு</option>
-                <option value="SK செலவு">SK செலவு</option>
-                <option value="வட்டி">வட்டி</option>
-                <option value="கைமாத்து">கைமாத்து</option>
+                <option value="பொது">📝 பொது</option>
+                <option value="MK செலவு">🛒 MK செலவு</option>
+                <option value="SK செலவு">📦 SK செலவு</option>
+                <option value="கொல்லை">🌱 கொல்லை</option>
             </select>
 
             <label class="modal-label">வகை:</label>
