@@ -277,7 +277,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
@@ -505,7 +505,7 @@
             else renderStandardView();
         }
 
-        function renderStandardView() {
+                function renderStandardView() {
             const container = document.getElementById("tx-list-container");
             const searchKeyword = document.getElementById("search-input").value.toLowerCase().trim();
 
@@ -526,12 +526,18 @@
                 let div = document.createElement("div");
                 div.className = `tx-card ${tx.type}`;
                 div.innerHTML = `
-                    <div>
+                    <div style="flex:1;">
                         <div class="tx-title">${tx.title}</div>
                         <div class="tx-sub">${dateStr} | கணக்கு: <b>${tx.source}</b></div>
                     </div>
-                    <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
-                        ${tx.type === 'income' ? '+' : '-'}₹${tx.amount}
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
+                            ${tx.type === 'income' ? '+' : '-'}₹${tx.amount}
+                        </div>
+                        <div class="action-btns">
+                            <span onclick="openEditModal(${JSON.stringify(tx).replace(/"/g, '&quot;')}, 'transactions')" style="cursor:pointer;">✏️</span>
+                            <span onclick="openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span>
+                        </div>
                     </div>
                 `;
                 container.appendChild(div);
