@@ -527,6 +527,31 @@
             }
         };
 
+function saveManualEntry() {
+    let title = document.getElementById("manual-title").value.trim();
+    let amount = parseFloat(document.getElementById("manual-amount").value);
+    let type = document.getElementById("manual-type").value;
+
+    if (!title || isNaN(amount) || amount <= 0) {
+        alert("தயவுசெய்து சரியான விவரம் மற்றும் தொகையை உள்ளிடவும்!");
+        return;
+    }
+
+    let txData = {
+        title: title,
+        amount: amount,
+        type: type,
+        category: currentCategory,
+        source: "மேனுவல் பதிவு",
+        timestamp: Date.now()
+    };
+
+    saveTransaction(txData);
+
+    document.getElementById("manual-title").value = "";
+    document.getElementById("manual-amount").value = "";
+}
+  
         function startVoice() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 alert("Voice feature கிடைக்கவில்லை.");
