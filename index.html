@@ -137,14 +137,33 @@
         </div>
     </div>
 
-    <!-- Source Pop-up Modal -->
-    <div class="modal-overlay" id="source-modal">
-        <div class="modal-box">
-            <h3 id="modal-title" style="margin-bottom:12px; font-size:16px;">பணம் எதிலிருந்து எடுக்கப்பட்டது?</h3>
-            <button class="modal-btn" style="background:#2563eb; color:white;" onclick="resolveSource('சம்பளம்')">சம்பள பணம்</button>
-            <button class="modal-btn" style="background:#16a34a; color:white;" onclick="resolveSource('வீடு')">வீட்டு பணம்</button>
+    <!-- 4 நிலைகளுக்கான பாப்-அப் திரை -->
+<div id="source-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+        <h3 id="modal-title">விவரத்தை தேர்வு செய்யவும்</h3>
+
+        <!-- 1. செலவு வகைகள் (4 லோகோ) -->
+        <div id="category-section" style="display: none; margin-bottom: 15px;">
+            <p class="section-label">எதற்கான செலவு?</p>
+            <div class="category-grid">
+                <button type="button" class="cat-btn" onclick="setCategory('MK செலவு', this)">🛒 MK செலவு</button>
+                <button type="button" class="cat-btn" onclick="setCategory('SK செலவு', this)">📦 SK செலவு</button>
+                <button type="button" class="cat-btn" onclick="setCategory('கொல்லை', this)">🌱 கொல்லை</button>
+                <button type="button" class="cat-btn" onclick="setCategory('பொது', this)">📝 பொது</button>
+            </div>
+        </div>
+
+        <!-- 2. பணக் கணக்குகள் (2 பட்டன்கள்) -->
+        <div id="source-section" style="display: none;">
+            <p class="section-label">எந்தப் பணம்?</p>
+            <div class="source-grid">
+                <button type="button" class="src-btn btn-salary" onclick="confirmSource('சம்பளம்')">💼 சம்பளம்</button>
+                <button type="button" class="src-btn btn-home" onclick="confirmSource('வீடு')">🏠 வீடு</button>
+            </div>
         </div>
     </div>
+</div>
+
 
     <!-- Edit Modal -->
     <div id="edit-modal" class="modal-overlay">
