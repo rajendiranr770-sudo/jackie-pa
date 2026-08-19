@@ -128,6 +128,21 @@
             </div>
         </div>
 
+            <!-- மேனுவல் என்ட்ரி ஃபார்ம் -->
+    <div class="manual-entry-box" id="manual-form-container" style="display: none;">
+        <div class="section-title" id="manual-form-title">📝 மேனுவல் பதிவு</div>
+        
+        <input type="text" id="manual-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
+        <input type="number" id="manual-amount" class="form-input" placeholder="தொகை (₹)">
+        
+        <select id="manual-type" class="form-input">
+            <option value="expense">செலவு (-)</option>
+            <option value="income">வரவு (+)</option>
+        </select>
+
+        <button onclick="saveManualEntry()" class="submit-btn">சேர்</button>
+    </div>
+        
         <!-- Section 1: Standard View -->
         <div id="standard-view">
             <div class="section-title" id="list-title">அனைத்துப் பதிவுகள்</div>
