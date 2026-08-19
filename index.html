@@ -735,6 +735,54 @@ async function saveEditData() {
                 <option value="கைமாத்து">கைமாத்து</option>
             </select>
 
+            <!-- பதிவைத் திருத்து Pop-up Modal -->
+<div id="edit-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h3 class="modal-title">பதிவைத் திருத்து</h3>
+        
+        <!-- எடிட் செய்யும் ஃபீல்டுகள் -->
+        <input type="hidden" id="edit-id">
+        <input type="hidden" id="edit-collection-type"> <!-- 'transactions' அல்லது 'vatti' -->
+
+        <label class="modal-label">விவரம் / பெயர்:</label>
+        <input type="text" id="edit-title" class="form-input">
+
+        <label class="modal-label">தொகை (₹):</label>
+        <input type="number" id="edit-amount" class="form-input">
+
+        <label class="modal-label">பணம் எதுல இருந்து எடுக்கப்பட்டது?</label>
+        <select id="edit-source" class="form-input">
+            <option value="சம்பளம்">சம்பளம்</option>
+            <option value="வீடு">வீடு</option>
+            <option value="கொல்லை">கொல்லை</option>
+            <option value="MK செலவு">MK செலவு</option>
+            <option value="SK செலவு">SK செலவு</option>
+        </select>
+
+        <label class="modal-label">எதுக்கு கொண்டு போகணும்? (கேட்டகரி):</label>
+        <select id="edit-category" class="form-input">
+            <option value="சம்பளம்">சம்பளம்</option>
+            <option value="வீடு">வீடு</option>
+            <option value="கொல்லை">கொல்லை</option>
+            <option value="MK செலவு">MK செலவு</option>
+            <option value="SK செலவு">SK செலவு</option>
+            <option value="வட்டி">வட்டி</option>
+            <option value="கைமாத்து">கைமாத்து</option>
+        </select>
+
+        <label class="modal-label">வகை:</label>
+        <select id="edit-type" class="form-input">
+            <option value="expense">செலவு (-)</option>
+            <option value="income">வரவு (+)</option>
+        </select>
+
+        <div class="modal-btn-group">
+            <button onclick="saveEditData()" class="save-btn">சேமி</button>
+            <button onclick="closeEditModal()" class="close-btn">மூடு</button>
+        </div>
+    </div>
+            </div>
+            
             <label class="modal-label">வகை:</label>
             <select id="edit-type" class="form-input">
                 <option value="expense">செலவு (-)</option>
