@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Finance & Loan Master App</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <title>Advanced Finance Master - Batch Ledger</title>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
         body { background-color: #f1f5f9; overflow-x: hidden; margin: 0; padding: 10px; padding-bottom: 70px; }
@@ -14,77 +13,36 @@
         .logout-btn { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
         .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; border: 1px solid #e2e8f0; }
-        .card:active { transform: scale(0.97); }
-        .card-label { font-size: 14px; color: #475569; font-weight: 600; }
-        .card-value { font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 4px; }
-        .card-vatti { border-color: #bfdbfe; background: #eff6ff; }
-        .card-vatti .card-label, .card-vatti .card-value { color: #1d4ed8; }
+        .card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .card-label { font-size: 12px; color: #475569; font-weight: 600; }
+        .card-value { font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 4px; }
+        .card-total { grid-column: span 2; background: #0284c7; color: white; border: none; }
+        .card-total .card-label { color: #e0f2fe; }
+        .card-total .card-value { color: white; font-size: 20px; }
 
-        .tab-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; scroll-behavior: smooth; }
-        .tab-btn { background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; color: #475569; }
-        .tab-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
-
-        .search-box { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
-        .search-title { color: #0369a1; font-weight: bold; font-size: 14px; margin-bottom: 8px; }
-        .search-input-group { display: flex; gap: 6px; }
-        .search-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
-        .search-btn { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #0f172a; }
-        .tx-card { background: white; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .tx-card.income { border-left-color: #10b981; }
-        .tx-card.expense { border-left-color: #ef4444; }
-        .tx-title { font-weight: bold; font-size: 14px; color: #1e293b; }
-        .tx-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
-        .tx-amt { font-weight: bold; font-size: 15px; }
+        .section-title { font-size: 16px; font-weight: bold; margin: 14px 0 8px 0; color: #0f172a; }
+        
+        /* Batch Card Styles */
+        .batch-box { background: white; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+        .batch-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 8px; }
+        .batch-title { font-weight: bold; font-size: 15px; color: #1e293b; }
+        .batch-status { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; }
+        .status-active { background: #dcfce7; color: #15803d; }
+        .status-zero { background: #fee2e2; color: #b91c1c; }
+        
+        .tx-card { background: #f8fafc; padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #ef4444; }
+        .tx-title { font-weight: 600; font-size: 13px; color: #334155; }
+        .tx-sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+        .tx-amt { font-weight: bold; font-size: 13px; color: #ef4444; }
 
         .vatti-form { background: white; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #e2e8f0; }
         .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .form-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; width: 100%; margin-bottom: 8px; }
-        .btn-green { background: #16a34a; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
         .btn-blue { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
-        .person-card { background: white; border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
-        .person-header { font-size: 16px; font-weight: bold; color: #1e3a8a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* Modals Default Display Off */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
-        }
-        .modal-content, .modal-box { background: white; width: 90%; max-width: 380px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: left; }
-        .modal-title { font-size: 18px; font-weight: bold; color: #0f172a; margin-bottom: 15px; text-align: center; }
-        .modal-label { font-size: 13px; font-weight: bold; color: #334155; margin-top: 8px; display: block; }
-        .modal-btn-group { display: flex; gap: 10px; margin-top: 15px; }
-        .save-btn { flex: 1; background: #2563eb; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .close-btn { flex: 1; background: #475569; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .delete-confirm-btn { flex: 1; background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .text-center { text-align: center; }
-        
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 10px; display: flex; gap: 6px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; }
         .voice-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
         .send-btn { background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .mic-btn { background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        .modal-card {
-            background: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 380px; text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-        }
-        .section-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; text-align: left; }
-
-        .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .cat-btn {
-            padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; background: #f8f9fa;
-            font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s;
-        }
-        .cat-btn.selected { background: #e3f2fd; border-color: #2196f3; color: #1976d2; }
-
-        .source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .src-btn {
-            padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 15px; cursor: pointer;
-        }
-        .btn-salary { background: #2563eb; }
-        .btn-home { background: #16a34a; }
     </style>
 </head>
 <body>
@@ -104,190 +62,59 @@
         </div>
 
         <div class="cards-grid">
-            <div class="card" onclick="selectTab('சம்பளம்')"><div class="card-label">சம்பளம்</div><div class="card-value" id="val-salary">₹0</div></div>
-            <div class="card" onclick="selectTab('வீடு')"><div class="card-label">வீடு</div><div class="card-value" id="val-home">₹0</div></div>
-            <div class="card" onclick="selectTab('கொல்லை')"><div class="card-label">கொல்லை</div><div class="card-value" id="val-kollai">₹0</div></div>
-            <div class="card" onclick="selectTab('MK செலவு')"><div class="card-label">MK செலவு</div><div class="card-value" id="val-mk">₹0</div></div>
-            <div class="card" onclick="selectTab('SK செலவு')"><div class="card-label">SK செலவு</div><div class="card-value" id="val-sk">₹0</div></div>
-            <div class="card card-vatti" onclick="selectTab('வட்டி பிசினஸ்')"><div class="card-label">வட்டி பிசினஸ்</div><div class="card-value" id="val-vatti">₹0</div></div>
-        </div>
-
-        <div class="tab-bar" id="main-tab-bar">
-            <button class="tab-btn active" data-tab="All" onclick="filterTab('All', this)">📊 All</button>
-            <button class="tab-btn" data-tab="சம்பளம்" onclick="filterTab('சம்பளம்', this)">💼 சம்பளம்</button>
-            <button class="tab-btn" data-tab="வீடு" onclick="filterTab('வீடு', this)">🏠 வீடு</button>
-            <button class="tab-btn" data-tab="கொல்லை" onclick="filterTab('கொல்லை', this)">🌱 கொல்லை</button>
-            <button class="tab-btn" data-tab="MK செலவு" onclick="filterTab('MK செலவு', this)">👤 MK</button>
-            <button class="tab-btn" data-tab="SK செலவு" onclick="filterTab('SK செலவு', this)">👤 SK</button>
-            <button class="tab-btn" data-tab="வட்டி பிசினஸ்" onclick="filterTab('வட்டி பிசினஸ்', this)">💰 வட்டி</button>
-            <button class="tab-btn" data-tab="கைமாத்து" onclick="filterTab('கைமாத்து', this)">🤝 கைமாத்து</button>
-        </div>
-
-        <div class="search-box" id="search-box-area">
-            <div class="search-title">🔍 செலவு கணக்கு கேட்க / தேட</div>
-            <div class="search-input-group">
-                <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், 20000)">
-                <button class="search-btn" onclick="renderApp()">தேடு</button>
+            <div class="card card-total">
+                <div class="card-label">மொத்த கையிருப்பு (Total Balance)</div>
+                <div class="card-value" id="val-total">₹0</div>
             </div>
+            <div class="card"><div class="card-label">சம்பள இருப்பு</div><div class="card-value" id="val-salary">₹0</div></div>
+            <div class="card"><div class="card-label">வீட்டு இருப்பு</div><div class="card-value" id="val-home">₹0</div></div>
         </div>
 
         <div id="standard-view">
-            <!-- மேனுவல் என்ட்ரி ஃபார்ம் -->
-            <div class="vatti-form" id="manual-entry-form">
-                <div class="section-title">📝 மேனுவல் பதிவு</div>
-                <input type="text" id="m-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
+            <div class="vatti-form">
+                <div class="section-title">📝 புதிய பதிவு</div>
+                <input type="text" id="m-title" class="form-input" placeholder="விவரம் (எ.கா: சீகரெட், பெட்ரோல்)">
                 <input type="number" id="m-amount" class="form-input" placeholder="தொகை (₹)">
-                <div class="form-row">
-                    <select id="m-source" class="form-input">
-                        <option value="சம்பளம்">💼 சம்பளம்</option>
-                        <option value="வீடு">🏠 வீடு</option>
-                    </select>
-                    <select id="m-category" class="form-input">
-                        <option value="பொது">📝 பொது</option>
-                        <option value="MK செலவு">🛒 MK செலவு</option>
-                        <option value="SK செலவு">📦 SK செலவு</option>
-                        <option value="கொல்லை">🌱 கொல்லை</option>
-                    </select>
-                </div>
+                
                 <div class="form-row">
                     <select id="m-type" class="form-input">
                         <option value="expense">செலவு (-)</option>
                         <option value="income">வரவு (+)</option>
                     </select>
-                    <input type="date" id="m-date" class="form-input">
+                    <select id="m-source" class="form-input">
+                        <option value="சம்பளம்">💼 சம்பளம்</option>
+                        <option value="வீடு">🏠 வீடு</option>
+                    </select>
                 </div>
-                <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
-            </div>
 
-            <div class="section-title" id="list-title">அனைத்துப் பதிவுகள்</div>
-            <div id="tx-list-container"></div>
-        </div>
-
-        <div id="vatti-view" style="display: none;">
-            <div class="vatti-form">
-                <div class="section-title">💰 வட்டி கடன் பதிவிட</div>
-                <input type="text" id="v-name" class="form-input" placeholder="நபர் பெயர் (எ.கா: சுரேஷ்)">
                 <div class="form-row">
-                    <input type="number" id="v-principal" class="form-input" placeholder="அசல் தொகை (₹)">
-                    <input type="number" id="v-rate" class="form-input" placeholder="வட்டி % (எ.கா: 3)">
+                    <select id="m-category" class="form-input">
+                        <option value="பொது">📝 பொது</option>
+                        <option value="MK செலவு">🛒 MK செலவு</option>
+                        <option value="SK செலவு">📦 SK செலவு</option>
+                        <option value="சீகரெட்">🚬 சீகரெட்</option>
+                        <option value="பெட்ரோல்">⛽ பெட்ரோல்</option>
+                    </select>
+                    <input type="datetime-local" id="m-date" class="form-input">
                 </div>
-                <div class="form-row">
-                    <input type="date" id="v-date" class="form-input">
-                </div>
-                <button class="btn-green" onclick="addVattiLoan()">+ கடன் சேர்</button>
+                <button class="btn-blue" onclick="addManualTransaction()">+ சேர்</button>
             </div>
-            <div id="vatti-persons-container"></div>
-        </div>
 
-        <div id="kaimaathu-view" style="display: none;">
-            <div class="vatti-form">
-                <div class="section-title">🤝 கைமாத்து கடன் பதிவிட (0% வட்டி)</div>
-                <input type="text" id="km-name" class="form-input" placeholder="நபர் பெயர்">
-                <input type="number" id="km-amount" class="form-input" placeholder="தொகை (₹)">
-                <div class="form-row">
-                    <input type="date" id="km-date" class="form-input">
-                </div>
-                <button class="btn-green" onclick="triggerKaiMaathuAdd()">+ கைமாத்து சேர்</button>
-            </div>
-            <div id="kaimaathu-container"></div>
+            <div class="section-title">📦 வரவு வாரியாக தனித்தனி கணக்குகள் (Batch Report)</div>
+            <div id="batch-list-container"></div>
         </div>
     </div>
 
-    <!-- 4 நிலைகளுக்கான பாப்-அப் திரை -->
-    <div id="source-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-card">
-            <h3 id="modal-title">விவரத்தை தேர்வு செய்யவும்</h3>
-
-            <!-- 1. செலவு வகைகள் (4 லோகோ) -->
-            <div id="category-section" style="display: none; margin-bottom: 15px;">
-                <p class="section-label">எதற்கான செலவு?</p>
-                <div class="category-grid">
-                    <button type="button" class="cat-btn" onclick="setCategory('MK செலவு', this)">🛒 MK செலவு</button>
-                    <button type="button" class="cat-btn" onclick="setCategory('SK செலவு', this)">📦 SK செலவு</button>
-                    <button type="button" class="cat-btn" onclick="setCategory('கொல்லை', this)">🌱 கொல்லை</button>
-                    <button type="button" class="cat-btn" onclick="setCategory('பொது', this)">📝 பொது</button>
-                </div>
-            </div>
-
-            <!-- 2. பணக் கணக்குகள் (2 பட்டன்கள்) -->
-            <div id="source-section" style="display: none;">
-                <p class="section-label">எந்தப் பணம்?</p>
-                <div class="source-grid">
-                    <button type="button" class="src-btn btn-salary" onclick="confirmSource('சம்பளம்')">💼 சம்பளம்</button>
-                    <button type="button" class="src-btn btn-home" onclick="confirmSource('வீடு')">🏠 வீடு</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Modal -->
-    <div id="edit-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3 class="modal-title">பதிவைத் திருத்து</h3>
-            <input type="hidden" id="edit-id">
-            <input type="hidden" id="edit-collection-type">
-
-            <label class="modal-label">விவரம் / பெயர்:</label>
-            <input type="text" id="edit-title" class="form-input">
-
-            <label class="modal-label">தொகை (₹):</label>
-            <input type="number" id="edit-amount" class="form-input">
-
-            <label class="modal-label">தேதி:</label>
-            <input type="date" id="edit-date" class="form-input">
-
-            <label class="modal-label">எந்தக் கணக்கு (Source)?</label>
-            <select id="edit-source" class="form-input">
-                <option value="சம்பளம்">💼 சம்பளம்</option>
-                <option value="வீடு">🏠 வீடு</option>
-            </select>
-
-            <label class="modal-label">செலவு வகை (Category):</label>
-            <select id="edit-category" class="form-input">
-                <option value="பொது">📝 பொது</option>
-                <option value="MK செலவு">🛒 MK செலவு</option>
-                <option value="SK செலவு">📦 SK செலவு</option>
-                <option value="கொல்லை">🌱 கொல்லை</option>
-            </select>
-
-            <label class="modal-label">வகை:</label>
-            <select id="edit-type" class="form-input">
-                <option value="expense">செலவு (-)</option>
-                <option value="income">வரவு (+)</option>
-            </select>
-
-            <div class="modal-btn-group">
-                <button onclick="saveEditData()" class="save-btn">சேமி</button>
-                <button onclick="closeEditModal()" class="close-btn">மூடு</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delete Modal -->
-    <div id="delete-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content text-center">
-            <h3 class="modal-title" style="color: #ef4444;">⚠️ பதிவை நீக்கவா?</h3>
-            <p style="margin-bottom: 20px; font-size: 14px; color: #475569;">இந்த பதிவை நிச்சயம் நீக்க விரும்புகிறீர்களா?</p>
-            <input type="hidden" id="delete-id">
-            <input type="hidden" id="delete-collection-type">
-            <div class="modal-btn-group">
-                <button onclick="confirmDeleteData()" class="delete-confirm-btn">ஆம், நீக்கு</button>
-                <button onclick="closeDeleteModal()" class="close-btn">இல்லை</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bottom Voice Bar -->
+    <!-- Voice / Quick Bottom Bar -->
     <div class="bottom-bar">
-        <input type="text" id="voice-text-input" class="voice-input" placeholder="எ.கா: எம் கே செலவு 500">
-        <button id="btn-send-tx" class="send-btn">அனுப்பு</button>
-        <button id="btn-mic" class="mic-btn">🎙️ பேசு</button>
+        <input type="text" id="voice-text-input" class="voice-input" placeholder="எ.கா: சம்பளம் 19000 அல்லது சீகரெட் 100">
+        <button id="btn-send-tx" class="send-btn" onclick="processInput()">அனுப்பு</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
@@ -303,562 +130,178 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // ஆஃப்லைன் பயன்பாட்டு வசதி (Offline Support)
-        enableIndexedDbPersistence(db).catch((err) => {
-            console.log("Offline mode setup:", err.code);
-        });
-
         let allTransactions = [];
-        let allVattiLoans = [];
-        let activeTab = "All";
-        let pendingAction = null;
-        let selectedCategoryChoice = "பொது";
 
-        // இன்றைய தேதியை Default-ஆக செட் செய்ய
-        const todayStr = new Date().toISOString().split('T')[0];
-        document.getElementById("m-date").value = todayStr;
-        document.getElementById("v-date").value = todayStr;
-        document.getElementById("km-date").value = todayStr;
+        // Set default datetime picker to current local time
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById("m-date").value = now.toISOString().slice(0, 16);
 
-        document.getElementById("login-btn").onclick = () => {
-            signInWithPopup(auth, provider).catch(err => {
-                console.error("Login Error:", err);
-                alert("லாக்-இன் செய்வதில் பிழை: " + err.message);
-            });
-        };
-        
+        document.getElementById("login-btn").onclick = () => signInWithPopup(auth, provider);
         document.getElementById("logout-btn").onclick = () => signOut(auth);
-        document.getElementById("btn-send-tx").onclick = processInput;
-        document.getElementById("btn-mic").onclick = startVoice;
-
-        let isInitialAuthDone = false;
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById("auth-container").style.display = "none";
                 document.getElementById("main-app").style.display = "block";
                 document.getElementById("user-display-name").innerText = user.displayName || "User";
-                
-                if (!isInitialAuthDone) {
-                    listenToData(user.uid);
-                    isInitialAuthDone = true;
-                }
+                listenToData(user.uid);
             } else {
-                isInitialAuthDone = false;
                 document.getElementById("auth-container").style.display = "block";
                 document.getElementById("main-app").style.display = "none";
             }
         });
 
-        function extractAmount(text) {
-            let textVal = text.replace(/,/g, '');
-            textVal = textVal.replace(/அறுபதாயிரம்/g, "60000")
-                             .replace(/இருபதாயிரம்/g, "20000")
-                             .replace(/ஐயாயிரம்/g, "5000")
-                             .replace(/இரண்டாயிரம்/g, "2000");
+        function listenToData(uid) {
+            // Read entries chronologically (oldest to newest)
+            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "asc")), (snap) => {
+                allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderApp();
+            });
+        }
 
-            textVal = textVal.replace(/(\d+)\s*ஆயிரம்/gi, (match, number) => {
-                return parseInt(number) * 1000;
+        function renderApp() {
+            let salaryBalance = 0;
+            let homeBalance = 0;
+
+            // Separate Incomes into individual Batches
+            let batches = [];
+
+            allTransactions.forEach(tx => {
+                if (tx.type === "income") {
+                    let newBatch = {
+                        id: tx.id,
+                        source: tx.source,
+                        title: tx.title,
+                        initialAmount: tx.amount,
+                        remainingAmount: tx.amount,
+                        timestamp: tx.timestamp,
+                        expenses: []
+                    };
+                    batches.push(newBatch);
+                } 
+                else if (tx.type === "expense") {
+                    // User explicitly chooses the source (சம்பளம் or வீடு)
+                    let targetSource = tx.source || "சம்பளம்";
+
+                    // Find the oldest active batch for that source that still has money
+                    let availableBatch = batches.find(b => b.source === targetSource && b.remainingAmount > 0);
+
+                    if (availableBatch) {
+                        availableBatch.expenses.push(tx);
+                        availableBatch.remainingAmount -= tx.amount;
+                    } else {
+                        // If all previous batches of that source are ZERO, link expense to the latest batch
+                        let lastBatch = [...batches].reverse().find(b => b.source === targetSource);
+                        if (lastBatch) {
+                            lastBatch.expenses.push(tx);
+                            lastBatch.remainingAmount -= tx.amount;
+                        }
+                    }
+                }
             });
 
-            let matches = textVal.match(/\d+/g);
-            if (!matches) return 0;
-            return parseInt(matches.join(''), 10);
-        }
+            // Calculate active totals
+            batches.forEach(b => {
+                let rem = Math.max(0, b.remainingAmount);
+                if (b.source === "சம்பளம்") salaryBalance += rem;
+                else if (b.source === "வீடு") homeBalance += rem;
+            });
 
-        function processInput() {
-            const inputField = document.getElementById("voice-text-input");
-            let rawText = inputField.value.trim();
-            if (!rawText) return;
+            document.getElementById("val-salary").innerText = `₹${salaryBalance}`;
+            document.getElementById("val-home").innerText = `₹${homeBalance}`;
+            document.getElementById("val-total").innerText = `₹${salaryBalance + homeBalance}`;
 
-            let amount = extractAmount(rawText);
-            let lowerText = rawText.toLowerCase();
+            // Render Batches UI
+            const container = document.getElementById("batch-list-container");
+            container.innerHTML = "";
 
-            let isIncome = lowerText.includes("வரவு") || lowerText.includes("வந்தது") || lowerText.includes("தந்தாங்க") || lowerText.includes("கிடைத்தது") || lowerText.includes("சேர்ந்தது");
-
-            let category = "பொது";
-            if (lowerText.includes("mk") || lowerText.includes("எம்கே") || lowerText.includes("எம் கே")) category = "MK செலவு";
-            else if (lowerText.includes("sk") || lowerText.includes("எஸ்கே") || lowerText.includes("எஸ் கே")) category = "SK செலவு";
-            else if (lowerText.includes("கொல்லை")) category = "கொல்லை";
-            else if (lowerText.includes("கைமாத்து")) category = "கைமாத்து";
-            else if (lowerText.includes("வட்டி")) category = "வட்டி பிசினஸ்";
-
-            let detectedSource = null;
-            if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) detectedSource = "சம்பளம்";
-            else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு") || lowerText.includes("வீட்டிலிருந்து")) detectedSource = "வீடு";
-
-            let txData = {
-                title: rawText,
-                amount: amount,
-                type: isIncome ? "income" : "expense",
-                category: category,
-                timestamp: Date.now()
-            };
-
-            if (isIncome) {
-                if (detectedSource !== null) {
-                    txData.source = detectedSource;
-                    saveTransaction(txData);
-                } else {
-                    openModalByScenario(1, txData);
-                }
-            } else {
-                if (detectedSource !== null && category !== "பொது") {
-                    txData.source = detectedSource;
-                    saveTransaction(txData);
-                } 
-                else if (detectedSource === null && category !== "பொது") {
-                    openModalByScenario(2, txData);
-                } 
-                else if (detectedSource !== null && category === "பொது") {
-                    txData.source = detectedSource;
-                    openModalByScenario(3, txData);
-                } 
-                else {
-                    openModalByScenario(4, txData);
-                }
+            if (batches.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:gray;">வரவு பதிவுகள் எதுவும் இல்லை.</div>`;
+                return;
             }
 
-            inputField.value = "";
+            // Display newest batches first
+            [...batches].reverse().forEach(b => {
+                let incomeDate = new Date(b.timestamp).toLocaleString("ta-IN", { dateStyle: "short", timeStyle: "short" });
+                let isZero = b.remainingAmount <= 0;
+                
+                let div = document.createElement("div");
+                div.className = "batch-box";
+                
+                let expensesHtml = "";
+                if (b.expenses.length === 0) {
+                    expensesHtml = `<div style="font-size:12px; color:gray; padding:4px 0;">செலவுகள் எதுவும் இல்லை.</div>`;
+                } else {
+                    b.expenses.forEach(ex => {
+                        let exTime = new Date(ex.timestamp).toLocaleString("ta-IN", { dateStyle: "short", timeStyle: "short" });
+                        expensesHtml += `
+                            <div class="tx-card">
+                                <div>
+                                    <div class="tx-title">${ex.title} (${ex.category})</div>
+                                    <div class="tx-sub">🕒 ${exTime}</div>
+                                </div>
+                                <div class="tx-amt">-₹${ex.amount}</div>
+                            </div>
+                        `;
+                    });
+                }
+
+                div.innerHTML = `
+                    <div class="batch-header">
+                        <div>
+                            <div class="batch-title">💼 ${b.source} - ₹${b.initialAmount}</div>
+                            <div class="tx-sub">📅 வரவு தேதி: ${incomeDate}</div>
+                        </div>
+                        <span class="batch-status ${isZero ? 'status-zero' : 'status-active'}">
+                            ${isZero ? '₹0 (முடிந்தது)' : `மீதி: ₹${b.remainingAmount}`}
+                        </span>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:6px;">இந்த வரவில் செய்யப்பட்ட செலவுகள் (தேதி & நேரம் வாரியாக):</div>
+                        ${expensesHtml}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
         }
 
-        // மேனுவல் கணக்கு பதிவு ஃபங்க்ஷன்
-        window.addManualTransaction = function() {
+        window.addManualTransaction = async function() {
             let title = document.getElementById("m-title").value.trim();
             let amount = parseFloat(document.getElementById("m-amount").value);
-            let source = document.getElementById("m-source").value;
             let category = document.getElementById("m-category").value;
             let type = document.getElementById("m-type").value;
+            let source = document.getElementById("m-source").value;
             let dateVal = document.getElementById("m-date").value;
 
             if (!title || !amount) { alert("விவரங்களை நிரப்பவும்!"); return; }
 
-            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
-
-            saveTransaction({
-                title: title,
-                amount: amount,
-                source: source,
-                category: category,
-                type: type,
-                timestamp: timestamp
+            await addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), {
+                title, amount, category, type, source,
+                timestamp: dateVal ? new Date(dateVal).getTime() : Date.now()
             });
 
             document.getElementById("m-title").value = "";
             document.getElementById("m-amount").value = "";
         };
 
-        window.triggerKaiMaathuAdd = function() {
-            let name = document.getElementById("km-name").value.trim();
-            let amt = parseInt(document.getElementById("km-amount").value);
-            let dateVal = document.getElementById("km-date").value;
-            if (!name || !amt) { alert("விவரங்களை நிரப்பவும்!"); return; }
+        window.processInput = function() {
+            let text = document.getElementById("voice-text-input").value.trim();
+            if (!text) return;
 
-            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+            let amt = parseInt(text.match(/\d+/)) || 0;
+            let isIncome = text.includes("வரவு") || text.includes("சம்பளம்");
+            let category = "பொது";
+            if (text.includes("சீகரெட்")) category = "சீகரெட்";
+            else if (text.includes("பெட்ரோல்")) category = "பெட்ரோல்";
 
-            pendingAction = {
-                type: "KM",
-                data: { personName: name, principal: amt, rate: 0, timestamp: timestamp, isReturned: false, isKaiMaathu: true }
-            };
-            
-            document.getElementById("modal-title").innerText = "கைமாத்து பணம் எதிலிருந்து கொடுக்கப்பட்டது?";
-            document.getElementById("category-section").style.display = "none";
-            document.getElementById("source-section").style.display = "block";
-            document.getElementById("source-modal").style.display = "flex";
-        };
-
-        window.confirmSource = function(sourceName) {
-            if (pendingAction && pendingAction.data) {
-                if (pendingAction.type === "TX") {
-                    pendingAction.data.source = sourceName;
-                    if (pendingAction.data.type === "expense") {
-                        pendingAction.data.category = selectedCategoryChoice || "பொது";
-                    }
-                    saveTransaction(pendingAction.data);
-                } 
-                else if (pendingAction.type === "KM") {
-                    let kmData = pendingAction.data;
-                    kmData.source = sourceName;
-                    
-                    addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), kmData);
-
-                    saveTransaction({
-                        title: "கைமாத்து: " + kmData.personName,
-                        amount: kmData.principal,
-                        type: "expense",
-                        category: "கைமாத்து",
-                        source: sourceName,
-                        timestamp: kmData.timestamp
-                    });
-                }
-                closeModal();
-            }
-        };
-
-        async function saveTransaction(data) {
-            try {
-                let user = auth.currentUser;
-                if (!user) {
-                    alert("உள்நுழையப்படவில்லை!");
-                    return;
-                }
-
-                await addDoc(collection(db, "users", user.uid, "transactions"), {
-                    ...data,
-                    timestamp: data.timestamp || Date.now()
-                });
-            } catch (error) {
-                console.error("Error saving transaction:", error);
-            }
-        }
-
-        function listenToData(uid) {
-            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
-                allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                updateCalculations();
+            addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), {
+                title: text, amount: amt, type: isIncome ? "income" : "expense",
+                category: category, source: text.includes("வீடு") ? "வீடு" : "சம்பளம்",
+                timestamp: Date.now()
             });
-
-            onSnapshot(query(collection(db, "users", uid, "vatti"), orderBy("timestamp", "desc")), (snap) => {
-                allVattiLoans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                updateCalculations();
-            });
-        }
-
-        function updateCalculations() {
-            let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி பிசினஸ்": 0 };
-
-            allTransactions.forEach(tx => {
-                if (tx.type === "income") {
-                    totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
-                } else {
-                    totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
-                    if (tx.category && tx.category !== "பொது") {
-                        totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
-                    }
-                }
-            });
-
-            let vattiTotal = 0;
-            allVattiLoans.forEach(v => {
-                if (!v.isReturned && !v.isKaiMaathu) vattiTotal += v.principal;
-            });
-            totals["வட்டி பிசினஸ்"] = vattiTotal;
-
-            document.getElementById("val-salary").innerText = `₹${totals["சம்பளம்"] || 0}`;
-            document.getElementById("val-home").innerText = `₹${totals["வீடு"] || 0}`;
-            document.getElementById("val-kollai").innerText = `₹${totals["கொல்லை"] || 0}`;
-            document.getElementById("val-mk").innerText = `₹${totals["MK செலவு"] || 0}`;
-            document.getElementById("val-sk").innerText = `₹${totals["SK செலவு"] || 0}`;
-            document.getElementById("val-vatti").innerText = `₹${totals["வட்டி பிசினஸ்"] || 0}`;
-
-            renderApp();
-        }
-
-        window.selectTab = function(tabName) {
-            let targetBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
-            if (targetBtn) {
-                filterTab(tabName, targetBtn);
-                document.getElementById("search-box-area").scrollIntoView({ behavior: 'smooth' });
-            }
+            document.getElementById("voice-text-input").value = "";
         };
-
-        window.filterTab = function(tabName, btnElem) {
-            activeTab = tabName;
-            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-            btnElem.classList.add("active");
-
-            document.getElementById("standard-view").style.display = "none";
-            document.getElementById("vatti-view").style.display = "none";
-            document.getElementById("kaimaathu-view").style.display = "none";
-
-            if (tabName === "வட்டி பிசினஸ்") {
-                document.getElementById("vatti-view").style.display = "block";
-            } else if (tabName === "கைமாத்து") {
-                document.getElementById("kaimaathu-view").style.display = "block";
-            } else {
-                document.getElementById("standard-view").style.display = "block";
-            }
-            renderApp();
-        };
-
-        window.renderApp = function() {
-            if (activeTab === "வட்டி பிசினஸ்") renderVattiView();
-            else if (activeTab === "கைமாத்து") renderKaiMaathuView();
-            else renderStandardView();
-        };
-
-        function renderStandardView() {
-            const container = document.getElementById("tx-list-container");
-            const searchKeyword = document.getElementById("search-input").value.toLowerCase().trim();
-
-            let filtered = allTransactions.filter(tx => {
-                let matchesTab = (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
-                let matchesSearch = !searchKeyword || tx.title.toLowerCase().includes(searchKeyword);
-                return matchesTab && matchesSearch;
-            });
-
-            container.innerHTML = "";
-            if (filtered.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding:20px; color:gray;">பதிவுகள் எதுவும் இல்லை.</div>`;
-                return;
-            }
-
-            filtered.forEach(tx => {
-                let dateStr = new Date(tx.timestamp).toLocaleDateString("ta-IN");
-                let div = document.createElement("div");
-                div.className = `tx-card ${tx.type}`;
-                div.innerHTML = `
-                    <div style="flex:1;">
-                        <div class="tx-title">${tx.title}</div>
-                        <div class="tx-sub">${dateStr} | கணக்கு: <b>${tx.source || '-'}</b> | வகை: <b>${tx.category || 'பொது'}</b></div>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
-                            ${tx.type === 'income' ? '+' : '-'}₹${tx.amount}
-                        </div>
-                        <div class="action-btns">
-                            <span onclick="openEditModal(${JSON.stringify(tx).replace(/"/g, '&quot;')}, 'transactions')" style="cursor:pointer; margin-right: 8px;">✏️</span>
-                            <span onclick="openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        window.addVattiLoan = function() {
-            let name = document.getElementById("v-name").value.trim();
-            let principal = parseInt(document.getElementById("v-principal").value);
-            let rate = parseFloat(document.getElementById("v-rate").value) || 0;
-            let dateVal = document.getElementById("v-date").value;
-            if (!name || !principal) { alert("விவரங்களை நிரப்பவும்!"); return; }
-
-            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
-
-            addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), {
-                personName: name, principal: principal, rate: rate, timestamp: timestamp, isReturned: false, isKaiMaathu: false
-            });
-
-            document.getElementById("v-name").value = "";
-            document.getElementById("v-principal").value = "";
-            document.getElementById("v-rate").value = "";
-        };
-
-        function renderVattiView() {
-            const container = document.getElementById("vatti-persons-container");
-            container.innerHTML = "";
-            let loansList = allVattiLoans.filter(v => !v.isKaiMaathu);
-
-            loansList.forEach((l) => {
-                let days = Math.floor((Date.now() - l.timestamp) / (1000 * 60 * 60 * 24));
-                if (days < 0) days = 0;
-                let interest = Math.round((l.principal * (l.rate / 100) * (days / 30)));
-                let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
-
-                let div = document.createElement("div");
-                div.className = "person-card";
-                div.innerHTML = `
-                    <div class="person-header">
-                        <span>👤 ${l.personName}</span>
-                        <div>
-                            <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
-                            <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
-                            <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
-                        </div>
-                    </div>
-                    <div>அசல்: ₹${l.principal} | வட்டி: ${l.rate}% | தேதி: ${dateStr}</div>
-                    <div style="color:#d97706; font-weight:bold; margin-top:4px;">வட்டி தொகை: ₹${interest} (${days} நாட்கள்)</div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function renderKaiMaathuView() {
-            const container = document.getElementById("kaimaathu-container");
-            container.innerHTML = "";
-            let kmList = allVattiLoans.filter(v => v.isKaiMaathu);
-
-            kmList.forEach(l => {
-                let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
-                let div = document.createElement("div");
-                div.className = "person-card";
-                div.innerHTML = `
-                    <div class="person-header">
-                        <span>🤝 ${l.personName}</span>
-                        <div>
-                            <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
-                            <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
-                            <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}', this)">
-                        </div>
-                    </div>
-                    <div>கைமாத்து தொகை: <b>₹${l.principal}</b> | தேதி: ${dateStr}</div>
-                    <div style="font-size:12px; color:gray; margin-top:4px;">எடுக்கப்பட்ட கணக்கு: <b>${l.source || '-'}</b></div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        window.toggleLoanReturn = async function(loanId, isChecked, isKaiMaathu, source, amount, name, element) {
-            if (isKaiMaathu && isChecked) {
-                element.checked = false;
-                const confirmReturn = confirm(`🤝 ${name}-டமிருந்து ₹${amount} பணம் வந்துவிட்டதா?`);
-                if (confirmReturn) {
-                    try {
-                        const q = query(collection(db, "users", auth.currentUser.uid, "transactions"), orderBy("timestamp", "desc"));
-                        const snap = await getDocs(q);
-                        const matchingTx = snap.docs.find(docSnap => {
-                            const data = docSnap.data();
-                            return data.category === "கைமாத்து" && data.amount === amount && data.title.includes(name);
-                        });
-
-                        if (matchingTx) {
-                            await deleteDoc(doc(db, "users", auth.currentUser.uid, "transactions", matchingTx.id));
-                        }
-                        await deleteDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId));
-                        alert(`👍 பணம் சரிபார்க்கப்பட்டது! ₹${amount} மீண்டும் ${source || 'கணக்கில்'} சேர்க்கப்பட்டது.`);
-                    } catch (error) {
-                        console.error("Error returning KaiMaathu: ", error);
-                    }
-                }
-            } else {
-                updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId), { isReturned: isChecked });
-            }
-        };
-
-        window.openDeleteModal = function(id, collectionType = 'transactions') {
-            document.getElementById("delete-id").value = id;
-            document.getElementById("delete-collection-type").value = collectionType;
-            document.getElementById("delete-modal").style.display = "flex";
-        };
-
-        window.closeDeleteModal = function() {
-            document.getElementById("delete-modal").style.display = "none";
-        };
-
-        // நீக்கல் உறுதிப்படுத்தும் போது alert மெசேஜ் வராமல் அமைக்கும் முறை
-        window.confirmDeleteData = async function() {
-            const id = document.getElementById("delete-id").value;
-            const collectionType = document.getElementById("delete-collection-type").value;
-            try {
-                await deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id));
-                closeDeleteModal();
-            } catch (error) {
-                console.error("Delete Error: ", error);
-            }
-        };
-
-        window.openEditModal = function(item, collectionType = 'transactions') {
-            document.getElementById("edit-id").value = item.id;
-            document.getElementById("edit-collection-type").value = collectionType;
-            document.getElementById("edit-title").value = item.title || item.personName || "";
-            document.getElementById("edit-amount").value = item.amount || item.principal || 0;
-            document.getElementById("edit-source").value = item.source || "சம்பளம்";
-            document.getElementById("edit-category").value = item.category || "பொது";
-            document.getElementById("edit-type").value = item.type || "expense";
-            
-            if (item.timestamp) {
-                document.getElementById("edit-date").value = new Date(item.timestamp).toISOString().split('T')[0];
-            }
-            document.getElementById("edit-modal").style.display = "flex";
-        };
-
-        window.closeEditModal = function() {
-            document.getElementById("edit-modal").style.display = "none";
-        };
-
-        window.saveEditData = async function() {
-            const id = document.getElementById("edit-id").value;
-            const collectionType = document.getElementById("edit-collection-type").value;
-            const title = document.getElementById("edit-title").value;
-            const amount = parseFloat(document.getElementById("edit-amount").value);
-            const source = document.getElementById("edit-source").value;
-            const category = document.getElementById("edit-category").value;
-            const type = document.getElementById("edit-type").value;
-            const dateVal = document.getElementById("edit-date").value;
-
-            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
-
-            try {
-                const userRef = doc(db, "users", auth.currentUser.uid, collectionType, id);
-                if (collectionType === 'vatti') {
-                    await updateDoc(userRef, { personName: title, principal: amount, source: source, timestamp: timestamp });
-                } else {
-                    await updateDoc(userRef, { title: title, amount: amount, source: source, category: category, type: type, timestamp: timestamp });
-                }
-                closeEditModal();
-            } catch (error) {
-                console.error("Edit Error: ", error);
-            }
-        };
-
-        function startVoice() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert("Voice feature கிடைக்கவில்லை.");
-                return;
-            }
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'ta-IN';
-            recognition.onresult = (e) => {
-                document.getElementById("voice-text-input").value = e.results[0][0].transcript;
-                setTimeout(() => processInput(), 500);
-            };
-            recognition.start();
-        }
-
-        function openModalByScenario(popupType, txData) {
-            pendingAction = { type: "TX", data: txData };
-            
-            let catSec = document.getElementById("category-section");
-            let srcSec = document.getElementById("source-section");
-            let modalTitle = document.getElementById("modal-title");
-
-            catSec.style.display = "none";
-            srcSec.style.display = "none";
-            selectedCategoryChoice = txData.category || "பொது";
-            
-            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
-
-            if (popupType === 1) {
-                modalTitle.innerText = "பணம் எங்கு சேர வேண்டும்?";
-                srcSec.style.display = "block";
-            } 
-            else if (popupType === 2) {
-                modalTitle.innerText = txData.category + " - எந்தப் பணம்?";
-                srcSec.style.display = "block";
-            }
-            else if (popupType === 3) {
-                modalTitle.innerText = "எதற்கான செலவு?";
-                catSec.style.display = "block";
-            } 
-            else if (popupType === 4) {
-                modalTitle.innerText = "விவரத்தை உறுதி செய்யவும்";
-                catSec.style.display = "block";
-                srcSec.style.display = "block";
-            }
-
-            document.getElementById("source-modal").style.display = "flex";
-        }
-
-        function setCategory(catName, btnElement) {
-            selectedCategoryChoice = catName;
-            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
-            btnElement.classList.add('selected');
-
-            if (document.getElementById("source-section").style.display === "none") {
-                pendingAction.data.category = catName;
-                saveTransaction(pendingAction.data);
-                closeModal();
-            }
-        }
-
-        window.closeModal = function() {
-            document.getElementById("source-modal").style.display = "none";
-            pendingAction = null;
-        };
-
-        window.openModalByScenario = openModalByScenario;
-        window.setCategory = setCategory;
     </script>
 </body>
 </html>
