@@ -34,7 +34,7 @@
 
         /* Weekly Filter Styling */
         .week-bar { display: flex; gap: 6px; overflow-x: auto; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #bae6fd; }
-        .week-btn { background: #white; border: 1px solid #0284c7; color: #0284c7; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        .week-btn { background: white; border: 1px solid #0284c7; color: #0284c7; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
         .week-btn.active { background: #0284c7; color: white; }
 
         .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #0f172a; }
@@ -116,12 +116,12 @@
         </div>
 
         <div class="cards-grid">
-            <div class="card" onclick="selectTab('சம்பளம்')"><div class="card-label">சம்பளம்</div><div class="card-value" id="val-salary">₹0</div></div>
-            <div class="card" onclick="selectTab('வீடு')"><div class="card-label">வீடு</div><div class="card-value" id="val-home">₹0</div></div>
-            <div class="card" onclick="selectTab('கொல்லை')"><div class="card-label">கொல்லை</div><div class="card-value" id="val-kollai">₹0</div></div>
-            <div class="card" onclick="selectTab('MK செலவு')"><div class="card-label">MK செலவு</div><div class="card-value" id="val-mk">₹0</div></div>
-            <div class="card" onclick="selectTab('SK செலவு')"><div class="card-label">SK செலவு</div><div class="card-value" id="val-sk">₹0</div></div>
-            <div class="card card-vatti" onclick="selectTab('வட்டி பிசினஸ்')"><div class="card-label">வட்டி பிசினஸ்</div><div class="card-value" id="val-vatti">₹0</div></div>
+            <div class="card" onclick="selectTab('சம்பளம்')"><div class="card-label">சம்பளம்</div><div class="card-value" id="salary-card-val">₹0.00</div></div>
+            <div class="card" onclick="selectTab('வீடு')"><div class="card-label">வீடு</div><div class="card-value" id="veedu-card-val">₹0.00</div></div>
+            <div class="card" onclick="selectTab('கொல்லை')"><div class="card-label">கொல்லை</div><div class="card-value" id="kollai-card-val">₹0.00</div></div>
+            <div class="card" onclick="selectTab('MK செலவு')"><div class="card-label">MK செலவு</div><div class="card-value" id="mk-card-val">₹0.00</div></div>
+            <div class="card" onclick="selectTab('SK செலவு')"><div class="card-label">SK செலவு</div><div class="card-value" id="sk-card-val">₹0.00</div></div>
+            <div class="card card-vatti" onclick="selectTab('வட்டி பிசினஸ்')"><div class="card-label">வட்டி பிசினஸ்</div><div class="card-value" id="vatti-card-val">₹0.00</div></div>
         </div>
 
         <div class="tab-bar" id="main-tab-bar">
@@ -136,39 +136,37 @@
         </div>
 
         <!-- தேடல் மற்றும் ஃபில்டர் பகுதி -->
-<div class="search-box" id="search-box-area">
-    <div class="search-title">🔍 செலவு கணக்கு ஃபில்டர் & தேடல்</div>
-    
-    <!-- வார்த்தை தேடல் -->
-    <div class="search-input-group" style="margin-bottom: 8px;">
-        <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், MK செலவு, 20000)">
-        <button class="search-btn" onclick="executeSearch()">தேடு</button>
-        <button class="search-btn" style="background: #64748b;" onclick="resetSearch()">✖ ரீசெட்</button>
-    </div>
+        <div class="search-box" id="search-box-area">
+            <div class="search-title">🔍 செலவு கணக்கு ஃபில்டர் & தேடல்</div>
+            
+            <!-- வார்த்தை தேடல் -->
+            <div class="search-input-group" style="margin-bottom: 8px;">
+                <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், MK செலவு, 20000)">
+                <button class="search-btn" onclick="executeSearch()">தேடு</button>
+                <button class="search-btn" style="background: #64748b;" onclick="resetSearch()">✖ ரீசெட்</button>
+            </div>
 
-    <!-- மாதம் & வகை ஃபில்டர் -->
-    <div class="search-input-group" style="margin-bottom: 8px;">
-        <select id="month-filter" class="month-select" onchange="onFilterChange()">
-            <option value="CURRENT_WEEK">📅 இந்த வாரம் மட்டும் (Current Week)</option>
-            <option value="ALL">🌐 அனைத்து கணக்குகள் (All Statements)</option>
-            <option value="CUSTOM_DATE">📆 குறிப்பிட்ட தேதி வரை (Custom Date)</option>
-            <option value="2026-08">📅 ஆகஸ்ட் 2026</option>
-            <option value="2026-09">📅 செப்டம்பர் 2026</option>
-        </select>
-    </div>
+            <!-- மாதம் & வகை ஃபில்டர் -->
+            <div class="search-input-group" style="margin-bottom: 8px;">
+                <select id="month-filter" class="month-select" onchange="onFilterChange()">
+                    <option value="CURRENT_WEEK">📅 இந்த வாரம் மட்டும் (Current Week)</option>
+                    <option value="ALL">🌐 அனைத்து கணக்குகள் (All Statements)</option>
+                    <option value="CUSTOM_DATE">📆 குறிப்பிட்ட தேதி வரை (Custom Date)</option>
+                </select>
+            </div>
 
-    <!-- குறிப்பிட்ட தேதி தேர்ந்தெடுக்கும் பாக்ஸ் (Custom Date Range) -->
-    <div id="custom-date-container" style="display: none; gap: 6px; margin-top: 8px;">
-        <div style="flex:1;">
-            <span style="font-size:11px; font-weight:bold; color:#0369a1;">இருந்து (From):</span>
-            <input type="date" id="from-date" class="search-input" onchange="executeSearch()">
+            <!-- குறிப்பிட்ட தேதி தேர்ந்தெடுக்கும் பாக்ஸ் (Custom Date Range) -->
+            <div id="custom-date-container" style="display: none; gap: 6px; margin-top: 8px;">
+                <div style="flex:1;">
+                    <span style="font-size:11px; font-weight:bold; color:#0369a1;">இருந்து (From):</span>
+                    <input type="date" id="from-date" class="search-input" onchange="executeSearch()">
+                </div>
+                <div style="flex:1;">
+                    <span style="font-size:11px; font-weight:bold; color:#0369a1;">வரை (To):</span>
+                    <input type="date" id="to-date" class="search-input" onchange="executeSearch()">
+                </div>
+            </div>
         </div>
-        <div style="flex:1;">
-            <span style="font-size:11px; font-weight:bold; color:#0369a1;">வரை (To):</span>
-            <input type="date" id="to-date" class="search-input" onchange="executeSearch()">
-        </div>
-    </div>
-</div>
 
         <div id="standard-view">
             <!-- மேனுவல் என்ட்ரி ஃபார்ம் -->
@@ -599,7 +597,11 @@
         function populateMonthDropdown() {
             const select = document.getElementById("month-filter");
             const currentSelected = select.value;
-            select.innerHTML = '<option value="ALL">📅 அனைத்து மாதம்</option>';
+            select.innerHTML = `
+                <option value="CURRENT_WEEK">📅 இந்த வாரம் மட்டும் (Current Week)</option>
+                <option value="ALL">🌐 அனைத்து கணக்குகள் (All Statements)</option>
+                <option value="CUSTOM_DATE">📆 குறிப்பிட்ட தேதி வரை (Custom Date)</option>
+            `;
             
             let monthsSet = new Set();
             allTransactions.forEach(tx => {
@@ -630,106 +632,105 @@
             onMonthChange();
         }
 
-        // 1. நடப்பு வாரத்தின் தேதிகளைக் கணக்கிடும் ஃபங்ஷன்
-function getThisWeekRange() {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-    
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - diffToMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
-
-    return { startOfWeek, endOfWeek };
-}
-
-// 2. டிராப்டவுன் மாறும் போது வேலை செய்யும் ஃபங்ஷன்
-window.onFilterChange = function() {
-    const monthFilter = document.getElementById('month-filter').value;
-    const customDateContainer = document.getElementById('custom-date-container');
-    
-    if (monthFilter === 'CUSTOM_DATE') {
-        customDateContainer.style.display = 'flex';
-    } else {
-        customDateContainer.style.display = 'none';
-    }
-    executeSearch();
-};
-
-// 3. முதன்மை ஃபில்டர் ஃபங்ஷன் (Filter & Search Engine)
-function filterTransactions(allTransactions) {
-    const searchInput = document.getElementById('search-input');
-    const monthFilterInput = document.getElementById('month-filter');
-    
-    const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
-    const monthFilter = monthFilterInput ? monthFilterInput.value : 'CURRENT_WEEK';
-    
-    const fromDateVal = document.getElementById('from-date') ? document.getElementById('from-date').value : '';
-    const toDateVal = document.getElementById('to-date') ? document.getElementById('to-date').value : '';
-    const { startOfWeek, endOfWeek } = getThisWeekRange();
-
-    return allTransactions.filter(item => {
-        const itemDate = new Date(item.date); 
-        itemDate.setHours(0, 0, 0, 0);
-
-        // A. வார்த்தை தேடல்
-        let matchesSearch = true;
-        if (searchVal !== '') {
-            const titleMatch = item.title && item.title.toLowerCase().includes(searchVal);
-            const amountMatch = item.amount && item.amount.toString().includes(searchVal);
-            const catMatch = item.category && item.category.toLowerCase().includes(searchVal);
-            const sourceMatch = item.source && item.source.toLowerCase().includes(searchVal);
-            matchesSearch = titleMatch || amountMatch || catMatch || sourceMatch;
+        function onMonthChange() {
+            renderApp();
         }
 
-        // B. தேதி மற்றும் மாத ஃபில்டர்
-        let matchesDate = true;
+        function getThisWeekRange() {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+            
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - diffToMonday);
+            startOfWeek.setHours(0, 0, 0, 0);
 
-        if (monthFilter === 'CURRENT_WEEK' && searchVal === '') {
-            matchesDate = itemDate >= startOfWeek && itemDate <= endOfWeek;
-        } 
-        else if (monthFilter === 'ALL') {
-            matchesDate = true;
-        } 
-        else if (monthFilter === 'CUSTOM_DATE') {
-            if (fromDateVal) {
-                const fDate = new Date(fromDateVal);
-                fDate.setHours(0, 0, 0, 0);
-                matchesDate = matchesDate && (itemDate >= fDate);
-            }
-            if (toDateVal) {
-                const tDate = new Date(toDateVal);
-                tDate.setHours(23, 59, 59, 999);
-                matchesDate = matchesDate && (itemDate <= tDate);
-            }
-        } 
-        else if (monthFilter.includes('-')) {
-            const itemMonth = item.date.substring(0, 7);
-            matchesDate = (itemMonth === monthFilter);
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            return { startOfWeek, endOfWeek };
         }
 
-        return matchesSearch && matchesDate;
-    });
-}
+        window.onFilterChange = function() {
+            const monthFilter = document.getElementById('month-filter').value;
+            const customDateContainer = document.getElementById('custom-date-container');
+            
+            if (monthFilter === 'CUSTOM_DATE') {
+                customDateContainer.style.display = 'flex';
+            } else {
+                customDateContainer.style.display = 'none';
+            }
+            executeSearch();
+        };
 
-// 4. ரீசெட் பட்டன்
-window.resetSearch = function() {
-    if (document.getElementById('search-input')) document.getElementById('search-input').value = '';
-    if (document.getElementById('month-filter')) document.getElementById('month-filter').value = 'CURRENT_WEEK';
-    if (document.getElementById('custom-date-container')) document.getElementById('custom-date-container').style.display = 'none';
-    if (document.getElementById('from-date')) document.getElementById('from-date').value = '';
-    if (document.getElementById('to-date')) document.getElementById('to-date').value = '';
-    renderApp(); 
-};
+        function filterTransactions(txList) {
+            const searchInput = document.getElementById('search-input');
+            const monthFilterInput = document.getElementById('month-filter');
+            
+            const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const monthFilter = monthFilterInput ? monthFilterInput.value : 'CURRENT_WEEK';
+            
+            const fromDateVal = document.getElementById('from-date') ? document.getElementById('from-date').value : '';
+            const toDateVal = document.getElementById('to-date') ? document.getElementById('to-date').value : '';
+            const { startOfWeek, endOfWeek } = getThisWeekRange();
 
-// 5. தேடல் பட்டன் ஆக்ஷன்
-window.executeSearch = function() {
-    renderApp(); 
-};
+            return txList.filter(item => {
+                const itemTime = item.timestamp ? item.timestamp : (item.date ? new Date(item.date).getTime() : 0);
+                const itemDate = new Date(itemTime); 
+                itemDate.setHours(0, 0, 0, 0);
+
+                let matchesSearch = true;
+                if (searchVal !== '') {
+                    const titleMatch = item.title && item.title.toLowerCase().includes(searchVal);
+                    const amountMatch = item.amount && item.amount.toString().includes(searchVal);
+                    const catMatch = item.category && item.category.toLowerCase().includes(searchVal);
+                    const sourceMatch = item.source && item.source.toLowerCase().includes(searchVal);
+                    matchesSearch = titleMatch || amountMatch || catMatch || sourceMatch;
+                }
+
+                let matchesDate = true;
+
+                if (monthFilter === 'CURRENT_WEEK' && searchVal === '') {
+                    matchesDate = itemDate >= startOfWeek && itemDate <= endOfWeek;
+                } 
+                else if (monthFilter === 'ALL') {
+                    matchesDate = true;
+                } 
+                else if (monthFilter === 'CUSTOM_DATE') {
+                    if (fromDateVal) {
+                        const fDate = new Date(fromDateVal);
+                        fDate.setHours(0, 0, 0, 0);
+                        matchesDate = matchesDate && (itemDate >= fDate);
+                    }
+                    if (toDateVal) {
+                        const tDate = new Date(toDateVal);
+                        tDate.setHours(23, 59, 59, 999);
+                        matchesDate = matchesDate && (itemDate <= tDate);
+                    }
+                } 
+                else if (monthFilter.includes('-')) {
+                    let d = new Date(itemTime);
+                    let monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    matchesDate = (monthKey === monthFilter);
+                }
+
+                return matchesSearch && matchesDate;
+            });
+        }
+
+        window.resetSearch = function() {
+            if (document.getElementById('search-input')) document.getElementById('search-input').value = '';
+            if (document.getElementById('month-filter')) document.getElementById('month-filter').value = 'CURRENT_WEEK';
+            if (document.getElementById('custom-date-container')) document.getElementById('custom-date-container').style.display = 'none';
+            if (document.getElementById('from-date')) document.getElementById('from-date').value = '';
+            if (document.getElementById('to-date')) document.getElementById('to-date').value = '';
+            renderApp(); 
+        };
+
+        window.executeSearch = function() {
+            renderApp(); 
+        };
 
         function listenToData(uid) {
             onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
@@ -764,22 +765,21 @@ window.executeSearch = function() {
             });
             totals["வட்டி பிசினஸ்"] = vattiTotal;
 
-                // கார்டுகளுக்கு .toFixed(2) அப்ளை செய்து அப்டேட் செய்யும் லூப்
-    const cardMapping = {
-        "சம்பளம்": "salary-card-val",
-        "வீடு": "veedu-card-val",
-        "கொல்லை": "kollai-card-val",
-        "MK செலவு": "mk-card-val",
-        "SK செலவு": "sk-card-val",
-        "வட்டி பிசினஸ்": "vatti-card-val"
-    };
+            const cardMapping = {
+                "சம்பளம்": "salary-card-val",
+                "வீடு": "veedu-card-val",
+                "கொல்லை": "kollai-card-val",
+                "MK செலவு": "mk-card-val",
+                "SK செலவு": "sk-card-val",
+                "வட்டி பிசினஸ்": "vatti-card-val"
+            };
 
-    for (let key in cardMapping) {
-        let elem = document.getElementById(cardMapping[key]);
-        if (elem) {
-            elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
-        }
-    }
+            for (let key in cardMapping) {
+                let elem = document.getElementById(cardMapping[key]);
+                if (elem) {
+                    elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
+                }
+            }
 
             renderApp();
         }
@@ -819,29 +819,9 @@ window.executeSearch = function() {
 
         function renderStandardView() {
             const container = document.getElementById("tx-list-container");
-            const searchKeyword = document.getElementById("search-input").value.toLowerCase().trim();
-            const selectedMonth = document.getElementById("month-filter").value;
-
-            let filtered = allTransactions.filter(tx => {
-                let matchesTab = (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
-                let matchesSearch = !searchKeyword || tx.title.toLowerCase().includes(searchKeyword);
-                
-                let matchesMonth = true;
-                let matchesWeek = true;
-
-                if (selectedMonth !== "ALL" && tx.timestamp) {
-                    let d = new Date(tx.timestamp);
-                    let txMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                    matchesMonth = (txMonthKey === selectedMonth);
-
-                    let day = d.getDate();
-                    if (activeWeekFilter === "W1") matchesWeek = (day >= 1 && day <= 7);
-                    else if (activeWeekFilter === "W2") matchesWeek = (day >= 8 && day <= 14);
-                    else if (activeWeekFilter === "W3") matchesWeek = (day >= 15 && day <= 21);
-                    else if (activeWeekFilter === "W4") matchesWeek = (day >= 22);
-                }
-
-                return matchesTab && matchesSearch && matchesMonth && matchesWeek;
+            
+            let filtered = filterTransactions(allTransactions).filter(tx => {
+                return (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
             });
 
             container.innerHTML = "";
@@ -1019,15 +999,12 @@ window.executeSearch = function() {
             document.getElementById("delete-modal").style.display = "none";
         };
 
-        // டக்குன்னு க்ளோஸ் ஆகும்படி மாற்றி அமைக்கப்பட்ட நீக்கும் ஃபங்க்ஷன்
         window.confirmDeleteData = function() {
             const id = document.getElementById("delete-id").value;
             const collectionType = document.getElementById("delete-collection-type").value;
             
-            // பாப்-அப் உடனடியாக க்ளோஸ் ஆகும்
             closeDeleteModal();
             
-            // பின்னணியில் நீக்கப்படும்
             deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id)).catch((error) => {
                 console.error("Delete Error: ", error);
             });
