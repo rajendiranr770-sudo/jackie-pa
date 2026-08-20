@@ -750,32 +750,56 @@ window.executeSearch = function() {
         }
 
         function updateCalculations() {
-            let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி பிசினஸ்": 0 };
+    // 1. ஆரம்ப மதிப்புகள்
+    let totals = {
+        "சம்பளம்": 0,
+        "வீடு": 0,
+        "கொல்லை": 0,
+        "MK செலவு": 0,
+        "SK செலவு": 0,
+        "பொது செலவு": 0,
+        "வட்டி பிசினஸ்": 0
+    };
 
-            allTransactions.forEach(tx => {
-                if (tx.type === "income") {
-                    totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
-                } else {
-                    totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
-                    if (tx.category && tx.category !== "பொது" && !tx.category.includes("வரவு")) {
-                        totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
-                    }
-                }
-            });
+    // 2. லிஸ்ட்டில் உள்ள தொகைகளைக் கூட்டும் கணக்கீடு
+    allTransactions.forEach(tx => {
+        let amt = parseFloat(tx.amount || 0);
+        
+        // category அல்லது source இரண்டிலும் செக் செய்யும்
+        let cat = tx.category || tx.source;
 
-            let vattiTotal = 0;
-            allVattiLoans.forEach(v => {
-                if (!v.isReturned && !v.isKaiMaathu) vattiTotal += v.principal;
-            });
-            totals["வட்டி பிசினஸ்"] = vattiTotal;
+        if (cat === "பொது" || cat === "பொது செலவு") {
+            totals["பொது செலவு"] += amt;
+        } else if (cat === "MK செலவு" || cat === "MK") {
+            totals["MK செலவு"] += amt;
+        } else if (cat === "SK செலவு" || cat === "SK") {
+            totals["SK செலவு"] += amt;
+        } else if (cat === "சம்பளம்") {
+            totals["சம்பளம்"] += amt;
+        } else if (cat === "வீடு") {
+            totals["வீடு"] += amt;
+        } else if (cat === "கொல்லை") {
+            totals["கொல்லை"] += amt;
+        }
+    });
 
-                // கார்டுகளுக்கு .toFixed(2) அப்ளை செய்து அப்டேட் செய்யும் லூப்
+    // 3. வட்டி பிசினஸ் கணக்கு
+    let vattiTotal = 0;
+    if (typeof allVattiLoans !== 'undefined' && Array.isArray(allVattiLoans)) {
+        allVattiLoans.forEach(v => {
+            if (!v.isReturned) vattiTotal += parseFloat(v.amount || 0);
+        });
+    }
+    totals["வட்டி பிசினஸ்"] = vattiTotal;
+
+    // 4. கார்டுகளுக்கு ID பொருத்தி .toFixed(2) கொடுக்கும் லூப்
     const cardMapping = {
         "சம்பளம்": "salary-card-val",
         "வீடு": "veedu-card-val",
         "கொல்லை": "kollai-card-val",
         "MK செலவு": "mk-card-val",
         "SK செலவு": "sk-card-val",
+        "பொது செலவு": "general-expense-val",
         "வட்டி பிசினஸ்": "vatti-card-val"
     };
 
@@ -785,6 +809,7 @@ window.executeSearch = function() {
             elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
         }
     }
+}
 
             renderApp();
         }
