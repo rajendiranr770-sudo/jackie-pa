@@ -32,6 +32,11 @@
         .month-select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: bold; background: white; color: #0369a1; outline: none; }
         .search-btn { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
+        /* Weekly Filter Styling */
+        .week-bar { display: flex; gap: 6px; overflow-x: auto; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #bae6fd; }
+        .week-btn { background: #white; border: 1px solid #0284c7; color: #0284c7; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        .week-btn.active { background: #0284c7; color: white; }
+
         .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #0f172a; }
         .sub-section-title { font-size: 14px; font-weight: bold; margin: 12px 0 8px 0; color: #334155; display: flex; align-items: center; gap: 6px; }
         
@@ -134,10 +139,18 @@
             <div class="search-title">🔍 செலவு கணக்கு கேட்க / தேட</div>
             <div class="search-input-group">
                 <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், 20000)">
-                <select id="month-filter" class="month-select" onchange="renderApp()">
+                <select id="month-filter" class="month-select" onchange="onMonthChange()">
                     <option value="ALL">📅 அனைத்து மாதம்</option>
                 </select>
                 <button class="search-btn" onclick="renderApp()">தேடு</button>
+            </div>
+            <!-- வாராந்திர ஃபில்டர் பார்கள் -->
+            <div class="week-bar" id="week-bar-area" style="display: none;">
+                <button class="week-btn active" data-week="ALL" onclick="filterWeek('ALL', this)">🗓️ முழு மாதம்</button>
+                <button class="week-btn" data-week="W1" onclick="filterWeek('W1', this)">வாரம் 1 (1-7)</button>
+                <button class="week-btn" data-week="W2" onclick="filterWeek('W2', this)">வாரம் 2 (8-14)</button>
+                <button class="week-btn" data-week="W3" onclick="filterWeek('W3', this)">வாரம் 3 (15-21)</button>
+                <button class="week-btn" data-week="W4" onclick="filterWeek('W4', this)">வாரம் 4 (22+)</button>
             </div>
         </div>
 
@@ -332,6 +345,7 @@
         let allTransactions = [];
         let allVattiLoans = [];
         let activeTab = "All";
+        let activeWeekFilter = "ALL";
         let pendingAction = null;
         let selectedCategoryChoice = "பொது";
 
@@ -453,7 +467,6 @@
             }
         };
 
-        // மேனுவல் கணக்கு பதிவு ஃபங்க்ஷன்
         window.addManualTransaction = function() {
             let title = document.getElementById("m-title").value.trim();
             let amount = parseFloat(document.getElementById("m-amount").value);
@@ -597,7 +610,28 @@
             if (currentSelected && Array.from(select.options).some(o => o.value === currentSelected)) {
                 select.value = currentSelected;
             }
+            
+            onMonthChange();
         }
+
+        window.onMonthChange = function() {
+            const selectedMonth = document.getElementById("month-filter").value;
+            const weekArea = document.getElementById("week-bar-area");
+            if (selectedMonth !== "ALL") {
+                weekArea.style.display = "flex";
+            } else {
+                weekArea.style.display = "none";
+                activeWeekFilter = "ALL";
+            }
+            renderApp();
+        };
+
+        window.filterWeek = function(weekKey, btnElem) {
+            activeWeekFilter = weekKey;
+            document.querySelectorAll(".week-btn").forEach(b => b.classList.remove("active"));
+            btnElem.classList.add("active");
+            renderApp();
+        };
 
         function listenToData(uid) {
             onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
@@ -685,13 +719,21 @@
                 let matchesSearch = !searchKeyword || tx.title.toLowerCase().includes(searchKeyword);
                 
                 let matchesMonth = true;
+                let matchesWeek = true;
+
                 if (selectedMonth !== "ALL" && tx.timestamp) {
                     let d = new Date(tx.timestamp);
                     let txMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
                     matchesMonth = (txMonthKey === selectedMonth);
+
+                    let day = d.getDate();
+                    if (activeWeekFilter === "W1") matchesWeek = (day >= 1 && day <= 7);
+                    else if (activeWeekFilter === "W2") matchesWeek = (day >= 8 && day <= 14);
+                    else if (activeWeekFilter === "W3") matchesWeek = (day >= 15 && day <= 21);
+                    else if (activeWeekFilter === "W4") matchesWeek = (day >= 22);
                 }
 
-                return matchesTab && matchesSearch && matchesMonth;
+                return matchesTab && matchesSearch && matchesMonth && matchesWeek;
             });
 
             container.innerHTML = "";
@@ -846,9 +888,9 @@
                         });
 
                         if (matchingTx) {
-                            await deleteDoc(doc(db, "users", auth.currentUser.uid, "transactions", matchingTx.id));
+                            deleteDoc(doc(db, "users", auth.currentUser.uid, "transactions", matchingTx.id));
                         }
-                        await deleteDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId));
+                        deleteDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId));
                         alert(`👍 கைமாத்து கணக்கு சரிபார்க்கப்பட்டு நீக்கப்பட்டது!`);
                     } catch (error) {
                         console.error("Error returning KaiMaathu: ", error);
@@ -869,15 +911,18 @@
             document.getElementById("delete-modal").style.display = "none";
         };
 
-        window.confirmDeleteData = async function() {
+        // டக்குன்னு க்ளோஸ் ஆகும்படி மாற்றி அமைக்கப்பட்ட நீக்கும் ஃபங்க்ஷன்
+        window.confirmDeleteData = function() {
             const id = document.getElementById("delete-id").value;
             const collectionType = document.getElementById("delete-collection-type").value;
-            try {
-                await deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id));
-                closeDeleteModal();
-            } catch (error) {
+            
+            // பாப்-அப் உடனடியாக க்ளோஸ் ஆகும்
+            closeDeleteModal();
+            
+            // பின்னணியில் நீக்கப்படும்
+            deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id)).catch((error) => {
                 console.error("Delete Error: ", error);
-            }
+            });
         };
 
         window.openEditModal = function(item, collectionType = 'transactions') {
