@@ -737,19 +737,21 @@ window.executeSearch = function() {
 };
 
         function listenToData(uid) {
-            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
-                allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                populateMonthDropdown();
-                updateCalculations();
-            });
+    onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
+        allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        populateMonthDropdown();
+        updateCalculations();
+        renderApp(); // 👈 டேட்டா வந்ததும் UI அப்டேட் ஆக இங்க இருக்கணும்
+    });
 
-            onSnapshot(query(collection(db, "users", uid, "vatti"), orderBy("timestamp", "desc")), (snap) => {
-                allVattiLoans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                updateCalculations();
-            });
-        }
+    onSnapshot(query(collection(db, "users", uid, "vatti"), orderBy("timestamp", "desc")), (snap) => {
+        allVattiLoans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCalculations();
+        renderApp();
+    });
+}
 
-        function updateCalculations() {
+function updateCalculations() {
     // 1. ஆரம்ப மதிப்புகள்
     let totals = {
         "சம்பளம்": 0,
@@ -764,8 +766,6 @@ window.executeSearch = function() {
     // 2. லிஸ்ட்டில் உள்ள தொகைகளைக் கூட்டும் கணக்கீடு
     allTransactions.forEach(tx => {
         let amt = parseFloat(tx.amount || 0);
-        
-        // category அல்லது source இரண்டிலும் செக் செய்யும்
         let cat = tx.category || tx.source;
 
         if (cat === "பொது" || cat === "பொது செலவு") {
@@ -809,18 +809,15 @@ window.executeSearch = function() {
             elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
         }
     }
-}
+} // 👈 ஃபங்ஷன் இங்க பெர்ஃபெக்ட்டா முடிஞ்சிருச்சு!
 
-            renderApp();
-        }
-
-        window.selectTab = function(tabName) {
-            let targetBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
-            if (targetBtn) {
-                filterTab(tabName, targetBtn);
-                document.getElementById("search-box-area").scrollIntoView({ behavior: 'smooth' });
-            }
-        };
+window.selectTab = function(tabName) {
+    let targetBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    if (targetBtn) {
+        filterTab(tabName, targetBtn);
+        document.getElementById("search-box-area").scrollIntoView({ behavior: 'smooth' });
+    }
+};
 
         window.filterTab = function(tabName, btnElem) {
             activeTab = tabName;
