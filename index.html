@@ -803,7 +803,7 @@ function setCategory(catName, btnElement) {
 }
 
 // சம்பளம் / வீடு பட்டனைத் தொடும்போது
-function confirmSource(sourceName) {
+window.confirmSource = function(sourceName) {
     if (pendingAction && pendingAction.data) {
         pendingAction.data.source = sourceName;
         
