@@ -692,7 +692,6 @@ async function saveTransaction(data) {
             const collectionType = document.getElementById("delete-collection-type").value;
             try {
                 await deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id));
-                alert("பதிவு நீக்கப்பட்டது!");
                 closeDeleteModal();
             } catch (error) {
                 console.error("Delete Error: ", error);
