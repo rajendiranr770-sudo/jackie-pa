@@ -764,12 +764,22 @@ window.executeSearch = function() {
             });
             totals["வட்டி பிசினஸ்"] = vattiTotal;
 
-            document.getElementById("val-salary").innerText = `₹${totals["சம்பளம்"] || 0}`;
-            document.getElementById("val-home").innerText = `₹${totals["வீடு"] || 0}`;
-            document.getElementById("val-kollai").innerText = `₹${totals["கொல்லை"] || 0}`;
-            document.getElementById("val-mk").innerText = `₹${totals["MK செலவு"] || 0}`;
-            document.getElementById("val-sk").innerText = `₹${totals["SK செலவு"] || 0}`;
-            document.getElementById("val-vatti").innerText = `₹${totals["வட்டி பிசினஸ்"] || 0}`;
+                // கார்டுகளுக்கு .toFixed(2) அப்ளை செய்து அப்டேட் செய்யும் லூப்
+    const cardMapping = {
+        "சம்பளம்": "salary-card-val",
+        "வீடு": "veedu-card-val",
+        "கொல்லை": "kollai-card-val",
+        "MK செலவு": "mk-card-val",
+        "SK செலவு": "sk-card-val",
+        "வட்டி பிசினஸ்": "vatti-card-val"
+    };
+
+    for (let key in cardMapping) {
+        let elem = document.getElementById(cardMapping[key]);
+        if (elem) {
+            elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
+        }
+    }
 
             renderApp();
         }
