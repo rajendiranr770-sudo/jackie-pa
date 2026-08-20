@@ -122,11 +122,6 @@
             <div class="card" onclick="selectTab('MK செலவு')"><div class="card-label">MK செலவு</div><div class="card-value" id="val-mk">₹0</div></div>
             <div class="card" onclick="selectTab('SK செலவு')"><div class="card-label">SK செலவு</div><div class="card-value" id="val-sk">₹0</div></div>
             <div class="card card-vatti" onclick="selectTab('வட்டி பிசினஸ்')"><div class="card-label">வட்டி பிசினஸ்</div><div class="card-value" id="val-vatti">₹0</div></div>
-                <!-- பொது செலவு கார்டு -->
-        <div class="card" style="background: #ffffff; border-radius: 12px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-            <div style="font-size: 14px; color: #64748b; font-weight: bold;">பொது செலவு</div>
-            <div id="general-expense-val" style="font-size: 20px; color: #ef4444; font-weight: bold;">₹0.00</div>
-        </div>
         </div>
 
         <div class="tab-bar" id="main-tab-bar">
@@ -737,69 +732,45 @@ window.executeSearch = function() {
 };
 
         function listenToData(uid) {
-    onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
-        allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        populateMonthDropdown();
-        updateCalculations();
-        renderApp(); // 👈 டேட்டா வந்ததும் UI அப்டேட் ஆக இங்க இருக்கணும்
-    });
+            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
+                allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                populateMonthDropdown();
+                updateCalculations();
+            });
 
-    onSnapshot(query(collection(db, "users", uid, "vatti"), orderBy("timestamp", "desc")), (snap) => {
-        allVattiLoans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        updateCalculations();
-        renderApp();
-    });
-}
-
-function updateCalculations() {
-    // 1. ஆரம்ப மதிப்புகள்
-    let totals = {
-        "சம்பளம்": 0,
-        "வீடு": 0,
-        "கொல்லை": 0,
-        "MK செலவு": 0,
-        "SK செலவு": 0,
-        "பொது செலவு": 0,
-        "வட்டி பிசினஸ்": 0
-    };
-
-    // 2. லிஸ்ட்டில் உள்ள தொகைகளைக் கூட்டும் கணக்கீடு
-    allTransactions.forEach(tx => {
-        let amt = parseFloat(tx.amount || 0);
-        let cat = tx.category || tx.source;
-
-        if (cat === "பொது" || cat === "பொது செலவு") {
-            totals["பொது செலவு"] += amt;
-        } else if (cat === "MK செலவு" || cat === "MK") {
-            totals["MK செலவு"] += amt;
-        } else if (cat === "SK செலவு" || cat === "SK") {
-            totals["SK செலவு"] += amt;
-        } else if (cat === "சம்பளம்") {
-            totals["சம்பளம்"] += amt;
-        } else if (cat === "வீடு") {
-            totals["வீடு"] += amt;
-        } else if (cat === "கொல்லை") {
-            totals["கொல்லை"] += amt;
+            onSnapshot(query(collection(db, "users", uid, "vatti"), orderBy("timestamp", "desc")), (snap) => {
+                allVattiLoans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateCalculations();
+            });
         }
-    });
 
-    // 3. வட்டி பிசினஸ் கணக்கு
-    let vattiTotal = 0;
-    if (typeof allVattiLoans !== 'undefined' && Array.isArray(allVattiLoans)) {
-        allVattiLoans.forEach(v => {
-            if (!v.isReturned) vattiTotal += parseFloat(v.amount || 0);
-        });
-    }
-    totals["வட்டி பிசினஸ்"] = vattiTotal;
+        function updateCalculations() {
+            let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி பிசினஸ்": 0 };
 
-    // 4. கார்டுகளுக்கு ID பொருத்தி .toFixed(2) கொடுக்கும் லூப்
+            allTransactions.forEach(tx => {
+                if (tx.type === "income") {
+                    totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
+                } else {
+                    totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
+                    if (tx.category && tx.category !== "பொது" && !tx.category.includes("வரவு")) {
+                        totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
+                    }
+                }
+            });
+
+            let vattiTotal = 0;
+            allVattiLoans.forEach(v => {
+                if (!v.isReturned && !v.isKaiMaathu) vattiTotal += v.principal;
+            });
+            totals["வட்டி பிசினஸ்"] = vattiTotal;
+
+                // கார்டுகளுக்கு .toFixed(2) அப்ளை செய்து அப்டேட் செய்யும் லூப்
     const cardMapping = {
         "சம்பளம்": "salary-card-val",
         "வீடு": "veedu-card-val",
         "கொல்லை": "kollai-card-val",
         "MK செலவு": "mk-card-val",
         "SK செலவு": "sk-card-val",
-        "பொது செலவு": "general-expense-val",
         "வட்டி பிசினஸ்": "vatti-card-val"
     };
 
@@ -809,15 +780,17 @@ function updateCalculations() {
             elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
         }
     }
-} // 👈 ஃபங்ஷன் இங்க பெர்ஃபெக்ட்டா முடிஞ்சிருச்சு!
 
-window.selectTab = function(tabName) {
-    let targetBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
-    if (targetBtn) {
-        filterTab(tabName, targetBtn);
-        document.getElementById("search-box-area").scrollIntoView({ behavior: 'smooth' });
-    }
-};
+            renderApp();
+        }
+
+        window.selectTab = function(tabName) {
+            let targetBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+            if (targetBtn) {
+                filterTab(tabName, targetBtn);
+                document.getElementById("search-box-area").scrollIntoView({ behavior: 'smooth' });
+            }
+        };
 
         window.filterTab = function(tabName, btnElem) {
             activeTab = tabName;
