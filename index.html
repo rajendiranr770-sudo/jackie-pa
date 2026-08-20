@@ -343,7 +343,7 @@
     // 3. பணம் எந்தக் கணக்கு (Source/Account)
     let detectedSource = null;
     if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) detectedSource = "சம்பளம்";
-    else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு")) detectedSource = "வீடு";
+    else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு") || lowerText.includes("வீட்டிலிருந்து")) detectedSource = "வீடு";
 
     let txData = {
         title: rawText,
