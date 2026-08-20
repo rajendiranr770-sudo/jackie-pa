@@ -22,7 +22,6 @@
 
         .section-title { font-size: 16px; font-weight: bold; margin: 14px 0 8px 0; color: #0f172a; }
         
-        /* Batch Card Styles */
         .batch-box { background: white; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
         .batch-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 8px; }
         .batch-title { font-weight: bold; font-size: 15px; color: #1e293b; }
@@ -132,7 +131,6 @@
 
         let allTransactions = [];
 
-        // Set default datetime picker to current local time
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById("m-date").value = now.toISOString().slice(0, 16);
@@ -153,7 +151,6 @@
         });
 
         function listenToData(uid) {
-            // Read entries chronologically (oldest to newest)
             onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "asc")), (snap) => {
                 allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderApp();
@@ -163,8 +160,6 @@
         function renderApp() {
             let salaryBalance = 0;
             let homeBalance = 0;
-
-            // Separate Incomes into individual Batches
             let batches = [];
 
             allTransactions.forEach(tx => {
@@ -181,17 +176,13 @@
                     batches.push(newBatch);
                 } 
                 else if (tx.type === "expense") {
-                    // User explicitly chooses the source (சம்பளம் or வீடு)
                     let targetSource = tx.source || "சம்பளம்";
-
-                    // Find the oldest active batch for that source that still has money
                     let availableBatch = batches.find(b => b.source === targetSource && b.remainingAmount > 0);
 
                     if (availableBatch) {
                         availableBatch.expenses.push(tx);
                         availableBatch.remainingAmount -= tx.amount;
                     } else {
-                        // If all previous batches of that source are ZERO, link expense to the latest batch
                         let lastBatch = [...batches].reverse().find(b => b.source === targetSource);
                         if (lastBatch) {
                             lastBatch.expenses.push(tx);
@@ -201,7 +192,6 @@
                 }
             });
 
-            // Calculate active totals
             batches.forEach(b => {
                 let rem = Math.max(0, b.remainingAmount);
                 if (b.source === "சம்பளம்") salaryBalance += rem;
@@ -212,7 +202,6 @@
             document.getElementById("val-home").innerText = `₹${homeBalance}`;
             document.getElementById("val-total").innerText = `₹${salaryBalance + homeBalance}`;
 
-            // Render Batches UI
             const container = document.getElementById("batch-list-container");
             container.innerHTML = "";
 
@@ -221,7 +210,6 @@
                 return;
             }
 
-            // Display newest batches first
             [...batches].reverse().forEach(b => {
                 let incomeDate = new Date(b.timestamp).toLocaleString("ta-IN", { dateStyle: "short", timeStyle: "short" });
                 let isZero = b.remainingAmount <= 0;
