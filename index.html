@@ -408,31 +408,35 @@ onAuthStateChanged(auth, (user) => {
             document.getElementById("source-modal").style.display = "flex";
         };
 
-        window.resolveSource = function(selectedSource) {
-            document.getElementById("source-modal").style.display = "none";
-            if (!pendingAction) return;
+        window.resolveSource = function(sourceName) {
+    document.getElementById("source-modal").style.display = "none";
+    if (!pendingAction) return;
 
-            if (pendingAction.type === "TX") {
-                pendingAction.data.source = selectedSource;
-                saveTransaction(pendingAction.data);
-            } else if (pendingAction.type === "KM") {
-                pendingAction.data.source = selectedSource;
-                addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), pendingAction.data);
-                
-                saveTransaction({
-                    title: `${pendingAction.data.personName}-க்கு கைமாத்து கொடுத்தது`,
-                    amount: pendingAction.data.principal,
-                    type: "expense",
-                    source: selectedSource,
-                    category: "கைமாத்து",
-                    timestamp: Date.now()
-                });
-                
-                document.getElementById("km-name").value = "";
-                document.getElementById("km-amount").value = "";
-            }
-            pendingAction = null;
-        };
+    if (pendingAction.type === "TX") {
+        pendingAction.data.source = sourceName;
+        if (!pendingAction.data.category) {
+            pendingAction.data.category = selectedCategoryChoice || "பொது";
+        }
+        saveTransaction(pendingAction.data);
+    } 
+    else if (pendingAction.type === "KM") {
+        // கைமாத்து பதிவுகளுக்கு
+        let kmData = pendingAction.data;
+        
+        saveTransaction({
+            title: "கைமாத்து: " + kmData.personName,
+            amount: kmData.amount,
+            type: "expense",
+            category: "கைமாத்து",
+            source: sourceName,
+            date: new Date().toLocaleDateString('en-GB')
+        });
+    }
+
+    pendingAction = null;
+};
+
+
 
 // 1. பட்டன் கிளிக் செய்யும்போது இயங்கும் ஃபங்க்ஷன்
 function confirmSource(sourceName) {
