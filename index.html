@@ -135,24 +135,40 @@
             <button class="tab-btn" data-tab="கைமாத்து" onclick="filterTab('கைமாத்து', this)">🤝 கைமாத்து</button>
         </div>
 
-        <div class="search-box" id="search-box-area">
-            <div class="search-title">🔍 செலவு கணக்கு கேட்க / தேட</div>
-            <div class="search-input-group">
-                <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், 20000)">
-                <select id="month-filter" class="month-select" onchange="onMonthChange()">
-                    <option value="ALL">📅 அனைத்து மாதம்</option>
-                </select>
-                <button class="search-btn" onclick="renderApp()">தேடு</button>
-            </div>
-            <!-- வாராந்திர ஃபில்டர் பார்கள் -->
-            <div class="week-bar" id="week-bar-area" style="display: none;">
-                <button class="week-btn active" data-week="ALL" onclick="filterWeek('ALL', this)">🗓️ முழு மாதம்</button>
-                <button class="week-btn" data-week="W1" onclick="filterWeek('W1', this)">வாரம் 1 (1-7)</button>
-                <button class="week-btn" data-week="W2" onclick="filterWeek('W2', this)">வாரம் 2 (8-14)</button>
-                <button class="week-btn" data-week="W3" onclick="filterWeek('W3', this)">வாரம் 3 (15-21)</button>
-                <button class="week-btn" data-week="W4" onclick="filterWeek('W4', this)">வாரம் 4 (22+)</button>
-            </div>
+        <!-- தேடல் மற்றும் ஃபில்டர் பகுதி -->
+<div class="search-box" id="search-box-area">
+    <div class="search-title">🔍 செலவு கணக்கு ஃபில்டர் & தேடல்</div>
+    
+    <!-- வார்த்தை தேடல் -->
+    <div class="search-input-group" style="margin-bottom: 8px;">
+        <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், MK செலவு, 20000)">
+        <button class="search-btn" onclick="executeSearch()">தேடு</button>
+        <button class="search-btn" style="background: #64748b;" onclick="resetSearch()">✖ ரீசெட்</button>
+    </div>
+
+    <!-- மாதம் & வகை ஃபில்டர் -->
+    <div class="search-input-group" style="margin-bottom: 8px;">
+        <select id="month-filter" class="month-select" onchange="onFilterChange()">
+            <option value="CURRENT_WEEK">📅 இந்த வாரம் மட்டும் (Current Week)</option>
+            <option value="ALL">🌐 அனைத்து கணக்குகள் (All Statements)</option>
+            <option value="CUSTOM_DATE">📆 குறிப்பிட்ட தேதி வரை (Custom Date)</option>
+            <option value="2026-08">📅 ஆகஸ்ட் 2026</option>
+            <option value="2026-09">📅 செப்டம்பர் 2026</option>
+        </select>
+    </div>
+
+    <!-- குறிப்பிட்ட தேதி தேர்ந்தெடுக்கும் பாக்ஸ் (Custom Date Range) -->
+    <div id="custom-date-container" style="display: none; gap: 6px; margin-top: 8px;">
+        <div style="flex:1;">
+            <span style="font-size:11px; font-weight:bold; color:#0369a1;">இருந்து (From):</span>
+            <input type="date" id="from-date" class="search-input" onchange="executeSearch()">
         </div>
+        <div style="flex:1;">
+            <span style="font-size:11px; font-weight:bold; color:#0369a1;">வரை (To):</span>
+            <input type="date" id="to-date" class="search-input" onchange="executeSearch()">
+        </div>
+    </div>
+</div>
 
         <div id="standard-view">
             <!-- மேனுவல் என்ட்ரி ஃபார்ம் -->
