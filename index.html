@@ -27,8 +27,9 @@
 
         .search-box { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
         .search-title { color: #0369a1; font-weight: bold; font-size: 14px; margin-bottom: 8px; }
-        .search-input-group { display: flex; gap: 6px; }
-        .search-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
+        .search-input-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .search-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; min-width: 140px; }
+        .month-select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: bold; background: white; color: #0369a1; outline: none; }
         .search-btn { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
         .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #0f172a; }
@@ -133,6 +134,9 @@
             <div class="search-title">🔍 செலவு கணக்கு கேட்க / தேட</div>
             <div class="search-input-group">
                 <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், 20000)">
+                <select id="month-filter" class="month-select" onchange="renderApp()">
+                    <option value="ALL">📅 அனைத்து மாதம்</option>
+                </select>
                 <button class="search-btn" onclick="renderApp()">தேடு</button>
             </div>
         </div>
@@ -563,9 +567,42 @@
             }
         }
 
+        function populateMonthDropdown() {
+            const select = document.getElementById("month-filter");
+            const currentSelected = select.value;
+            select.innerHTML = '<option value="ALL">📅 அனைத்து மாதம்</option>';
+            
+            let monthsSet = new Set();
+            allTransactions.forEach(tx => {
+                if (tx.timestamp) {
+                    let d = new Date(tx.timestamp);
+                    let monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    monthsSet.add(monthKey);
+                }
+            });
+
+            let sortedMonths = Array.from(monthsSet).sort().reverse();
+            const monthNames = ["ஜனவரி", "பிப்ரவரி", "மார்ச்", "ஏப்ரல்", "மே", "ஜூன்", "ஜூலை", "ஆகஸ்ட்", "செப்டம்பர்", "அக்டோபர்", "நவம்பர்", "டிசம்பர்"];
+
+            sortedMonths.forEach(m => {
+                let parts = m.split('-');
+                let year = parts[0];
+                let monthIdx = parseInt(parts[1]) - 1;
+                let opt = document.createElement("option");
+                opt.value = m;
+                opt.innerText = `${monthNames[monthIdx]} ${year}`;
+                select.appendChild(opt);
+            });
+
+            if (currentSelected && Array.from(select.options).some(o => o.value === currentSelected)) {
+                select.value = currentSelected;
+            }
+        }
+
         function listenToData(uid) {
             onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
                 allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                populateMonthDropdown();
                 updateCalculations();
             });
 
@@ -641,11 +678,20 @@
         function renderStandardView() {
             const container = document.getElementById("tx-list-container");
             const searchKeyword = document.getElementById("search-input").value.toLowerCase().trim();
+            const selectedMonth = document.getElementById("month-filter").value;
 
             let filtered = allTransactions.filter(tx => {
                 let matchesTab = (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
                 let matchesSearch = !searchKeyword || tx.title.toLowerCase().includes(searchKeyword);
-                return matchesTab && matchesSearch;
+                
+                let matchesMonth = true;
+                if (selectedMonth !== "ALL" && tx.timestamp) {
+                    let d = new Date(tx.timestamp);
+                    let txMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    matchesMonth = (txMonthKey === selectedMonth);
+                }
+
+                return matchesTab && matchesSearch && matchesMonth;
             });
 
             container.innerHTML = "";
