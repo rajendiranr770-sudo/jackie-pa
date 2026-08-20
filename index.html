@@ -43,13 +43,14 @@
         .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .form-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; width: 100%; margin-bottom: 8px; }
         .btn-green { background: #16a34a; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
+        .btn-blue { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
         .person-card { background: white; border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
         .person-header { font-size: 16px; font-weight: bold; color: #1e3a8a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 
         /* Modals Default Display Off */
         .modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
         }
         .modal-content, .modal-box { background: white; width: 90%; max-width: 380px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: left; }
         .modal-title { font-size: 18px; font-weight: bold; color: #0f172a; margin-bottom: 15px; text-align: center; }
@@ -58,7 +59,6 @@
         .save-btn { flex: 1; background: #2563eb; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .close-btn { flex: 1; background: #475569; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .delete-confirm-btn { flex: 1; background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .modal-btn { width: 100%; padding: 10px; margin-top: 8px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         .text-center { text-align: center; }
         
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 10px; display: flex; gap: 6px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; }
@@ -66,33 +66,25 @@
         .send-btn { background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .mic-btn { background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        /* Pop-up Overlay & Card Design */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;
-}
-.modal-card {
-    background: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 380px; text-align: center;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-}
-.section-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; text-align: left; }
+        .modal-card {
+            background: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 380px; text-align: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+        .section-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; text-align: left; }
 
-/* 4 Category Buttons */
-.category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.cat-btn {
-    padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; background: #f8f9fa;
-    font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s;
-}
-.cat-btn.selected { background: #e3f2fd; border-color: #2196f3; color: #1976d2; }
+        .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .cat-btn {
+            padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; background: #f8f9fa;
+            font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s;
+        }
+        .cat-btn.selected { background: #e3f2fd; border-color: #2196f3; color: #1976d2; }
 
-/* 2 Source Buttons */
-.source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.src-btn {
-    padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 15px; cursor: pointer;
-}
-.btn-salary { background: #2563eb; }
-.btn-home { background: #16a34a; }
-
+        .source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .src-btn {
+            padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 15px; cursor: pointer;
+        }
+        .btn-salary { background: #2563eb; }
+        .btn-home { background: #16a34a; }
     </style>
 </head>
 <body>
@@ -140,6 +132,33 @@
         </div>
 
         <div id="standard-view">
+            <!-- மேனுவல் என்ட்ரி ஃபார்ம் -->
+            <div class="vatti-form" id="manual-entry-form">
+                <div class="section-title">📝 மேனுவல் பதிவு</div>
+                <input type="text" id="m-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
+                <input type="number" id="m-amount" class="form-input" placeholder="தொகை (₹)">
+                <div class="form-row">
+                    <select id="m-source" class="form-input">
+                        <option value="சம்பளம்">💼 சம்பளம்</option>
+                        <option value="வீடு">🏠 வீடு</option>
+                    </select>
+                    <select id="m-category" class="form-input">
+                        <option value="பொது">📝 பொது</option>
+                        <option value="MK செலவு">🛒 MK செலவு</option>
+                        <option value="SK செலவு">📦 SK செலவு</option>
+                        <option value="கொல்லை">🌱 கொல்லை</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <select id="m-type" class="form-input">
+                        <option value="expense">செலவு (-)</option>
+                        <option value="income">வரவு (+)</option>
+                    </select>
+                    <input type="date" id="m-date" class="form-input">
+                </div>
+                <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
+            </div>
+
             <div class="section-title" id="list-title">அனைத்துப் பதிவுகள்</div>
             <div id="tx-list-container"></div>
         </div>
@@ -152,6 +171,9 @@
                     <input type="number" id="v-principal" class="form-input" placeholder="அசல் தொகை (₹)">
                     <input type="number" id="v-rate" class="form-input" placeholder="வட்டி % (எ.கா: 3)">
                 </div>
+                <div class="form-row">
+                    <input type="date" id="v-date" class="form-input">
+                </div>
                 <button class="btn-green" onclick="addVattiLoan()">+ கடன் சேர்</button>
             </div>
             <div id="vatti-persons-container"></div>
@@ -162,6 +184,9 @@
                 <div class="section-title">🤝 கைமாத்து கடன் பதிவிட (0% வட்டி)</div>
                 <input type="text" id="km-name" class="form-input" placeholder="நபர் பெயர்">
                 <input type="number" id="km-amount" class="form-input" placeholder="தொகை (₹)">
+                <div class="form-row">
+                    <input type="date" id="km-date" class="form-input">
+                </div>
                 <button class="btn-green" onclick="triggerKaiMaathuAdd()">+ கைமாத்து சேர்</button>
             </div>
             <div id="kaimaathu-container"></div>
@@ -169,33 +194,33 @@
     </div>
 
     <!-- 4 நிலைகளுக்கான பாப்-அப் திரை -->
-<div id="source-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-card">
-        <h3 id="modal-title">விவரத்தை தேர்வு செய்யவும்</h3>
+    <div id="source-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <h3 id="modal-title">விவரத்தை தேர்வு செய்யவும்</h3>
 
-        <!-- 1. செலவு வகைகள் (4 லோகோ) -->
-        <div id="category-section" style="display: none; margin-bottom: 15px;">
-            <p class="section-label">எதற்கான செலவு?</p>
-            <div class="category-grid">
-                <button type="button" class="cat-btn" onclick="setCategory('MK செலவு', this)">🛒 MK செலவு</button>
-                <button type="button" class="cat-btn" onclick="setCategory('SK செலவு', this)">📦 SK செலவு</button>
-                <button type="button" class="cat-btn" onclick="setCategory('கொல்லை', this)">🌱 கொல்லை</button>
-                <button type="button" class="cat-btn" onclick="setCategory('பொது', this)">📝 பொது</button>
+            <!-- 1. செலவு வகைகள் (4 லோகோ) -->
+            <div id="category-section" style="display: none; margin-bottom: 15px;">
+                <p class="section-label">எதற்கான செலவு?</p>
+                <div class="category-grid">
+                    <button type="button" class="cat-btn" onclick="setCategory('MK செலவு', this)">🛒 MK செலவு</button>
+                    <button type="button" class="cat-btn" onclick="setCategory('SK செலவு', this)">📦 SK செலவு</button>
+                    <button type="button" class="cat-btn" onclick="setCategory('கொல்லை', this)">🌱 கொல்லை</button>
+                    <button type="button" class="cat-btn" onclick="setCategory('பொது', this)">📝 பொது</button>
+                </div>
             </div>
-        </div>
 
-        <!-- 2. பணக் கணக்குகள் (2 பட்டன்கள்) -->
-        <div id="source-section" style="display: none;">
-            <p class="section-label">எந்தப் பணம்?</p>
-            <div class="source-grid">
-                <button type="button" class="src-btn btn-salary" onclick="confirmSource('சம்பளம்')">💼 சம்பளம்</button>
-                <button type="button" class="src-btn btn-home" onclick="confirmSource('வீடு')">🏠 வீடு</button>
+            <!-- 2. பணக் கணக்குகள் (2 பட்டன்கள்) -->
+            <div id="source-section" style="display: none;">
+                <p class="section-label">எந்தப் பணம்?</p>
+                <div class="source-grid">
+                    <button type="button" class="src-btn btn-salary" onclick="confirmSource('சம்பளம்')">💼 சம்பளம்</button>
+                    <button type="button" class="src-btn btn-home" onclick="confirmSource('வீடு')">🏠 வீடு</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-        <!-- Edit Modal -->
+    <!-- Edit Modal -->
     <div id="edit-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h3 class="modal-title">பதிவைத் திருத்து</h3>
@@ -208,14 +233,15 @@
             <label class="modal-label">தொகை (₹):</label>
             <input type="number" id="edit-amount" class="form-input">
 
-                        <!-- 1. கணக்கு (Source): சம்பளம் / வீடு மட்டும் -->
+            <label class="modal-label">தேதி:</label>
+            <input type="date" id="edit-date" class="form-input">
+
             <label class="modal-label">எந்தக் கணக்கு (Source)?</label>
             <select id="edit-source" class="form-input">
                 <option value="சம்பளம்">💼 சம்பளம்</option>
                 <option value="வீடு">🏠 வீடு</option>
             </select>
 
-            <!-- 2. செலவு வகை (Category) -->
             <label class="modal-label">செலவு வகை (Category):</label>
             <select id="edit-category" class="form-input">
                 <option value="பொது">📝 பொது</option>
@@ -261,7 +287,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
@@ -277,10 +303,22 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
+        // ஆஃப்லைன் பயன்பாட்டு வசதி (Offline Support)
+        enableIndexedDbPersistence(db).catch((err) => {
+            console.log("Offline mode setup:", err.code);
+        });
+
         let allTransactions = [];
         let allVattiLoans = [];
         let activeTab = "All";
         let pendingAction = null;
+        let selectedCategoryChoice = "பொது";
+
+        // இன்றைய தேதியை Default-ஆக செட் செய்ய
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById("m-date").value = todayStr;
+        document.getElementById("v-date").value = todayStr;
+        document.getElementById("km-date").value = todayStr;
 
         document.getElementById("login-btn").onclick = () => {
             signInWithPopup(auth, provider).catch(err => {
@@ -295,22 +333,22 @@
 
         let isInitialAuthDone = false;
 
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        document.getElementById("auth-container").style.display = "none";
-        document.getElementById("main-app").style.display = "block";
-        document.getElementById("user-display-name").innerText = user.displayName || "User";
-        
-        if (!isInitialAuthDone) {
-            listenToData(user.uid);
-            isInitialAuthDone = true;
-        }
-    } else {
-        isInitialAuthDone = false;
-        document.getElementById("auth-container").style.display = "block";
-        document.getElementById("main-app").style.display = "none";
-    }
-});
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById("auth-container").style.display = "none";
+                document.getElementById("main-app").style.display = "block";
+                document.getElementById("user-display-name").innerText = user.displayName || "User";
+                
+                if (!isInitialAuthDone) {
+                    listenToData(user.uid);
+                    isInitialAuthDone = true;
+                }
+            } else {
+                isInitialAuthDone = false;
+                document.getElementById("auth-container").style.display = "block";
+                document.getElementById("main-app").style.display = "none";
+            }
+        });
 
         function extractAmount(text) {
             let textVal = text.replace(/,/g, '');
@@ -329,147 +367,150 @@ onAuthStateChanged(auth, (user) => {
         }
 
         function processInput() {
-    const inputField = document.getElementById("voice-text-input");
-    let rawText = inputField.value.trim();
-    if (!rawText) return;
+            const inputField = document.getElementById("voice-text-input");
+            let rawText = inputField.value.trim();
+            if (!rawText) return;
 
-    let amount = extractAmount(rawText);
-    let lowerText = rawText.toLowerCase();
+            let amount = extractAmount(rawText);
+            let lowerText = rawText.toLowerCase();
 
-    // 1. வரவா செலவா எனக் கண்டறிதல்
-    let isIncome = lowerText.includes("வரவு") || lowerText.includes("வந்தது") || lowerText.includes("தந்தாங்க") || lowerText.includes("கிடைத்தது") || lowerText.includes("சேர்ந்தது");
+            let isIncome = lowerText.includes("வரவு") || lowerText.includes("வந்தது") || lowerText.includes("தந்தாங்க") || lowerText.includes("கிடைத்தது") || lowerText.includes("சேர்ந்தது");
 
-    // 2. செலவு வகை (Category)
-    let category = "பொது";
-    if (lowerText.includes("mk") || lowerText.includes("எம்கே") || lowerText.includes("எம் கே")) category = "MK செலவு";
-    else if (lowerText.includes("sk") || lowerText.includes("எஸ்கே") || lowerText.includes("எஸ் கே")) category = "SK செலவு";
-    else if (lowerText.includes("கொல்லை")) category = "கொல்லை";
-    else if (lowerText.includes("கைமாத்து")) category = "கைமாத்து";
-    else if (lowerText.includes("வட்டி")) category = "வட்டி பிசினஸ்";
+            let category = "பொது";
+            if (lowerText.includes("mk") || lowerText.includes("எம்கே") || lowerText.includes("எம் கே")) category = "MK செலவு";
+            else if (lowerText.includes("sk") || lowerText.includes("எஸ்கே") || lowerText.includes("எஸ் கே")) category = "SK செலவு";
+            else if (lowerText.includes("கொல்லை")) category = "கொல்லை";
+            else if (lowerText.includes("கைமாத்து")) category = "கைமாத்து";
+            else if (lowerText.includes("வட்டி")) category = "வட்டி பிசினஸ்";
 
-    // 3. பணம் எந்தக் கணக்கு (Source/Account)
-    let detectedSource = null;
-    if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) detectedSource = "சம்பளம்";
-    else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு") || lowerText.includes("வீட்டிலிருந்து")) detectedSource = "வீடு";
+            let detectedSource = null;
+            if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) detectedSource = "சம்பளம்";
+            else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு") || lowerText.includes("வீட்டிலிருந்து")) detectedSource = "வீடு";
 
-    let txData = {
-        title: rawText,
-        amount: amount,
-        type: isIncome ? "income" : "expense",
-        category: category,
-        timestamp: Date.now()
-    };
+            let txData = {
+                title: rawText,
+                amount: amount,
+                type: isIncome ? "income" : "expense",
+                category: category,
+                timestamp: Date.now()
+            };
 
-    // 4. 4 வகை பாப்-அப் பிரிக்கும் பகுதி:
-    if (isIncome) {
-        if (detectedSource !== null) {
-            // வரவு + கணக்கும் தெளிவு -> Auto Save
-            txData.source = detectedSource;
-            saveTransaction(txData);
-        } else {
-            // POP-UP 1: "5000 வந்தது" (சம்பளம் / வீடு மட்டும் கேட்கும்)
-            openModalByScenario(1, txData);
+            if (isIncome) {
+                if (detectedSource !== null) {
+                    txData.source = detectedSource;
+                    saveTransaction(txData);
+                } else {
+                    openModalByScenario(1, txData);
+                }
+            } else {
+                if (detectedSource !== null && category !== "பொது") {
+                    txData.source = detectedSource;
+                    saveTransaction(txData);
+                } 
+                else if (detectedSource === null && category !== "பொது") {
+                    openModalByScenario(2, txData);
+                } 
+                else if (detectedSource !== null && category === "பொது") {
+                    txData.source = detectedSource;
+                    openModalByScenario(3, txData);
+                } 
+                else {
+                    openModalByScenario(4, txData);
+                }
+            }
+
+            inputField.value = "";
         }
-    } else {
-        // செலவு கணக்குகள்
-        if (detectedSource !== null && category !== "பொது") {
-            // கணக்கும் தெளிவு + செலவு வகையும் தெளிவு -> Auto Save
-            txData.source = detectedSource;
-            saveTransaction(txData);
-        } 
-        else if (detectedSource === null && category !== "பொது") {
-            // POP-UP 2: "எம்.கே 500 செலவு" (எந்தப் பணம்னு மட்டும் கேட்கும்)
-            openModalByScenario(2, txData);
-        } 
-        else if (detectedSource !== null && category === "பொது") {
-            // POP-UP 3: "சம்பளத்தில் 500 செலவு" (4 லோகோ மட்டும் கேட்கும்)
-            txData.source = detectedSource;
-            openModalByScenario(3, txData);
-        } 
-        else {
-            // POP-UP 4: வெறும் "500 செலவு" (4 லோகோ + 2 கணக்கு ரெண்டுமே கேட்கும்)
-            openModalByScenario(4, txData);
-        }
-    }
 
-    inputField.value = "";
-}
+        // மேனுவல் கணக்கு பதிவு ஃபங்க்ஷன்
+        window.addManualTransaction = function() {
+            let title = document.getElementById("m-title").value.trim();
+            let amount = parseFloat(document.getElementById("m-amount").value);
+            let source = document.getElementById("m-source").value;
+            let category = document.getElementById("m-category").value;
+            let type = document.getElementById("m-type").value;
+            let dateVal = document.getElementById("m-date").value;
+
+            if (!title || !amount) { alert("விவரங்களை நிரப்பவும்!"); return; }
+
+            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+
+            saveTransaction({
+                title: title,
+                amount: amount,
+                source: source,
+                category: category,
+                type: type,
+                timestamp: timestamp
+            });
+
+            document.getElementById("m-title").value = "";
+            document.getElementById("m-amount").value = "";
+        };
 
         window.triggerKaiMaathuAdd = function() {
             let name = document.getElementById("km-name").value.trim();
             let amt = parseInt(document.getElementById("km-amount").value);
+            let dateVal = document.getElementById("km-date").value;
             if (!name || !amt) { alert("விவரங்களை நிரப்பவும்!"); return; }
+
+            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
 
             pendingAction = {
                 type: "KM",
-                data: { personName: name, principal: amt, rate: 0, timestamp: Date.now(), isReturned: false, isKaiMaathu: true }
+                data: { personName: name, principal: amt, rate: 0, timestamp: timestamp, isReturned: false, isKaiMaathu: true }
             };
+            
             document.getElementById("modal-title").innerText = "கைமாத்து பணம் எதிலிருந்து கொடுக்கப்பட்டது?";
+            document.getElementById("category-section").style.display = "none";
+            document.getElementById("source-section").style.display = "block";
             document.getElementById("source-modal").style.display = "flex";
         };
 
-        window.resolveSource = function(sourceName) {
-    document.getElementById("source-modal").style.display = "none";
-    if (!pendingAction) return;
+        window.confirmSource = function(sourceName) {
+            if (pendingAction && pendingAction.data) {
+                if (pendingAction.type === "TX") {
+                    pendingAction.data.source = sourceName;
+                    if (pendingAction.data.type === "expense") {
+                        pendingAction.data.category = selectedCategoryChoice || "பொது";
+                    }
+                    saveTransaction(pendingAction.data);
+                } 
+                else if (pendingAction.type === "KM") {
+                    let kmData = pendingAction.data;
+                    kmData.source = sourceName;
+                    
+                    addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), kmData);
 
-    if (pendingAction.type === "TX") {
-        pendingAction.data.source = sourceName;
-        if (!pendingAction.data.category) {
-            pendingAction.data.category = selectedCategoryChoice || "பொது";
+                    saveTransaction({
+                        title: "கைமாத்து: " + kmData.personName,
+                        amount: kmData.principal,
+                        type: "expense",
+                        category: "கைமாத்து",
+                        source: sourceName,
+                        timestamp: kmData.timestamp
+                    });
+                }
+                closeModal();
+            }
+        };
+
+        async function saveTransaction(data) {
+            try {
+                let user = auth.currentUser;
+                if (!user) {
+                    alert("உள்நுழையப்படவில்லை!");
+                    return;
+                }
+
+                await addDoc(collection(db, "users", user.uid, "transactions"), {
+                    ...data,
+                    timestamp: data.timestamp || Date.now()
+                });
+            } catch (error) {
+                console.error("Error saving transaction:", error);
+            }
         }
-        saveTransaction(pendingAction.data);
-    } 
-    else if (pendingAction.type === "KM") {
-        // கைமாத்து பதிவுகளுக்கு
-        let kmData = pendingAction.data;
-        
-        saveTransaction({
-            title: "கைமாத்து: " + kmData.personName,
-            amount: kmData.amount,
-            type: "expense",
-            category: "கைமாத்து",
-            source: sourceName,
-            date: new Date().toLocaleDateString('en-GB')
-        });
-    }
-
-    pendingAction = null;
-};
-
-
-
-// 1. பட்டன் கிளிக் செய்யும்போது இயங்கும் ஃபங்க்ஷன்
-function confirmSource(sourceName) {
-    if (pendingAction && pendingAction.data) {
-        pendingAction.data.source = sourceName;
-        
-        if (pendingAction.data.type === "expense") {
-            pendingAction.data.category = selectedCategoryChoice || "பொது";
-        }
-
-        saveTransaction(pendingAction.data);
-        closeModal();
-    }
-}
-
-// 2. ஃபயர் பேஸ் (Firebase) டேட்டாபேஸில் சேமிக்கும் ஃபங்க்ஷன்
-async function saveTransaction(data) {
-    try {
-        let user = auth.currentUser;
-        if (!user) {
-            alert("உள்நுழையப்படவில்லை!");
-            return;
-        }
-
-        await addDoc(collection(db, "users", user.uid, "transactions"), {
-            ...data,
-            timestamp: Date.now()
-        });
-    } catch (error) {
-        console.error("Error saving transaction:", error);
-        alert("சேமிப்பதில் பிழை ஏற்பட்டது!");
-    }
-}
 
         function listenToData(uid) {
             onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
@@ -503,12 +544,12 @@ async function saveTransaction(data) {
             });
             totals["வட்டி பிசினஸ்"] = vattiTotal;
 
-            document.getElementById("val-salary").innerText = `₹${totals["சம்பளம்"]}`;
-            document.getElementById("val-home").innerText = `₹${totals["வீடு"]}`;
-            document.getElementById("val-kollai").innerText = `₹${totals["கொல்லை"]}`;
-            document.getElementById("val-mk").innerText = `₹${totals["MK செலவு"]}`;
-            document.getElementById("val-sk").innerText = `₹${totals["SK செலவு"]}`;
-            document.getElementById("val-vatti").innerText = `₹${totals["வட்டி பிசினஸ்"]}`;
+            document.getElementById("val-salary").innerText = `₹${totals["சம்பளம்"] || 0}`;
+            document.getElementById("val-home").innerText = `₹${totals["வீடு"] || 0}`;
+            document.getElementById("val-kollai").innerText = `₹${totals["கொல்லை"] || 0}`;
+            document.getElementById("val-mk").innerText = `₹${totals["MK செலவு"] || 0}`;
+            document.getElementById("val-sk").innerText = `₹${totals["SK செலவு"] || 0}`;
+            document.getElementById("val-vatti").innerText = `₹${totals["வட்டி பிசினஸ்"] || 0}`;
 
             renderApp();
         }
@@ -569,7 +610,7 @@ async function saveTransaction(data) {
                 div.innerHTML = `
                     <div style="flex:1;">
                         <div class="tx-title">${tx.title}</div>
-                        <div class="tx-sub">${dateStr} | கணக்கு: <b>${tx.source}</b></div>
+                        <div class="tx-sub">${dateStr} | கணக்கு: <b>${tx.source || '-'}</b> | வகை: <b>${tx.category || 'பொது'}</b></div>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
@@ -589,10 +630,13 @@ async function saveTransaction(data) {
             let name = document.getElementById("v-name").value.trim();
             let principal = parseInt(document.getElementById("v-principal").value);
             let rate = parseFloat(document.getElementById("v-rate").value) || 0;
+            let dateVal = document.getElementById("v-date").value;
             if (!name || !principal) { alert("விவரங்களை நிரப்பவும்!"); return; }
 
+            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+
             addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), {
-                personName: name, principal: principal, rate: rate, timestamp: Date.now(), isReturned: false, isKaiMaathu: false
+                personName: name, principal: principal, rate: rate, timestamp: timestamp, isReturned: false, isKaiMaathu: false
             });
 
             document.getElementById("v-name").value = "";
@@ -607,7 +651,10 @@ async function saveTransaction(data) {
 
             loansList.forEach((l) => {
                 let days = Math.floor((Date.now() - l.timestamp) / (1000 * 60 * 60 * 24));
+                if (days < 0) days = 0;
                 let interest = Math.round((l.principal * (l.rate / 100) * (days / 30)));
+                let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
+
                 let div = document.createElement("div");
                 div.className = "person-card";
                 div.innerHTML = `
@@ -619,7 +666,7 @@ async function saveTransaction(data) {
                             <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
                         </div>
                     </div>
-                    <div>அசல்: ₹${l.principal} | வட்டி: ${l.rate}%</div>
+                    <div>அசல்: ₹${l.principal} | வட்டி: ${l.rate}% | தேதி: ${dateStr}</div>
                     <div style="color:#d97706; font-weight:bold; margin-top:4px;">வட்டி தொகை: ₹${interest} (${days} நாட்கள்)</div>
                 `;
                 container.appendChild(div);
@@ -632,6 +679,7 @@ async function saveTransaction(data) {
             let kmList = allVattiLoans.filter(v => v.isKaiMaathu);
 
             kmList.forEach(l => {
+                let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
                 let div = document.createElement("div");
                 div.className = "person-card";
                 div.innerHTML = `
@@ -643,8 +691,8 @@ async function saveTransaction(data) {
                             <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}', this)">
                         </div>
                     </div>
-                    <div>கைமாத்து தொகை: <b>₹${l.principal}</b></div>
-                    <div style="font-size:12px; color:gray; margin-top:4px;">எடுக்கப்பட்ட கணக்கு: <b>${l.source}</b></div>
+                    <div>கைமாத்து தொகை: <b>₹${l.principal}</b> | தேதி: ${dateStr}</div>
+                    <div style="font-size:12px; color:gray; margin-top:4px;">எடுக்கப்பட்ட கணக்கு: <b>${l.source || '-'}</b></div>
                 `;
                 container.appendChild(div);
             });
@@ -687,6 +735,7 @@ async function saveTransaction(data) {
             document.getElementById("delete-modal").style.display = "none";
         };
 
+        // நீக்கல் உறுதிப்படுத்தும் போது alert மெசேஜ் வராமல் அமைக்கும் முறை
         window.confirmDeleteData = async function() {
             const id = document.getElementById("delete-id").value;
             const collectionType = document.getElementById("delete-collection-type").value;
@@ -706,6 +755,10 @@ async function saveTransaction(data) {
             document.getElementById("edit-source").value = item.source || "சம்பளம்";
             document.getElementById("edit-category").value = item.category || "பொது";
             document.getElementById("edit-type").value = item.type || "expense";
+            
+            if (item.timestamp) {
+                document.getElementById("edit-date").value = new Date(item.timestamp).toISOString().split('T')[0];
+            }
             document.getElementById("edit-modal").style.display = "flex";
         };
 
@@ -721,15 +774,17 @@ async function saveTransaction(data) {
             const source = document.getElementById("edit-source").value;
             const category = document.getElementById("edit-category").value;
             const type = document.getElementById("edit-type").value;
+            const dateVal = document.getElementById("edit-date").value;
+
+            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
 
             try {
                 const userRef = doc(db, "users", auth.currentUser.uid, collectionType, id);
                 if (collectionType === 'vatti') {
-                    await updateDoc(userRef, { personName: title, principal: amount, source: source });
+                    await updateDoc(userRef, { personName: title, principal: amount, source: source, timestamp: timestamp });
                 } else {
-                    await updateDoc(userRef, { title: title, amount: amount, source: source, category: category, type: type });
+                    await updateDoc(userRef, { title: title, amount: amount, source: source, category: category, type: type, timestamp: timestamp });
                 }
-                alert("புதுப்பிக்கப்பட்டது!");
                 closeEditModal();
             } catch (error) {
                 console.error("Edit Error: ", error);
@@ -751,87 +806,59 @@ async function saveTransaction(data) {
             recognition.start();
         }
 
-        // ==========================================
-// பாப்-அப் கட்டுப்பாட்டு ஃபங்க்ஷன்கள் (Modal Controls)
-// ==========================================
+        function openModalByScenario(popupType, txData) {
+            pendingAction = { type: "TX", data: txData };
+            
+            let catSec = document.getElementById("category-section");
+            let srcSec = document.getElementById("source-section");
+            let modalTitle = document.getElementById("modal-title");
 
-let selectedCategoryChoice = "பொது";
+            catSec.style.display = "none";
+            srcSec.style.display = "none";
+            selectedCategoryChoice = txData.category || "பொது";
+            
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
 
-// 4 வகை பாப்-அப் நிலைகளைக் கட்டுப்படுத்தும் ஃபங்க்ஷன்
-function openModalByScenario(popupType, txData) {
-    pendingAction = { type: "TX", data: txData };
-    
-    let catSec = document.getElementById("category-section");
-    let srcSec = document.getElementById("source-section");
-    let modalTitle = document.getElementById("modal-title");
+            if (popupType === 1) {
+                modalTitle.innerText = "பணம் எங்கு சேர வேண்டும்?";
+                srcSec.style.display = "block";
+            } 
+            else if (popupType === 2) {
+                modalTitle.innerText = txData.category + " - எந்தப் பணம்?";
+                srcSec.style.display = "block";
+            }
+            else if (popupType === 3) {
+                modalTitle.innerText = "எதற்கான செலவு?";
+                catSec.style.display = "block";
+            } 
+            else if (popupType === 4) {
+                modalTitle.innerText = "விவரத்தை உறுதி செய்யவும்";
+                catSec.style.display = "block";
+                srcSec.style.display = "block";
+            }
 
-    // பழைய தேர்வுகளை ரீசெட் செய்தல்
-    catSec.style.display = "none";
-    srcSec.style.display = "none";
-    selectedCategoryChoice = txData.category || "பொது";
-    
-    // பட்டன் தேர்வுகளை ரீசெட் செய்தல்
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
-
-    // POP-UP 1: "5000 வந்தது" (சம்பளமா / வீடா மட்டும் கேட்கும்)
-    if (popupType === 1) {
-        modalTitle.innerText = "பணம் எங்கு சேர வேண்டும்?";
-        srcSec.style.display = "block";
-    } 
-    // POP-UP 2: "எம்.கே 500 செலவு" (எந்தப் பணம்னு மட்டும் கேட்கும்)
-    else if (popupType === 2) {
-        modalTitle.innerText = txData.category + " - எந்தப் பணம்?";
-        srcSec.style.display = "block";
-    }
-    // POP-UP 3: "சம்பளத்தில் 500 செலவு" (4 லோகோ மட்டும் கேட்கும்)
-    else if (popupType === 3) {
-        modalTitle.innerText = "எதற்கான செலவு?";
-        catSec.style.display = "block";
-    } 
-    // POP-UP 4: வெறும் "500 செலவு" (4 லோகோ + 2 கணக்கு ரெண்டுமே கேட்கும்)
-    else if (popupType === 4) {
-        modalTitle.innerText = "விவரத்தை உறுதி செய்யவும்";
-        catSec.style.display = "block";
-        srcSec.style.display = "block";
-    }
-
-    document.getElementById("source-modal").style.display = "flex";
-}
-
-// 4 செலவு லோகோ பட்டன்களைத் தொடும்போது
-function setCategory(catName, btnElement) {
-    selectedCategoryChoice = catName;
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
-    btnElement.classList.add('selected');
-
-    // Pop-up 3-ல் லோகோவைத் தொட்டதும் சேவ் ஆகும்
-    if (document.getElementById("source-section").style.display === "none") {
-        pendingAction.data.category = catName;
-        saveTransaction(pendingAction.data);
-        closeModal();
-    }
-}
-
-// சம்பளம் / வீடு பட்டனைத் தொடும்போது
-window.confirmSource = function(sourceName) {
-    if (pendingAction && pendingAction.data) {
-        pendingAction.data.source = sourceName;
-        
-        if (pendingAction.data.type === "expense") {
-            pendingAction.data.category = selectedCategoryChoice;
+            document.getElementById("source-modal").style.display = "flex";
         }
 
-        saveTransaction(pendingAction.data);
-        closeModal();
-    }
-}
+        function setCategory(catName, btnElement) {
+            selectedCategoryChoice = catName;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+            btnElement.classList.add('selected');
 
-// பாப்-அப் மூட
-window.closeModal = function() {
-    document.getElementById("source-modal").style.display = "none";
-    pendingAction = null;
-}
+            if (document.getElementById("source-section").style.display === "none") {
+                pendingAction.data.category = catName;
+                saveTransaction(pendingAction.data);
+                closeModal();
+            }
+        }
 
+        window.closeModal = function() {
+            document.getElementById("source-modal").style.display = "none";
+            pendingAction = null;
+        };
+
+        window.openModalByScenario = openModalByScenario;
+        window.setCategory = setCategory;
     </script>
 </body>
 </html>
