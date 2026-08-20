@@ -293,17 +293,24 @@
         document.getElementById("btn-send-tx").onclick = processInput;
         document.getElementById("btn-mic").onclick = startVoice;
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                document.getElementById("auth-container").style.display = "none";
-                document.getElementById("main-app").style.display = "block";
-                document.getElementById("user-display-name").innerText = user.displayName || "User";
-                listenToData(user.uid);
-            } else {
-                document.getElementById("auth-container").style.display = "block";
-                document.getElementById("main-app").style.display = "none";
-            }
-        });
+        let isInitialAuthDone = false;
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        document.getElementById("auth-container").style.display = "none";
+        document.getElementById("main-app").style.display = "block";
+        document.getElementById("user-display-name").innerText = user.displayName || "User";
+        
+        if (!isInitialAuthDone) {
+            listenToData(user.uid);
+            isInitialAuthDone = true;
+        }
+    } else {
+        isInitialAuthDone = false;
+        document.getElementById("auth-container").style.display = "block";
+        document.getElementById("main-app").style.display = "none";
+    }
+});
 
         function extractAmount(text) {
             let textVal = text.replace(/,/g, '');
