@@ -630,24 +630,106 @@
             onMonthChange();
         }
 
-        window.onMonthChange = function() {
-            const selectedMonth = document.getElementById("month-filter").value;
-            const weekArea = document.getElementById("week-bar-area");
-            if (selectedMonth !== "ALL") {
-                weekArea.style.display = "flex";
-            } else {
-                weekArea.style.display = "none";
-                activeWeekFilter = "ALL";
-            }
-            renderApp();
-        };
+        // 1. நடப்பு வாரத்தின் தேதிகளைக் கணக்கிடும் ஃபங்ஷன்
+function getThisWeekRange() {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+    
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - diffToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
 
-        window.filterWeek = function(weekKey, btnElem) {
-            activeWeekFilter = weekKey;
-            document.querySelectorAll(".week-btn").forEach(b => b.classList.remove("active"));
-            btnElem.classList.add("active");
-            renderApp();
-        };
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return { startOfWeek, endOfWeek };
+}
+
+// 2. டிராப்டவுன் மாறும் போது வேலை செய்யும் ஃபங்ஷன்
+window.onFilterChange = function() {
+    const monthFilter = document.getElementById('month-filter').value;
+    const customDateContainer = document.getElementById('custom-date-container');
+    
+    if (monthFilter === 'CUSTOM_DATE') {
+        customDateContainer.style.display = 'flex';
+    } else {
+        customDateContainer.style.display = 'none';
+    }
+    executeSearch();
+};
+
+// 3. முதன்மை ஃபில்டர் ஃபங்ஷன் (Filter & Search Engine)
+function filterTransactions(allTransactions) {
+    const searchInput = document.getElementById('search-input');
+    const monthFilterInput = document.getElementById('month-filter');
+    
+    const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const monthFilter = monthFilterInput ? monthFilterInput.value : 'CURRENT_WEEK';
+    
+    const fromDateVal = document.getElementById('from-date') ? document.getElementById('from-date').value : '';
+    const toDateVal = document.getElementById('to-date') ? document.getElementById('to-date').value : '';
+    const { startOfWeek, endOfWeek } = getThisWeekRange();
+
+    return allTransactions.filter(item => {
+        const itemDate = new Date(item.date); 
+        itemDate.setHours(0, 0, 0, 0);
+
+        // A. வார்த்தை தேடல்
+        let matchesSearch = true;
+        if (searchVal !== '') {
+            const titleMatch = item.title && item.title.toLowerCase().includes(searchVal);
+            const amountMatch = item.amount && item.amount.toString().includes(searchVal);
+            const catMatch = item.category && item.category.toLowerCase().includes(searchVal);
+            const sourceMatch = item.source && item.source.toLowerCase().includes(searchVal);
+            matchesSearch = titleMatch || amountMatch || catMatch || sourceMatch;
+        }
+
+        // B. தேதி மற்றும் மாத ஃபில்டர்
+        let matchesDate = true;
+
+        if (monthFilter === 'CURRENT_WEEK' && searchVal === '') {
+            matchesDate = itemDate >= startOfWeek && itemDate <= endOfWeek;
+        } 
+        else if (monthFilter === 'ALL') {
+            matchesDate = true;
+        } 
+        else if (monthFilter === 'CUSTOM_DATE') {
+            if (fromDateVal) {
+                const fDate = new Date(fromDateVal);
+                fDate.setHours(0, 0, 0, 0);
+                matchesDate = matchesDate && (itemDate >= fDate);
+            }
+            if (toDateVal) {
+                const tDate = new Date(toDateVal);
+                tDate.setHours(23, 59, 59, 999);
+                matchesDate = matchesDate && (itemDate <= tDate);
+            }
+        } 
+        else if (monthFilter.includes('-')) {
+            const itemMonth = item.date.substring(0, 7);
+            matchesDate = (itemMonth === monthFilter);
+        }
+
+        return matchesSearch && matchesDate;
+    });
+}
+
+// 4. ரீசெட் பட்டன்
+window.resetSearch = function() {
+    if (document.getElementById('search-input')) document.getElementById('search-input').value = '';
+    if (document.getElementById('month-filter')) document.getElementById('month-filter').value = 'CURRENT_WEEK';
+    if (document.getElementById('custom-date-container')) document.getElementById('custom-date-container').style.display = 'none';
+    if (document.getElementById('from-date')) document.getElementById('from-date').value = '';
+    if (document.getElementById('to-date')) document.getElementById('to-date').value = '';
+    renderApp(); 
+};
+
+// 5. தேடல் பட்டன் ஆக்ஷன்
+window.executeSearch = function() {
+    renderApp(); 
+};
 
         function listenToData(uid) {
             onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
