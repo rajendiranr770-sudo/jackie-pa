@@ -29,13 +29,8 @@
         .search-title { color: #0369a1; font-weight: bold; font-size: 14px; margin-bottom: 8px; }
         .search-input-group { display: flex; gap: 6px; flex-wrap: wrap; }
         .search-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; min-width: 140px; }
-        .month-select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: bold; background: white; color: #0369a1; outline: none; }
+        .month-select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: bold; background: white; color: #0369a1; outline: none; width: 100%; }
         .search-btn { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        /* Weekly Filter Styling */
-        .week-bar { display: flex; gap: 6px; overflow-x: auto; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #bae6fd; }
-        .week-btn { background: white; border: 1px solid #0284c7; color: #0284c7; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
-        .week-btn.active { background: #0284c7; color: white; }
 
         .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #0f172a; }
         .sub-section-title { font-size: 14px; font-weight: bold; margin: 12px 0 8px 0; color: #334155; display: flex; align-items: center; gap: 6px; }
@@ -59,7 +54,6 @@
         
         .person-header { font-size: 16px; font-weight: bold; color: #1e3a8a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* Modals Default Display Off */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
@@ -80,7 +74,7 @@
 
         .modal-card {
             background: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 380px; text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2); position: relative;
         }
         .section-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; text-align: left; }
 
@@ -135,18 +129,15 @@
             <button class="tab-btn" data-tab="கைமாத்து" onclick="filterTab('கைமாத்து', this)">🤝 கைமாத்து</button>
         </div>
 
-        <!-- தேடல் மற்றும் ஃபில்டர் பகுதி -->
         <div class="search-box" id="search-box-area">
             <div class="search-title">🔍 செலவு கணக்கு ஃபில்டர் & தேடல்</div>
             
-            <!-- வார்த்தை தேடல் -->
             <div class="search-input-group" style="margin-bottom: 8px;">
                 <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், MK செலவு, 20000)">
                 <button class="search-btn" onclick="executeSearch()">தேடு</button>
                 <button class="search-btn" style="background: #64748b;" onclick="resetSearch()">✖ ரீசெட்</button>
             </div>
 
-            <!-- மாதம் & வகை ஃபில்டர் -->
             <div class="search-input-group" style="margin-bottom: 8px;">
                 <select id="month-filter" class="month-select" onchange="onFilterChange()">
                     <option value="CURRENT_WEEK">📅 இந்த வாரம் மட்டும் (Current Week)</option>
@@ -155,7 +146,6 @@
                 </select>
             </div>
 
-            <!-- குறிப்பிட்ட தேதி தேர்ந்தெடுக்கும் பாக்ஸ் (Custom Date Range) -->
             <div id="custom-date-container" style="display: none; gap: 6px; margin-top: 8px;">
                 <div style="flex:1;">
                     <span style="font-size:11px; font-weight:bold; color:#0369a1;">இருந்து (From):</span>
@@ -169,7 +159,6 @@
         </div>
 
         <div id="standard-view">
-            <!-- மேனுவல் என்ட்ரி ஃபார்ம் -->
             <div class="vatti-form" id="manual-entry-form">
                 <div class="section-title">📝 மேனுவல் பதிவு</div>
                 <input type="text" id="m-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
@@ -244,7 +233,6 @@
         <div class="modal-card">
             <h3 id="modal-title">விவரத்தை தேர்வு செய்யவும்</h3>
 
-            <!-- 1. செலவு வகைகள் (4 லோகோ) -->
             <div id="category-section" style="display: none; margin-bottom: 15px;">
                 <p class="section-label">எதற்கான செலவு?</p>
                 <div class="category-grid">
@@ -255,7 +243,6 @@
                 </div>
             </div>
 
-            <!-- 2. பணக் கணக்குகள் (2 பட்டன்கள்) -->
             <div id="source-section" style="display: none;">
                 <p class="section-label" id="source-section-label">எந்தப் பணம்?</p>
                 <div class="source-grid">
@@ -263,6 +250,8 @@
                     <button type="button" class="src-btn btn-home" onclick="confirmSource('வீடு')">🏠 வீடு</button>
                 </div>
             </div>
+
+            <button onclick="closeModal()" style="margin-top: 15px; background: #64748b; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">ரத்து செய்</button>
         </div>
     </div>
 
@@ -359,7 +348,6 @@
         let allTransactions = [];
         let allVattiLoans = [];
         let activeTab = "All";
-        let activeWeekFilter = "ALL";
         let pendingAction = null;
         let selectedCategoryChoice = "பொது";
 
@@ -401,9 +389,14 @@
         function extractAmount(text) {
             let textVal = text.replace(/,/g, '');
             textVal = textVal.replace(/அறுபதாயிரம்/g, "60000")
+                             .replace(/ஐம்பதாயிரம்/g, "50000")
+                             .replace(/நாற்பதாயிரம்/g, "40000")
+                             .replace(/முப்ப தாயிரம்/g, "30000")
                              .replace(/இருபதாயிரம்/g, "20000")
+                             .replace(/பத்தாயிரம்/g, "10000")
                              .replace(/ஐயாயிரம்/g, "5000")
-                             .replace(/இரண்டாயிரம்/g, "2000");
+                             .replace(/இரண்டாயிரம்/g, "2000")
+                             .replace(/ஆயிரம்/g, "1000");
 
             textVal = textVal.replace(/(\d+)\s*ஆயிரம்/gi, (match, number) => {
                 return parseInt(number) * 1000;
