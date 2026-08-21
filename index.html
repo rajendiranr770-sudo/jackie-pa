@@ -133,7 +133,7 @@
             <div class="search-title">🔍 செலவு கணக்கு ஃபில்டர் & தேடல்</div>
             
             <div class="search-input-group" style="margin-bottom: 8px;">
-                <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், MK செலவு, 20000)">
+                <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், MK செலவு, 20000)" onkeyup="executeSearch()">
                 <button class="search-btn" onclick="executeSearch()">தேடு</button>
                 <button class="search-btn" style="background: #64748b;" onclick="resetSearch()">✖ ரீசெட்</button>
             </div>
@@ -625,9 +625,9 @@
             onMonthChange();
         }
 
-        function onMonthChange() {
+        window.onMonthChange = function() {
             renderApp();
-        }
+        };
 
         function getThisWeekRange() {
             const now = new Date();
@@ -837,7 +837,7 @@
                             ${tx.type === 'income' ? '+' : '-'}₹${tx.amount}
                         </div>
                         <div class="action-btns">
-                            <span onclick="openEditModal(${JSON.stringify(tx).replace(/"/g, '&quot;')}, 'transactions')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick='openEditModal(${JSON.stringify(tx)}, "transactions")' style="cursor:pointer; margin-right: 8px;">✏️</span>
                             <span onclick="openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span>
                         </div>
                     </div>
@@ -881,7 +881,7 @@
                     <div class="person-header">
                         <span>👤 ${l.personName}</span>
                         <div>
-                            <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
                             <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
                             <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
                         </div>
@@ -915,7 +915,7 @@
                         <div class="person-header">
                             <span>🤝 ${l.personName} (கொடுத்தது)</span>
                             <div>
-                                <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                                <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
                                 <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
                                 <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}', 'given', this)">
                             </div>
@@ -938,7 +938,7 @@
                         <div class="person-header">
                             <span>🤝 ${l.personName} (வாங்கியது)</span>
                             <div>
-                                <span onclick="openEditModal(${JSON.stringify(l).replace(/"/g, '&quot;')}, 'vatti')" style="cursor:pointer; margin-right: 8px;">✏️</span>
+                                <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
                                 <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
                                 <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}', 'taken', this)">
                             </div>
