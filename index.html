@@ -98,6 +98,32 @@
         }
         .btn-salary { background: #2563eb; }
         .btn-home { background: #16a34a; }
+
+        /* புதிய டிசைன் கோடுகள் (கடன் சேர் பொத்தான் மற்றும் நோட்டீஸ்) */
+        .btn-add-more {
+            background-color: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            padding: 5px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-add-more:hover {
+            background-color: #c7d2fe;
+        }
+        .target-notice {
+            background-color: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -213,6 +239,12 @@
         </div>
 
         <div id="vatti-view" style="display: none;">
+            <!-- குறிப்பிட்ட நபர் தேர்ந்தெடுக்கப்பட்டதற்கான நோட்டீஸ் -->
+            <div id="targetNotice" class="target-notice" style="display: none;">
+                📌 குறிப்பிட்ட கார்டில் சேர்கிறது: <b id="targetName"></b> 
+                <span style="color:red; cursor:pointer; float:right;" onclick="clearTargetPerson()">✕ ரத்து செய்</span>
+            </div>
+
             <div class="vatti-form">
                 <div class="section-title">💰 வட்டி கடன் பதிவிட</div>
                 <input type="text" id="v-name" class="form-input" placeholder="நபர் பெயர் (எ.கா: சுரேஷ்)">
@@ -373,7 +405,7 @@
         let activeTab = "All";
         let pendingAction = null;
         let selectedCategoryChoice = "பொது";
-        let activeIncomeFilter = null; // வரவு வழி செலவை ஃபில்டர் செய்ய
+        let activeIncomeFilter = null;
 
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById("m-date").value = todayStr;
@@ -409,6 +441,19 @@
                 document.getElementById("main-app").style.display = "none";
             }
         });
+
+        // நபர் தேர்ந்தெடுக்கும் புதிய வசதிகள்
+        window.selectPersonForAdd = function(name) {
+            document.getElementById("v-name").value = name;
+            document.getElementById("targetName").innerText = name;
+            document.getElementById("targetNotice").style.display = "block";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.clearTargetPerson = function() {
+            document.getElementById("v-name").value = "";
+            document.getElementById("targetNotice").style.display = "none";
+        };
 
         function extractAmount(text) {
             let textVal = text.replace(/,/g, '');
@@ -484,7 +529,6 @@
                     openModalByScenario(4, txData);
                 }
             }
-
             inputField.value = "";
         }
 
@@ -511,7 +555,6 @@
             }
 
             if (!title || !amount) { alert("விவரங்களை நிரப்பவும்!"); return; }
-
             let timestamp = dateVal ? new Date(dateVal + 'T12:00:00').getTime() : Date.now();
 
             saveTransaction({
@@ -534,20 +577,11 @@
             let kmType = document.getElementById("km-type").value;
 
             if (!name || !amt) { alert("விவரங்களை நிரப்பவும்!"); return; }
-
             let timestamp = dateVal ? new Date(dateVal + 'T12:00:00').getTime() : Date.now();
 
             pendingAction = {
                 type: "KM",
-                data: { 
-                    personName: name, 
-                    principal: amt, 
-                    rate: 0, 
-                    timestamp: timestamp, 
-                    isReturned: false, 
-                    isKaiMaathu: true,
-                    kmType: kmType 
-                }
+                data: { personName: name, principal: amt, rate: 0, timestamp: timestamp, isReturned: false, isKaiMaathu: true, kmType: kmType }
             };
             
             if (kmType === "given") {
@@ -597,10 +631,7 @@
         async function saveTransaction(data) {
             try {
                 let user = auth.currentUser;
-                if (!user) {
-                    alert("உள்நுழையப்படவில்லை!");
-                    return;
-                }
+                if (!user) { alert("உள்நுழையப்படவில்லை!"); return; }
 
                 await addDoc(collection(db, "users", user.uid, "transactions"), {
                     ...data,
@@ -647,28 +678,21 @@
             }
         }
 
-        // 1. மாற்றியமைக்கப்பட்ட "கடந்த 7 நாட்கள்" (Rolling 7 Days Window)
         function getLast7DaysRange() {
             const end = new Date();
             end.setHours(23, 59, 59, 999);
-
             const start = new Date();
-            start.setDate(end.getDate() - 6); // இன்றோடு சேர்த்து 7 நாட்கள்
+            start.setDate(end.getDate() - 6);
             start.setHours(0, 0, 0, 0);
-
             return { start, end };
         }
 
         window.onFilterChange = function() {
             const monthFilter = document.getElementById('month-filter').value;
             const customDateContainer = document.getElementById('custom-date-container');
-            
-            if (monthFilter === 'CUSTOM_DATE') {
-                customDateContainer.style.display = 'flex';
-            } else {
-                customDateContainer.style.display = 'none';
-            }
-            activeIncomeFilter = null; // ஃபில்டர் மாறும்போது வரவு ஃபில்டரை ரீசெட் செய்ய
+            if (monthFilter === 'CUSTOM_DATE') { customDateContainer.style.display = 'flex'; } 
+            else { customDateContainer.style.display = 'none'; }
+            activeIncomeFilter = null;
             executeSearch();
         };
 
@@ -697,13 +721,8 @@
                 }
 
                 let matchesDate = true;
-
-                if (monthFilter === 'CURRENT_WEEK') {
-                    matchesDate = itemDate >= last7Start && itemDate <= last7End;
-                } 
-                else if (monthFilter === 'ALL') {
-                    matchesDate = true;
-                } 
+                if (monthFilter === 'CURRENT_WEEK') { matchesDate = itemDate >= last7Start && itemDate <= last7End; } 
+                else if (monthFilter === 'ALL') { matchesDate = true; } 
                 else if (monthFilter === 'CUSTOM_DATE') {
                     if (fromDateVal) {
                         const fDate = new Date(fromDateVal + 'T00:00:00');
@@ -735,9 +754,7 @@
             renderApp(); 
         };
 
-        window.executeSearch = function() {
-            renderApp(); 
-        };
+        window.executeSearch = function() { renderApp(); };
 
         function listenToData(uid) {
             onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
@@ -769,12 +786,9 @@
                     totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
                 } else {
                     totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
-                    
                     if (tx.category && tx.category !== "பொது" && !tx.category.includes("வரவு")) {
                         if (["MK செலவு", "SK செலவு", "கொல்லை"].includes(tx.category)) {
-                            if (txMonthKey === currentMonth) {
-                                totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
-                            }
+                            if (txMonthKey === currentMonth) { totals[tx.category] = (totals[tx.category] || 0) + tx.amount; }
                         } else {
                             totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
                         }
@@ -788,22 +802,11 @@
             });
             totals["வட்டி பிசினஸ்"] = vattiTotal;
 
-            const cardMapping = {
-                "சம்பளம்": "salary-card-val",
-                "வீடு": "veedu-card-val",
-                "கொல்லை": "kollai-card-val",
-                "MK செலவு": "mk-card-val",
-                "SK செலவு": "sk-card-val",
-                "வட்டி பிசினஸ்": "vatti-card-val"
-            };
-
+            const cardMapping = { "சம்பளம்": "salary-card-val", "வீடு": "veedu-card-val", "கொல்லை": "kollai-card-val", "MK செலவு": "mk-card-val", "SK செலவு": "sk-card-val", "வட்டி பிசினஸ்": "vatti-card-val" };
             for (let key in cardMapping) {
                 let elem = document.getElementById(cardMapping[key]);
-                if (elem) {
-                    elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
-                }
+                if (elem) elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
             }
-
             renderApp();
         }
 
@@ -817,7 +820,7 @@
 
         window.filterTab = function(tabName, btnElem) {
             activeTab = tabName;
-            activeIncomeFilter = null; // டேப் மாற்றினால் வரவு ஃபில்டர் ரீசெட் ஆகும்
+            activeIncomeFilter = null;
             document.getElementById("list-title").innerText = "அனைத்துப் பதிவுகள்";
             
             document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -827,23 +830,14 @@
             document.getElementById("vatti-view").style.display = "none";
             document.getElementById("kaimaathu-view").style.display = "none";
 
-            if (tabName === "வட்டி பிசினஸ்") {
-                document.getElementById("vatti-view").style.display = "block";
-            } else if (tabName === "கைமாத்து") {
-                document.getElementById("kaimaathu-view").style.display = "block";
-            } else {
-                document.getElementById("standard-view").style.display = "block";
-            }
+            if (tabName === "வட்டி பிசினஸ்") { document.getElementById("vatti-view").style.display = "block"; } 
+            else if (tabName === "கைமாத்து") { document.getElementById("kaimaathu-view").style.display = "block"; } 
+            else { document.getElementById("standard-view").style.display = "block"; }
             renderApp();
         };
 
-        // 2. வரவை தொடும்போது இயங்கும் பங்க்ஷன் (Income-to-Expense Linking)
         window.filterExpensesByIncome = function(source, incomeTimestamp, incomeTitle) {
-            activeIncomeFilter = {
-                source: source,
-                timestamp: incomeTimestamp,
-                title: incomeTitle
-            };
+            activeIncomeFilter = { source: source, timestamp: incomeTimestamp, title: incomeTitle };
             document.getElementById("list-title").innerText = `📌 ${incomeTitle} (${source}) வரவிலிருந்து செய்யப்பட்ட செலவுகள்`;
             renderStandardView();
         };
@@ -863,7 +857,6 @@
                 return (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
             });
 
-            // ஒரு குறிப்பிட்ட வரவை கிளிக் செய்திருந்தால் அதற்குரிய செலவுகளை மட்டும் காட்டும்
             if (activeIncomeFilter) {
                 filtered = filtered.filter(tx => {
                     let txTime = tx.timestamp || 0;
@@ -876,11 +869,8 @@
 
             filtered.forEach(tx => {
                 let amt = Number(tx.amount || 0);
-                if (tx.type === 'income') {
-                    totalIncome += amt;
-                } else {
-                    totalExpense += amt;
-                }
+                if (tx.type === 'income') totalIncome += amt;
+                else totalExpense += amt;
             });
 
             let netBalance = totalIncome - totalExpense;
@@ -919,7 +909,6 @@
                 let div = document.createElement("div");
                 div.className = `tx-card ${tx.type}`;
                 
-                // வரவுப் பதிவாக இருந்தால் அதை தொட்டால் அதிலிருந்து செய்த செலவுகள் ஃபில்டர் ஆகும்
                 let clickAttr = tx.type === 'income' ? `onclick="filterExpensesByIncome('${tx.source}', ${tx.timestamp}, '${tx.title}')"` : '';
                 let incomeSubText = tx.type === 'income' ? ` | <span style="color:#10b981; font-weight:bold;">👆 தொட்டு செலவுகளைப் பார்</span>` : '';
 
@@ -958,35 +947,91 @@
             document.getElementById("v-name").value = "";
             document.getElementById("v-principal").value = "";
             document.getElementById("v-rate").value = "";
+            clearTargetPerson(); // நோட்டீஸை மறைக்க
         };
 
+        // புதுப்பிக்கப்பட்ட குரூப் டிசைன் (Grouped Vatti View)
         function renderVattiView() {
             const container = document.getElementById("vatti-persons-container");
             container.innerHTML = "";
             let loansList = allVattiLoans.filter(v => !v.isKaiMaathu);
 
-            loansList.forEach((l) => {
-                let days = Math.floor((Date.now() - l.timestamp) / (1000 * 60 * 60 * 24));
-                if (days < 0) days = 0;
-                let interest = Math.round((l.principal * (l.rate / 100) * (days / 30)));
-                let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
-
-                let div = document.createElement("div");
-                div.className = "person-card";
-                div.innerHTML = `
-                    <div class="person-header">
-                        <span>👤 ${l.personName}</span>
-                        <div>
-                            <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
-                            <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
-                            <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
-                        </div>
-                    </div>
-                    <div>அசல்: ₹${l.principal} | வட்டி: ${l.rate}% | தேதி: ${dateStr}</div>
-                    <div style="color:#d97706; font-weight:bold; margin-top:4px;">வட்டி தொகை: ₹${interest} (${days} நாட்கள்)</div>
-                `;
-                container.appendChild(div);
+            // நபர் பெயரின் அடிப்படையில் கடன்களை Group செய்தல்
+            let groupedLoans = {};
+            loansList.forEach(l => {
+                let name = l.personName.trim();
+                if (!groupedLoans[name]) groupedLoans[name] = [];
+                groupedLoans[name].push(l);
             });
+
+            for (let personName in groupedLoans) {
+                let personLoans = groupedLoans[personName];
+                
+                // தேதி அடிப்படையில் வரிசைப்படுத்துதல் (பழையதில் இருந்து புதியது)
+                personLoans.sort((a, b) => a.timestamp - b.timestamp);
+
+                let totalPrincipal = 0;
+                let totalInterest = 0;
+
+                let personDiv = document.createElement("div");
+                personDiv.className = "person-card";
+                
+                let headerHtml = `
+                    <div class="person-header" style="font-size: 18px;">
+                        <span>👤 ${personName}</span>
+                        <button class="btn-add-more" onclick="selectPersonForAdd('${personName}')">+ கடன் சேர்</button>
+                    </div>
+                `;
+
+                let loansHtml = "";
+                personLoans.forEach((l, index) => {
+                    let days = Math.floor((Date.now() - l.timestamp) / (1000 * 60 * 60 * 24));
+                    if (days < 0) days = 0;
+                    
+                    let months = Math.floor(days / 30);
+                    let remDays = days % 30;
+                    let durationText = (months > 0) ? `${days} நாட்கள் (${months} மாதம் ${remDays} நாள்)` : `${days} நாட்கள்`;
+
+                    let interest = Math.round((l.principal * (l.rate / 100) * (days / 30)));
+                    let mathaVatti = Math.round(l.principal * (l.rate / 100)); // ஒரு மாத வட்டி
+                    
+                    let dateStr = new Date(l.timestamp).toISOString().split('T')[0];
+
+                    totalPrincipal += l.principal;
+                    totalInterest += interest;
+
+                    loansHtml += `
+                        <div style="border-left: 3px solid #3b82f6; padding-left: 10px; margin-bottom: 15px;">
+                            <div style="display:flex; justify-content:space-between; font-weight:bold; color:#1e293b; font-size:14px;">
+                                <span>கடன் ${index + 1}: அசல்: ₹${l.principal} | வட்டி: ${l.rate}%</span>
+                                <div>
+                                    <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 5px;">✏️</span>
+                                    <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 5px;">🗑️</span>
+                                    <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
+                                </div>
+                            </div>
+                            <div style="font-size:12px; color:#64748b; margin-top:4px;">
+                                📅 தேதி: ${dateStr} (${durationText})
+                            </div>
+                            <div style="color:#d97706; font-weight:bold; margin-top:4px; font-size: 13px;">
+                                வட்டி தொகை: ₹${interest} (மாத வட்டி ₹${mathaVatti})
+                            </div>
+                        </div>
+                    `;
+                });
+
+                let grandTotal = totalPrincipal + totalInterest;
+
+                let footerHtml = `
+                    <div style="background-color: #0f172a; color: white; padding: 12px; border-radius: 8px; margin-top: 10px;">
+                        <div style="font-size:13px; margin-bottom:4px; opacity:0.9;">மொத்த அசல்: ₹${totalPrincipal} | மொத்த வட்டி: ₹${totalInterest}</div>
+                        <div style="color: #10b981; font-weight: bold; font-size: 16px;">மொத்தம்: ₹${grandTotal}</div>
+                    </div>
+                `;
+
+                personDiv.innerHTML = headerHtml + loansHtml + footerHtml;
+                container.appendChild(personDiv);
+            }
         }
 
         function renderKaiMaathuView() {
@@ -1093,10 +1138,7 @@
             const collectionType = document.getElementById("delete-collection-type").value;
             
             closeDeleteModal();
-            
-            deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id)).catch((error) => {
-                console.error("Delete Error: ", error);
-            });
+            deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id)).catch((error) => console.error("Delete Error: ", error));
         };
 
         window.openEditModal = function(item, collectionType = 'transactions') {
@@ -1175,23 +1217,10 @@
             
             document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
 
-            if (popupType === 1) {
-                modalTitle.innerText = "பணம் எங்கு சேர வேண்டும்?";
-                srcSec.style.display = "block";
-            } 
-            else if (popupType === 2) {
-                modalTitle.innerText = txData.category + " - எந்தப் பணம்?";
-                srcSec.style.display = "block";
-            }
-            else if (popupType === 3) {
-                modalTitle.innerText = "எதற்கான செலவு?";
-                catSec.style.display = "block";
-            } 
-            else if (popupType === 4) {
-                modalTitle.innerText = "விவரத்தை உறுதி செய்யவும்";
-                catSec.style.display = "block";
-                srcSec.style.display = "block";
-            }
+            if (popupType === 1) { modalTitle.innerText = "பணம் எங்கு சேர வேண்டும்?"; srcSec.style.display = "block"; } 
+            else if (popupType === 2) { modalTitle.innerText = txData.category + " - எந்தப் பணம்?"; srcSec.style.display = "block"; }
+            else if (popupType === 3) { modalTitle.innerText = "எதற்கான செலவு?"; catSec.style.display = "block"; } 
+            else if (popupType === 4) { modalTitle.innerText = "விவரத்தை உறுதி செய்யவும்"; catSec.style.display = "block"; srcSec.style.display = "block"; }
 
             document.getElementById("source-modal").style.display = "flex";
         }
