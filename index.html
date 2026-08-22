@@ -32,7 +32,13 @@
         .month-select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: bold; background: white; color: #0369a1; outline: none; width: 100%; }
         .search-btn { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        .search-total-card { background: #ffffff; border: 2px solid #2563eb; padding: 12px; border-radius: 10px; margin-top: 10px; text-align: center; font-weight: bold; color: #1e3a8a; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        /* தேடல் பலன் மொத்த தொகைக்கான புதிய Styling */
+        .search-total-card { background: #ffffff; border: 1px solid #bae6fd; padding: 12px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .total-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .total-item { padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; }
+        .total-income-box { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+        .total-expense-box { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+        .total-balance-box { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; text-align: center; padding: 6px; font-weight: bold; border-radius: 6px; font-size: 13px; }
 
         .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #0f172a; }
         .sub-section-title { font-size: 14px; font-weight: bold; margin: 12px 0 8px 0; color: #334155; display: flex; align-items: center; gap: 6px; }
@@ -159,9 +165,21 @@
                 </div>
             </div>
 
-            <!-- ஃபில்டர் செய்யபட்ட பதிவுகளின் மொத்த தொகை Box -->
+            <!-- புதுப்பிக்கப்பட்ட ஃபில்டர் தொகைகள் (வரவு, செலவு, இருப்பு தனித்தனியாக) -->
             <div id="search-total-box" class="search-total-card" style="display: none;">
-                தேடப்பட்ட பதிவுகளின் மொத்த தொகை: <span id="search-total-amount" style="font-size: 18px; color: #dc2626;">₹0.00</span>
+                <div class="total-grid">
+                    <div class="total-item total-income-box">
+                        <div style="font-size: 11px; opacity: 0.9;">மொத்த வரவு (+)</div>
+                        <div id="search-total-income" style="font-size: 16px;">₹0.00</div>
+                    </div>
+                    <div class="total-item total-expense-box">
+                        <div style="font-size: 11px; opacity: 0.9;">மொத்த செலவு (-)</div>
+                        <div id="search-total-expense" style="font-size: 16px;">₹0.00</div>
+                    </div>
+                </div>
+                <div class="total-balance-box">
+                    மீதி இருப்பு (Net Balance): <span id="search-net-balance" style="color: #2563eb;">₹0.00</span>
+                </div>
             </div>
         </div>
 
@@ -348,7 +366,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // Offline performance fix
+        // Offline performance persistence
         enableIndexedDbPersistence(db, { synchronizeTabs: true }).catch((err) => {
             console.warn("Offline persistence warning:", err.code);
         });
@@ -737,7 +755,6 @@
             });
         }
 
-        // Helper Function - தற்போதைய ஆண்டையும் மாதத்தையும் YYYY-MM வடிவில் பெற (எ.கா: 2026-08)
         function getCurrentMonthKey() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -758,7 +775,6 @@
                     
                     if (tx.category && tx.category !== "பொது" && !tx.category.includes("வரவு")) {
                         if (["MK செலவு", "SK செலவு", "கொல்லை"].includes(tx.category)) {
-                            // தற்போதைய மாதத்தின் செலவு மட்டும் கார்டில் காட்டும் (மாதம் மாறினால் 0 ஆகும்)
                             if (txMonthKey === currentMonth) {
                                 totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
                             }
@@ -836,15 +852,39 @@
                 return (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
             });
 
-            // Calculate Search Total Amount
-            let totalAmt = filtered.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+            // வரவு மற்றும் செலவு தொகைகளைத் தனித்தனியாகக் கணக்கிடுதல்
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            filtered.forEach(tx => {
+                let amt = Number(tx.amount || 0);
+                if (tx.type === 'income') {
+                    totalIncome += amt;
+                } else {
+                    totalExpense += amt;
+                }
+            });
+
+            let netBalance = totalIncome - totalExpense;
+
             const totalBox = document.getElementById("search-total-box");
-            const totalElem = document.getElementById("search-total-amount");
+            const incomeElem = document.getElementById("search-total-income");
+            const expenseElem = document.getElementById("search-total-expense");
+            const balanceElem = document.getElementById("search-net-balance");
 
             if (searchInput !== "" || monthFilter !== "ALL") {
-                if (totalBox && totalElem) {
+                if (totalBox && incomeElem && expenseElem && balanceElem) {
                     totalBox.style.display = "block";
-                    totalElem.innerText = `₹${totalAmt.toFixed(2)}`;
+                    incomeElem.innerText = `+₹${totalIncome.toFixed(2)}`;
+                    expenseElem.innerText = `-₹${totalExpense.toFixed(2)}`;
+                    
+                    if (netBalance >= 0) {
+                        balanceElem.style.color = "#16a34a"; // Green for Positive
+                        balanceElem.innerText = `+₹${netBalance.toFixed(2)}`;
+                    } else {
+                        balanceElem.style.color = "#dc2626"; // Red for Negative
+                        balanceElem.innerText = `-₹${Math.abs(netBalance).toFixed(2)}`;
+                    }
                 }
             } else {
                 if (totalBox) totalBox.style.display = "none";
