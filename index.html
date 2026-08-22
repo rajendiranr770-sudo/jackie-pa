@@ -32,6 +32,8 @@
         .month-select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: bold; background: white; color: #0369a1; outline: none; width: 100%; }
         .search-btn { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
+        .search-total-card { background: #ffffff; border: 2px solid #2563eb; padding: 12px; border-radius: 10px; margin-top: 10px; text-align: center; font-weight: bold; color: #1e3a8a; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
         .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #0f172a; }
         .sub-section-title { font-size: 14px; font-weight: bold; margin: 12px 0 8px 0; color: #334155; display: flex; align-items: center; gap: 6px; }
         
@@ -133,7 +135,7 @@
             <div class="search-title">🔍 செலவு கணக்கு ஃபில்டர் & தேடல்</div>
             
             <div class="search-input-group" style="margin-bottom: 8px;">
-                <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், MK செலவு, 20000)" onkeyup="executeSearch()">
+                <input type="text" id="search-input" class="search-input" placeholder="தேடவும் (எ.கா: சிகரெட், MK செலவு, 20000)" oninput="executeSearch()">
                 <button class="search-btn" onclick="executeSearch()">தேடு</button>
                 <button class="search-btn" style="background: #64748b;" onclick="resetSearch()">✖ ரீசெட்</button>
             </div>
@@ -155,6 +157,11 @@
                     <span style="font-size:11px; font-weight:bold; color:#0369a1;">வரை (To):</span>
                     <input type="date" id="to-date" class="search-input" onchange="executeSearch()">
                 </div>
+            </div>
+
+            <!-- ஃபில்டர் செய்யபட்ட பதிவுகளின் மொத்த தொகை Box -->
+            <div id="search-total-box" class="search-total-card" style="display: none;">
+                தேடப்பட்ட பதிவுகளின் மொத்த தொகை: <span id="search-total-amount" style="font-size: 18px; color: #dc2626;">₹0.00</span>
             </div>
         </div>
 
@@ -341,8 +348,9 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        enableIndexedDbPersistence(db).catch((err) => {
-            console.log("Offline mode setup:", err.code);
+        // Offline performance fix
+        enableIndexedDbPersistence(db, { synchronizeTabs: true }).catch((err) => {
+            console.warn("Offline persistence warning:", err.code);
         });
 
         let allTransactions = [];
@@ -488,7 +496,7 @@
 
             if (!title || !amount) { alert("விவரங்களை நிரப்பவும்!"); return; }
 
-            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+            let timestamp = dateVal ? new Date(dateVal + 'T12:00:00').getTime() : Date.now();
 
             saveTransaction({
                 title: title,
@@ -511,7 +519,7 @@
 
             if (!name || !amt) { alert("விவரங்களை நிரப்பவும்!"); return; }
 
-            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+            let timestamp = dateVal ? new Date(dateVal + 'T12:00:00').getTime() : Date.now();
 
             pendingAction = {
                 type: "KM",
@@ -621,13 +629,7 @@
             if (currentSelected && Array.from(select.options).some(o => o.value === currentSelected)) {
                 select.value = currentSelected;
             }
-            
-            onMonthChange();
         }
-
-        window.onMonthChange = function() {
-            renderApp();
-        };
 
         function getThisWeekRange() {
             const now = new Date();
@@ -639,7 +641,7 @@
             startOfWeek.setHours(0, 0, 0, 0);
 
             const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setDate(startOfWeek.getDate() + (6 - diffToMonday));
             endOfWeek.setHours(23, 59, 59, 999);
 
             return { startOfWeek, endOfWeek };
@@ -671,7 +673,6 @@
             return txList.filter(item => {
                 const itemTime = item.timestamp ? item.timestamp : (item.date ? new Date(item.date).getTime() : 0);
                 const itemDate = new Date(itemTime); 
-                itemDate.setHours(0, 0, 0, 0);
 
                 let matchesSearch = true;
                 if (searchVal !== '') {
@@ -684,7 +685,7 @@
 
                 let matchesDate = true;
 
-                if (monthFilter === 'CURRENT_WEEK' && searchVal === '') {
+                if (monthFilter === 'CURRENT_WEEK') {
                     matchesDate = itemDate >= startOfWeek && itemDate <= endOfWeek;
                 } 
                 else if (monthFilter === 'ALL') {
@@ -692,13 +693,11 @@
                 } 
                 else if (monthFilter === 'CUSTOM_DATE') {
                     if (fromDateVal) {
-                        const fDate = new Date(fromDateVal);
-                        fDate.setHours(0, 0, 0, 0);
+                        const fDate = new Date(fromDateVal + 'T00:00:00');
                         matchesDate = matchesDate && (itemDate >= fDate);
                     }
                     if (toDateVal) {
-                        const tDate = new Date(toDateVal);
-                        tDate.setHours(23, 59, 59, 999);
+                        const tDate = new Date(toDateVal + 'T23:59:59');
                         matchesDate = matchesDate && (itemDate <= tDate);
                     }
                 } 
@@ -738,16 +737,34 @@
             });
         }
 
+        // Helper Function - தற்போதைய ஆண்டையும் மாதத்தையும் YYYY-MM வடிவில் பெற (எ.கா: 2026-08)
+        function getCurrentMonthKey() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+
         function updateCalculations() {
             let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி பிசினஸ்": 0 };
+            const currentMonth = getCurrentMonthKey();
 
             allTransactions.forEach(tx => {
+                let txDate = tx.timestamp ? new Date(tx.timestamp) : new Date();
+                let txMonthKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
+
                 if (tx.type === "income") {
                     totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
                 } else {
                     totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
+                    
                     if (tx.category && tx.category !== "பொது" && !tx.category.includes("வரவு")) {
-                        totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
+                        if (["MK செலவு", "SK செலவு", "கொல்லை"].includes(tx.category)) {
+                            // தற்போதைய மாதத்தின் செலவு மட்டும் கார்டில் காட்டும் (மாதம் மாறினால் 0 ஆகும்)
+                            if (txMonthKey === currentMonth) {
+                                totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
+                            }
+                        } else {
+                            totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
+                        }
                     }
                 }
             });
@@ -812,10 +829,26 @@
 
         function renderStandardView() {
             const container = document.getElementById("tx-list-container");
+            const searchInput = document.getElementById('search-input') ? document.getElementById('search-input').value.trim() : "";
+            const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
             
             let filtered = filterTransactions(allTransactions).filter(tx => {
                 return (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
             });
+
+            // Calculate Search Total Amount
+            let totalAmt = filtered.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+            const totalBox = document.getElementById("search-total-box");
+            const totalElem = document.getElementById("search-total-amount");
+
+            if (searchInput !== "" || monthFilter !== "ALL") {
+                if (totalBox && totalElem) {
+                    totalBox.style.display = "block";
+                    totalElem.innerText = `₹${totalAmt.toFixed(2)}`;
+                }
+            } else {
+                if (totalBox) totalBox.style.display = "none";
+            }
 
             container.innerHTML = "";
             if (filtered.length === 0) {
@@ -853,7 +886,7 @@
             let dateVal = document.getElementById("v-date").value;
             if (!name || !principal) { alert("விவரங்களை நிரப்பவும்!"); return; }
 
-            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+            let timestamp = dateVal ? new Date(dateVal + 'T12:00:00').getTime() : Date.now();
 
             addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), {
                 personName: name, principal: principal, rate: rate, timestamp: timestamp, isReturned: false, isKaiMaathu: false
@@ -1036,7 +1069,7 @@
                 category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : "வீட்டு வரவு";
             }
 
-            let timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+            let timestamp = dateVal ? new Date(dateVal + 'T12:00:00').getTime() : Date.now();
 
             try {
                 const userRef = doc(db, "users", auth.currentUser.uid, collectionType, id);
