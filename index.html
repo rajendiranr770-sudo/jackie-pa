@@ -32,7 +32,6 @@
         .month-select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: bold; background: white; color: #0369a1; outline: none; width: 100%; }
         .search-btn { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        /* தேடல் பலன் மொத்த தொகைக்கான புதிய Styling */
         .search-total-card { background: #ffffff; border: 1px solid #bae6fd; padding: 12px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .total-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
         .total-item { padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; }
@@ -44,7 +43,7 @@
         .sub-section-title { font-size: 14px; font-weight: bold; margin: 12px 0 8px 0; color: #334155; display: flex; align-items: center; gap: 6px; }
         
         .tx-card { background: white; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .tx-card.income { border-left-color: #10b981; }
+        .tx-card.income { border-left-color: #10b981; cursor: pointer; }
         .tx-card.expense { border-left-color: #ef4444; }
         .tx-title { font-weight: bold; font-size: 14px; color: #1e293b; }
         .tx-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
@@ -148,7 +147,7 @@
 
             <div class="search-input-group" style="margin-bottom: 8px;">
                 <select id="month-filter" class="month-select" onchange="onFilterChange()">
-                    <option value="CURRENT_WEEK">📅 இந்த வாரம் மட்டும் (Current Week)</option>
+                    <option value="CURRENT_WEEK">📅 கடந்த 7 நாட்கள் (Last 7 Days)</option>
                     <option value="ALL">🌐 அனைத்து கணக்குகள் (All Statements)</option>
                     <option value="CUSTOM_DATE">📆 குறிப்பிட்ட தேதி வரை (Custom Date)</option>
                 </select>
@@ -165,7 +164,6 @@
                 </div>
             </div>
 
-            <!-- புதுப்பிக்கப்பட்ட ஃபில்டர் தொகைகள் (வரவு, செலவு, இருப்பு தனித்தனியாக) -->
             <div id="search-total-box" class="search-total-card" style="display: none;">
                 <div class="total-grid">
                     <div class="total-item total-income-box">
@@ -366,7 +364,6 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // Offline performance persistence
         enableIndexedDbPersistence(db, { synchronizeTabs: true }).catch((err) => {
             console.warn("Offline persistence warning:", err.code);
         });
@@ -376,6 +373,7 @@
         let activeTab = "All";
         let pendingAction = null;
         let selectedCategoryChoice = "பொது";
+        let activeIncomeFilter = null; // வரவு வழி செலவை ஃபில்டர் செய்ய
 
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById("m-date").value = todayStr;
@@ -617,7 +615,7 @@
             const select = document.getElementById("month-filter");
             const currentSelected = select.value;
             select.innerHTML = `
-                <option value="CURRENT_WEEK">📅 இந்த வாரம் மட்டும் (Current Week)</option>
+                <option value="CURRENT_WEEK">📅 கடந்த 7 நாட்கள் (Last 7 Days)</option>
                 <option value="ALL">🌐 அனைத்து கணக்குகள் (All Statements)</option>
                 <option value="CUSTOM_DATE">📆 குறிப்பிட்ட தேதி வரை (Custom Date)</option>
             `;
@@ -649,20 +647,16 @@
             }
         }
 
-        function getThisWeekRange() {
-            const now = new Date();
-            const dayOfWeek = now.getDay();
-            const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-            
-            const startOfWeek = new Date(now);
-            startOfWeek.setDate(now.getDate() - diffToMonday);
-            startOfWeek.setHours(0, 0, 0, 0);
+        // 1. மாற்றியமைக்கப்பட்ட "கடந்த 7 நாட்கள்" (Rolling 7 Days Window)
+        function getLast7DaysRange() {
+            const end = new Date();
+            end.setHours(23, 59, 59, 999);
 
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + (6 - diffToMonday));
-            endOfWeek.setHours(23, 59, 59, 999);
+            const start = new Date();
+            start.setDate(end.getDate() - 6); // இன்றோடு சேர்த்து 7 நாட்கள்
+            start.setHours(0, 0, 0, 0);
 
-            return { startOfWeek, endOfWeek };
+            return { start, end };
         }
 
         window.onFilterChange = function() {
@@ -674,6 +668,7 @@
             } else {
                 customDateContainer.style.display = 'none';
             }
+            activeIncomeFilter = null; // ஃபில்டர் மாறும்போது வரவு ஃபில்டரை ரீசெட் செய்ய
             executeSearch();
         };
 
@@ -686,7 +681,7 @@
             
             const fromDateVal = document.getElementById('from-date') ? document.getElementById('from-date').value : '';
             const toDateVal = document.getElementById('to-date') ? document.getElementById('to-date').value : '';
-            const { startOfWeek, endOfWeek } = getThisWeekRange();
+            const { start: last7Start, end: last7End } = getLast7DaysRange();
 
             return txList.filter(item => {
                 const itemTime = item.timestamp ? item.timestamp : (item.date ? new Date(item.date).getTime() : 0);
@@ -704,7 +699,7 @@
                 let matchesDate = true;
 
                 if (monthFilter === 'CURRENT_WEEK') {
-                    matchesDate = itemDate >= startOfWeek && itemDate <= endOfWeek;
+                    matchesDate = itemDate >= last7Start && itemDate <= last7End;
                 } 
                 else if (monthFilter === 'ALL') {
                     matchesDate = true;
@@ -735,6 +730,8 @@
             if (document.getElementById('custom-date-container')) document.getElementById('custom-date-container').style.display = 'none';
             if (document.getElementById('from-date')) document.getElementById('from-date').value = '';
             if (document.getElementById('to-date')) document.getElementById('to-date').value = '';
+            activeIncomeFilter = null;
+            document.getElementById("list-title").innerText = "அனைத்துப் பதிவுகள்";
             renderApp(); 
         };
 
@@ -820,6 +817,9 @@
 
         window.filterTab = function(tabName, btnElem) {
             activeTab = tabName;
+            activeIncomeFilter = null; // டேப் மாற்றினால் வரவு ஃபில்டர் ரீசெட் ஆகும்
+            document.getElementById("list-title").innerText = "அனைத்துப் பதிவுகள்";
+            
             document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
             btnElem.classList.add("active");
 
@@ -837,6 +837,17 @@
             renderApp();
         };
 
+        // 2. வரவை தொடும்போது இயங்கும் பங்க்ஷன் (Income-to-Expense Linking)
+        window.filterExpensesByIncome = function(source, incomeTimestamp, incomeTitle) {
+            activeIncomeFilter = {
+                source: source,
+                timestamp: incomeTimestamp,
+                title: incomeTitle
+            };
+            document.getElementById("list-title").innerText = `📌 ${incomeTitle} (${source}) வரவிலிருந்து செய்யப்பட்ட செலவுகள்`;
+            renderStandardView();
+        };
+
         window.renderApp = function() {
             if (activeTab === "வட்டி பிசினஸ்") renderVattiView();
             else if (activeTab === "கைமாத்து") renderKaiMaathuView();
@@ -852,7 +863,14 @@
                 return (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
             });
 
-            // வரவு மற்றும் செலவு தொகைகளைத் தனித்தனியாகக் கணக்கிடுதல்
+            // ஒரு குறிப்பிட்ட வரவை கிளிக் செய்திருந்தால் அதற்குரிய செலவுகளை மட்டும் காட்டும்
+            if (activeIncomeFilter) {
+                filtered = filtered.filter(tx => {
+                    let txTime = tx.timestamp || 0;
+                    return tx.type === 'expense' && tx.source === activeIncomeFilter.source && txTime >= activeIncomeFilter.timestamp;
+                });
+            }
+
             let totalIncome = 0;
             let totalExpense = 0;
 
@@ -872,17 +890,17 @@
             const expenseElem = document.getElementById("search-total-expense");
             const balanceElem = document.getElementById("search-net-balance");
 
-            if (searchInput !== "" || monthFilter !== "ALL") {
+            if (searchInput !== "" || monthFilter !== "ALL" || activeIncomeFilter !== null) {
                 if (totalBox && incomeElem && expenseElem && balanceElem) {
                     totalBox.style.display = "block";
                     incomeElem.innerText = `+₹${totalIncome.toFixed(2)}`;
                     expenseElem.innerText = `-₹${totalExpense.toFixed(2)}`;
                     
                     if (netBalance >= 0) {
-                        balanceElem.style.color = "#16a34a"; // Green for Positive
+                        balanceElem.style.color = "#16a34a";
                         balanceElem.innerText = `+₹${netBalance.toFixed(2)}`;
                     } else {
-                        balanceElem.style.color = "#dc2626"; // Red for Negative
+                        balanceElem.style.color = "#dc2626";
                         balanceElem.innerText = `-₹${Math.abs(netBalance).toFixed(2)}`;
                     }
                 }
@@ -900,10 +918,15 @@
                 let dateStr = new Date(tx.timestamp).toLocaleDateString("ta-IN");
                 let div = document.createElement("div");
                 div.className = `tx-card ${tx.type}`;
+                
+                // வரவுப் பதிவாக இருந்தால் அதை தொட்டால் அதிலிருந்து செய்த செலவுகள் ஃபில்டர் ஆகும்
+                let clickAttr = tx.type === 'income' ? `onclick="filterExpensesByIncome('${tx.source}', ${tx.timestamp}, '${tx.title}')"` : '';
+                let incomeSubText = tx.type === 'income' ? ` | <span style="color:#10b981; font-weight:bold;">👆 தொட்டு செலவுகளைப் பார்</span>` : '';
+
                 div.innerHTML = `
-                    <div style="flex:1;">
+                    <div style="flex:1;" ${clickAttr}>
                         <div class="tx-title">${tx.title}</div>
-                        <div class="tx-sub">${dateStr} | கணக்கு: <b>${tx.source || '-'}</b> | வகை: <b>${tx.category || 'பொது'}</b></div>
+                        <div class="tx-sub">${dateStr} | கணக்கு: <b>${tx.source || '-'}</b> | வகை: <b>${tx.category || 'பொது'}</b>${incomeSubText}</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
