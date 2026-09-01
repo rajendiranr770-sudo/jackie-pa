@@ -374,8 +374,11 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
+            getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, getDocs, 
+            initializeFirestore, persistentLocalCache, persistentMultipleTabManager 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCXRVuNCiWh1AhuVHInbKcfUAmgyAwzVHk",
@@ -388,12 +391,18 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
-
-        enableIndexedDbPersistence(db, { synchronizeTabs: true }).catch((err) => {
-            console.warn("Offline persistence warning:", err.code);
+        
+        // வேகமான ஆஃப்லைன் Persistence அமைப்பு
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({
+                tabManager: persistentMultipleTabManager()
+            })
         });
+        
+        // Auth நிலையை Local Storage-இல் சேமித்து வேகமாக உள்நுழைய
+        setPersistence(auth, browserLocalPersistence).catch(err => console.warn("Persistence Error:", err));
+
+        const provider = new GoogleAuthProvider();
 
         let allTransactions = [];
         let allVattiLoans = [];
@@ -420,15 +429,20 @@
 
         let isInitialAuthDone = false;
 
+        // வேகமான லாக்-இன்னிற்கான ஆப்டிமைஸ்டு பாணி
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                // UI உடனடியாக மாறும், பயனர் காத்திருக்க வேண்டியதில்லை
                 document.getElementById("auth-container").style.display = "none";
                 document.getElementById("main-app").style.display = "block";
                 document.getElementById("user-display-name").innerText = user.displayName || "User";
                 
                 if (!isInitialAuthDone) {
-                    listenToData(user.uid);
                     isInitialAuthDone = true;
+                    // பின்னணியில் தரவுகள் லோட் செய்யப்படும்
+                    setTimeout(() => {
+                        listenToData(user.uid);
+                    }, 50);
                 }
             } else {
                 isInitialAuthDone = false;
@@ -823,10 +837,10 @@
         window.filterTab = function(tabName, btnElem) {
             activeTab = tabName;
             activeIncomeFilter = null;
-            document.getElementById("list-title").innerText = "அனைத்துப் பதிவுகள்";
+            document.getElementById("list-title").innerText = (tabName === "All") ? "அனைத்துப் பதிவுகள்" : `${tabName} பதிவுகள்`;
             
             document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-            btnElem.classList.add("active");
+            if (btnElem) btnElem.classList.add("active");
 
             document.getElementById("standard-view").style.display = "none";
             document.getElementById("vatti-view").style.display = "none";
@@ -856,7 +870,11 @@
             const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
             
             let filtered = filterTransactions(allTransactions).filter(tx => {
-                return (activeTab === "All") || (tx.source === activeTab) || (tx.category === activeTab);
+                if (activeTab === "All") return true;
+                if (activeTab === "சம்பளம்" || activeTab === "வீடு") {
+                    return tx.source === activeTab;
+                }
+                return tx.category === activeTab;
             });
 
             if (activeIncomeFilter) {
@@ -884,7 +902,7 @@
             const expenseElem = document.getElementById("search-total-expense");
             const balanceElem = document.getElementById("search-net-balance");
 
-            if (searchInput !== "" || monthFilter !== "ALL" || activeIncomeFilter !== null) {
+            if (searchInput !== "" || monthFilter !== "ALL" || activeIncomeFilter !== null || activeTab !== "All") {
                 if (totalBox && incomeElem && expenseElem && balanceElem) {
                     totalBox.style.display = "block";
                     incomeElem.innerText = `+₹${totalIncome.toFixed(2)}`;
