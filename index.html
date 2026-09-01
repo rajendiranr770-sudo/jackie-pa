@@ -536,7 +536,6 @@
             }
         };
 
-        // 🟢 FIX 1: மேனுவல் பதிவின் போது சரியான நேரம் (Timestamp) சேரும்
         window.addManualTransaction = function() {
             let title = document.getElementById("m-title").value.trim();
             let amount = parseFloat(document.getElementById("m-amount").value);
@@ -851,7 +850,6 @@
             else renderStandardView();
         };
 
-        // 🟢 FIX 2: புதிய பதிவு எப்போதும் முதலாவதாக (Top First) மட்டுமே திரையில் தோன்றும்
         function renderStandardView() {
             const container = document.getElementById("tx-list-container");
             const searchInput = document.getElementById('search-input') ? document.getElementById('search-input').value.trim() : "";
@@ -868,7 +866,6 @@
                 });
             }
 
-            // புதியது எப்போதும் மேலே வர உறுதியான Sorting
             filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
             let totalIncome = 0;
