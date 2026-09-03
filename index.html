@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Finance & Loan Master App</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
         body { background-color: #f1f5f9; overflow-x: hidden; margin: 0; padding: 10px; padding-bottom: 70px; }
@@ -98,6 +97,7 @@
         }
         .btn-salary { background: #2563eb; }
         .btn-home { background: #16a34a; }
+        .btn-other { background: #d97706; }
 
         .btn-add-more {
             background-color: #e0e7ff;
@@ -110,9 +110,7 @@
             font-weight: bold;
             transition: 0.2s;
         }
-        .btn-add-more:hover {
-            background-color: #c7d2fe;
-        }
+        .btn-add-more:hover { background-color: #c7d2fe; }
         .target-notice {
             background-color: #fffbeb;
             color: #92400e;
@@ -144,6 +142,7 @@
         <div class="cards-grid">
             <div class="card" onclick="selectTab('சம்பளம்')"><div class="card-label">சம்பளம்</div><div class="card-value" id="salary-card-val">₹0.00</div></div>
             <div class="card" onclick="selectTab('வீடு')"><div class="card-label">வீடு</div><div class="card-value" id="veedu-card-val">₹0.00</div></div>
+            <div class="card" onclick="selectTab('இதர வரவு')"><div class="card-label">இதர வரவு</div><div class="card-value" id="other-card-val">₹0.00</div></div>
             <div class="card" onclick="selectTab('கொல்லை')"><div class="card-label">கொல்லை</div><div class="card-value" id="kollai-card-val">₹0.00</div></div>
             <div class="card" onclick="selectTab('MK செலவு')"><div class="card-label">MK செலவு</div><div class="card-value" id="mk-card-val">₹0.00</div></div>
             <div class="card" onclick="selectTab('SK செலவு')"><div class="card-label">SK செலவு</div><div class="card-value" id="sk-card-val">₹0.00</div></div>
@@ -154,6 +153,7 @@
             <button class="tab-btn active" data-tab="All" onclick="filterTab('All', this)">📊 All</button>
             <button class="tab-btn" data-tab="சம்பளம்" onclick="filterTab('சம்பளம்', this)">💼 சம்பளம்</button>
             <button class="tab-btn" data-tab="வீடு" onclick="filterTab('வீடு', this)">🏠 வீடு</button>
+            <button class="tab-btn" data-tab="இதர வரவு" onclick="filterTab('இதர வரவு', this)">💵 இதர வரவு</button>
             <button class="tab-btn" data-tab="கொல்லை" onclick="filterTab('கொல்லை', this)">🌱 கொல்லை</button>
             <button class="tab-btn" data-tab="MK செலவு" onclick="filterTab('MK செலவு', this)">👤 MK</button>
             <button class="tab-btn" data-tab="SK செலவு" onclick="filterTab('SK செலவு', this)">👤 SK</button>
@@ -215,6 +215,7 @@
                     <select id="m-source" class="form-input">
                         <option value="சம்பளம்">💼 சம்பளம்</option>
                         <option value="வீடு">🏠 வீடு</option>
+                        <option value="இதர வரவு">💵 இதர வரவு (நகை கடன்/PF/இதர)</option>
                     </select>
                     <select id="m-category" class="form-input">
                         <option value="பொது">📝 பொது</option>
@@ -301,6 +302,7 @@
                 <div class="source-grid">
                     <button type="button" class="src-btn btn-salary" onclick="confirmSource('சம்பளம்')">💼 சம்பளம்</button>
                     <button type="button" class="src-btn btn-home" onclick="confirmSource('வீடு')">🏠 வீடு</button>
+                    <button type="button" class="src-btn btn-other" style="grid-column: span 2;" onclick="confirmSource('இதர வரவு')">💵 இதர வரவு (நகை கடன்/PF/கடன்)</button>
                 </div>
             </div>
 
@@ -327,6 +329,7 @@
             <select id="edit-source" class="form-input">
                 <option value="சம்பளம்">💼 சம்பளம்</option>
                 <option value="வீடு">🏠 வீடு</option>
+                <option value="இதர வரவு">💵 இதர வரவு</option>
             </select>
 
             <label class="modal-label">செலவு வகை (Category):</label>
@@ -337,6 +340,7 @@
                 <option value="கொல்லை">🌱 கொல்லை</option>
                 <option value="சம்பளம் வரவு">💼 சம்பளம் வரவு</option>
                 <option value="வீட்டு வரவு">🏠 வீட்டு வரவு</option>
+                <option value="இதர வரவு">💵 இதர வரவு</option>
                 <option value="கைமாத்து">🤝 கைமாத்து</option>
             </select>
 
@@ -367,7 +371,7 @@
     </div>
 
     <div class="bottom-bar">
-        <input type="text" id="voice-text-input" class="voice-input" placeholder="எ.கா: எம் கே செலவு 500">
+        <input type="text" id="voice-text-input" class="voice-input" placeholder="எ.கா: எம்கே செலவு 500">
         <button id="btn-send-tx" class="send-btn">அனுப்பு</button>
         <button id="btn-mic" class="mic-btn">🎙️ பேசு</button>
     </div>
@@ -392,14 +396,12 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         
-        // வேகமான ஆஃப்லைன் Persistence அமைப்பு
         const db = initializeFirestore(app, {
             localCache: persistentLocalCache({
                 tabManager: persistentMultipleTabManager()
             })
         });
         
-        // Auth நிலையை Local Storage-இல் சேமித்து வேகமாக உள்நுழைய
         setPersistence(auth, browserLocalPersistence).catch(err => console.warn("Persistence Error:", err));
 
         const provider = new GoogleAuthProvider();
@@ -429,20 +431,15 @@
 
         let isInitialAuthDone = false;
 
-        // வேகமான லாக்-இன்னிற்கான ஆப்டிமைஸ்டு பாணி
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // UI உடனடியாக மாறும், பயனர் காத்திருக்க வேண்டியதில்லை
                 document.getElementById("auth-container").style.display = "none";
                 document.getElementById("main-app").style.display = "block";
                 document.getElementById("user-display-name").innerText = user.displayName || "User";
                 
                 if (!isInitialAuthDone) {
                     isInitialAuthDone = true;
-                    // பின்னணியில் தரவுகள் லோட் செய்யப்படும்
-                    setTimeout(() => {
-                        listenToData(user.uid);
-                    }, 50);
+                    setTimeout(() => { listenToData(user.uid); }, 50);
                 }
             } else {
                 isInitialAuthDone = false;
@@ -492,7 +489,7 @@
             let amount = extractAmount(rawText);
             let lowerText = rawText.toLowerCase();
 
-            let isIncome = lowerText.includes("வரவு") || lowerText.includes("வந்தது") || lowerText.includes("தந்தாங்க") || lowerText.includes("கிடைத்தது") || lowerText.includes("சேர்ந்தது");
+            let isIncome = lowerText.includes("வரவு") || lowerText.includes("வந்தது") || lowerText.includes("தந்தாங்க") || lowerText.includes("கிடைத்தது") || lowerText.includes("சேர்ந்தது") || lowerText.includes("நகை") || lowerText.includes("பிஎஃப்") || lowerText.includes("pf");
 
             let category = "பொது";
             if (lowerText.includes("mk") || lowerText.includes("எம்கே") || lowerText.includes("எம் கே")) category = "MK செலவு";
@@ -504,6 +501,7 @@
             let detectedSource = null;
             if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) detectedSource = "சம்பளம்";
             else if (lowerText.includes("வீடு") || lowerText.includes("வீட்டு") || lowerText.includes("வீட்டிலிருந்து")) detectedSource = "வீடு";
+            else if (lowerText.includes("நகை") || lowerText.includes("பிஎஃப்") || lowerText.includes("pf") || lowerText.includes("கடனாக")) detectedSource = "இதர வரவு";
 
             let txData = {
                 title: rawText,
@@ -516,7 +514,7 @@
             if (isIncome) {
                 if (detectedSource !== null) {
                     txData.source = detectedSource;
-                    txData.category = (detectedSource === "சம்பளம்") ? "சம்பளம் வரவு" : "வீட்டு வரவு";
+                    txData.category = (detectedSource === "சம்பளம்") ? "சம்பளம் வரவு" : (detectedSource === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
                     saveTransaction(txData);
                 } else {
                     openModalByScenario(1, txData);
@@ -559,7 +557,7 @@
             
             let category = document.getElementById("m-category").value;
             if (type === "income") {
-                category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : "வீட்டு வரவு";
+                category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
             }
 
             if (!title || !amount) { alert("விவரங்களை நிரப்பவும்!"); return; }
@@ -618,7 +616,7 @@
                 if (pendingAction.type === "TX") {
                     pendingAction.data.source = sourceName;
                     if (pendingAction.data.type === "income") {
-                        pendingAction.data.category = (sourceName === "சம்பளம்") ? "சம்பளம் வரவு" : "வீட்டு வரவு";
+                        pendingAction.data.category = (sourceName === "சம்பளம்") ? "சம்பளம் வரவு" : (sourceName === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
                     } else {
                         pendingAction.data.category = selectedCategoryChoice || "பொது";
                     }
@@ -791,7 +789,7 @@
         }
 
         function updateCalculations() {
-            let totals = { "சம்பளம்": 0, "வீடு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி பிசினஸ்": 0 };
+            let totals = { "சம்பளம்": 0, "வீடு": 0, "இதர வரவு": 0, "கொல்லை": 0, "MK செலவு": 0, "SK செலவு": 0, "வட்டி பிசினஸ்": 0 };
             const currentMonth = getCurrentMonthKey();
 
             allTransactions.forEach(tx => {
@@ -799,9 +797,9 @@
                 let txMonthKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
 
                 if (tx.type === "income") {
-                    totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
+                    if (tx.source) totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
                 } else {
-                    totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
+                    if (tx.source) totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
                     if (tx.category && tx.category !== "பொது" && !tx.category.includes("வரவு")) {
                         if (["MK செலவு", "SK செலவு", "கொல்லை"].includes(tx.category)) {
                             if (txMonthKey === currentMonth) { totals[tx.category] = (totals[tx.category] || 0) + tx.amount; }
@@ -818,7 +816,7 @@
             });
             totals["வட்டி பிசினஸ்"] = vattiTotal;
 
-            const cardMapping = { "சம்பளம்": "salary-card-val", "வீடு": "veedu-card-val", "கொல்லை": "kollai-card-val", "MK செலவு": "mk-card-val", "SK செலவு": "sk-card-val", "வட்டி பிசினஸ்": "vatti-card-val" };
+            const cardMapping = { "சம்பளம்": "salary-card-val", "வீடு": "veedu-card-val", "இதர வரவு": "other-card-val", "கொல்லை": "kollai-card-val", "MK செலவு": "mk-card-val", "SK செலவு": "sk-card-val", "வட்டி பிசினஸ்": "vatti-card-val" };
             for (let key in cardMapping) {
                 let elem = document.getElementById(cardMapping[key]);
                 if (elem) elem.innerText = '₹' + Number(totals[key] || 0).toFixed(2);
@@ -853,7 +851,13 @@
         };
 
         window.filterExpensesByIncome = function(source, incomeTimestamp, incomeTitle) {
-            activeIncomeFilter = { source: source, timestamp: incomeTimestamp, title: incomeTitle };
+            let sameSourceIncomes = allTransactions
+                .filter(tx => tx.type === 'income' && tx.source === source && (tx.timestamp || 0) > incomeTimestamp)
+                .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+            let nextIncomeTime = sameSourceIncomes.length > 0 ? sameSourceIncomes[0].timestamp : Infinity;
+
+            activeIncomeFilter = { source: source, timestamp: incomeTimestamp, nextTimestamp: nextIncomeTime, title: incomeTitle };
             document.getElementById("list-title").innerText = `📌 ${incomeTitle} (${source}) வரவிலிருந்து செய்யப்பட்ட செலவுகள்`;
             renderStandardView();
         };
@@ -871,7 +875,7 @@
             
             let filtered = filterTransactions(allTransactions).filter(tx => {
                 if (activeTab === "All") return true;
-                if (activeTab === "சம்பளம்" || activeTab === "வீடு") {
+                if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) {
                     return tx.source === activeTab;
                 }
                 return tx.category === activeTab;
@@ -880,7 +884,7 @@
             if (activeIncomeFilter) {
                 filtered = filtered.filter(tx => {
                     let txTime = tx.timestamp || 0;
-                    return tx.type === 'expense' && tx.source === activeIncomeFilter.source && txTime >= activeIncomeFilter.timestamp;
+                    return tx.type === 'expense' && tx.source === activeIncomeFilter.source && txTime >= activeIncomeFilter.timestamp && txTime < activeIncomeFilter.nextTimestamp;
                 });
             }
 
@@ -1192,7 +1196,7 @@
             const dateVal = document.getElementById("edit-date").value;
 
             if (type === "income" && category !== "கைமாத்து") {
-                category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : "வீட்டு வரவு";
+                category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
             }
 
             let now = new Date();
