@@ -121,6 +121,20 @@
             font-size: 13px;
             font-weight: bold;
         }
+
+        /* Trip Card Custom Styling */
+        .trip-card-box {
+            background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+        .trip-header {
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcfce7; padding-bottom: 6px; margin-bottom: 8px;
+        }
+        .btn-close-trip {
+            background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;
+        }
+        .btn-view-trip {
+            background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 6px; width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -208,7 +222,10 @@
 
         <div id="standard-view">
             <div class="vatti-form" id="manual-entry-form">
-                <div class="section-title">📝 மேனுவல் பதிவு</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;" class="section-title">
+                    <span>📝 மேனுவல் பதிவு</span>
+                    <button type="button" class="btn-add-more" onclick="addNewTripCategory()">+ புதிய Trip சேர்</button>
+                </div>
                 <input type="text" id="m-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="m-amount" class="form-input" placeholder="தொகை (₹)">
                 <div class="form-row">
@@ -233,6 +250,9 @@
                 </div>
                 <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
             </div>
+
+            <!-- Active Trip Cards Area -->
+            <div id="active-trips-container"></div>
 
             <div class="section-title" id="list-title">அனைத்துப் பதிவுகள்</div>
             <div id="tx-list-container"></div>
@@ -289,7 +309,7 @@
 
             <div id="category-section" style="display: none; margin-bottom: 15px;">
                 <p class="section-label">எதற்கான செலவு?</p>
-                <div class="category-grid">
+                <div class="category-grid" id="modal-category-grid">
                     <button type="button" class="cat-btn" onclick="setCategory('MK செலவு', this)">🛒 MK செலவு</button>
                     <button type="button" class="cat-btn" onclick="setCategory('SK செலவு', this)">📦 SK செலவு</button>
                     <button type="button" class="cat-btn" onclick="setCategory('கொல்லை', this)">🌱 கொல்லை</button>
@@ -413,6 +433,9 @@
         let selectedCategoryChoice = "பொது";
         let activeIncomeFilter = null;
 
+        // Custom Dynamic Trips Management
+        let customTrips = JSON.parse(localStorage.getItem("customTrips")) || [];
+
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById("m-date").value = todayStr;
         document.getElementById("v-date").value = todayStr;
@@ -447,6 +470,98 @@
                 document.getElementById("main-app").style.display = "none";
             }
         });
+
+        // ------------------ Dynamic Trip Categories Logic ------------------ //
+        window.addNewTripCategory = function() {
+            let tripName = prompt("புதிய Trip / நிகழ்வின் பெயரை உள்ளிடவும் (எ.கா: Kodaikanal Trip, கல்யாணம்):");
+            if (tripName && tripName.trim() !== "") {
+                tripName = tripName.trim();
+                if (!customTrips.includes(tripName)) {
+                    customTrips.push(tripName);
+                    localStorage.setItem("customTrips", JSON.stringify(customTrips));
+                    updateCategoryDropdowns();
+                    renderApp();
+                    alert(`'${tripName}' வெற்றிகரமாகச் சேர்க்கப்பட்டது!`);
+                } else {
+                    alert("இந்த பெயர் ஏற்கனவே உள்ளது!");
+                }
+            }
+        };
+
+        window.closeTripCard = function(tripName) {
+            if (confirm(`'${tripName}' கார்டை மட்டும் முகப்புத் திரையில் இருந்து நீக்க வேண்டுமா?\n\n(குறிப்பு: இதிலுள்ள அனைத்து செலவுகளும் 'Trip' வகையிலேயே 'அனைத்துப் பதிவுகள்' பட்டியலில் பாதுகாப்பாக இருக்கும்.)`)) {
+                customTrips = customTrips.filter(t => t !== tripName);
+                localStorage.setItem("customTrips", JSON.stringify(customTrips));
+                updateCategoryDropdowns();
+                renderApp();
+            }
+        };
+
+        function updateCategoryDropdowns() {
+            const mCat = document.getElementById("m-category");
+            const editCat = document.getElementById("edit-category");
+            
+            // Basic options reset
+            const defaultOptionsHtml = `
+                <option value="பொது">📝 பொது</option>
+                <option value="MK செலவு">🛒 MK செலவு</option>
+                <option value="SK செலவு">📦 SK செலவு</option>
+                <option value="கொல்லை">🌱 கொல்லை</option>
+            `;
+            
+            let tripOptionsHtml = "";
+            customTrips.forEach(trip => {
+                tripOptionsHtml += `<option value="${trip}">🧳 ${trip}</option>`;
+            });
+
+            mCat.innerHTML = defaultOptionsHtml + tripOptionsHtml;
+            
+            let editDefaultOptions = defaultOptionsHtml + `
+                <option value="சம்பளம் வரவு">💼 சம்பளம் வரவு</option>
+                <option value="வீட்டு வரவு">🏠 வீட்டு வரவு</option>
+                <option value="இதர வரவு">💵 இதர வரவு</option>
+                <option value="கைமாத்து">🤝 கைமாத்து</option>
+            `;
+            editCat.innerHTML = editDefaultOptions + tripOptionsHtml;
+        }
+        updateCategoryDropdowns();
+
+        function renderActiveTripCards() {
+            const tripContainer = document.getElementById("active-trips-container");
+            if (!tripContainer) return;
+            
+            tripContainer.innerHTML = "";
+
+            customTrips.forEach(tripName => {
+                let totalSpent = 0;
+                allTransactions.forEach(tx => {
+                    if (tx.category === tripName && tx.type === "expense") {
+                        totalSpent += Number(tx.amount || 0);
+                    }
+                });
+
+                let cardDiv = document.createElement("div");
+                cardDiv.className = "trip-card-box";
+                cardDiv.innerHTML = `
+                    <div class="trip-header">
+                        <span style="font-weight:bold; color:#15803d; font-size:15px;">🧳 ${tripName}</span>
+                        <button class="btn-close-trip" onclick="closeTripCard('${tripName}')">🗑️ Trip-ஐ முடி / நீக்கு</button>
+                    </div>
+                    <div style="font-size:13px; color:#334155;">
+                        மொத்தச் செலவு: <b style="color:#b91c1c; font-size:15px;">₹${totalSpent.toFixed(2)}</b>
+                    </div>
+                    <button class="btn-view-trip" onclick="filterByTripCategory('${tripName}')">👆 தொட்டுச் செலவுகளைப் பார்</button>
+                `;
+                tripContainer.appendChild(cardDiv);
+            });
+        }
+
+        window.filterByTripCategory = function(tripName) {
+            document.getElementById('search-input').value = tripName;
+            executeSearch();
+        };
+
+        // ------------------ End Trip Logic ------------------ //
 
         window.selectPersonForAdd = function(name) {
             document.getElementById("v-name").value = name;
@@ -497,6 +612,13 @@
             else if (lowerText.includes("கொல்லை")) category = "கொல்லை";
             else if (lowerText.includes("கைமாத்து")) category = "கைமாத்து";
             else if (lowerText.includes("வட்டி")) category = "வட்டி பிசினஸ்";
+
+            // Check matching dynamic trips
+            customTrips.forEach(trip => {
+                if (lowerText.includes(trip.toLowerCase())) {
+                    category = trip;
+                }
+            });
 
             let detectedSource = null;
             if (lowerText.includes("சம்பளம்") || lowerText.includes("சம்பள")) detectedSource = "சம்பளம்";
@@ -869,6 +991,8 @@
         };
 
         function renderStandardView() {
+            renderActiveTripCards();
+            
             const container = document.getElementById("tx-list-container");
             const searchInput = document.getElementById('search-input') ? document.getElementById('search-input').value.trim() : "";
             const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
@@ -1243,6 +1367,21 @@
             srcSec.style.display = "none";
             selectedCategoryChoice = txData.category || "பொது";
             
+            // Build Modal Category Grid dynamically to include active trips
+            const modalCatGrid = document.getElementById("modal-category-grid");
+            if (modalCatGrid) {
+                let gridHtml = `
+                    <button type="button" class="cat-btn" onclick="setCategory('MK செலவு', this)">🛒 MK செலவு</button>
+                    <button type="button" class="cat-btn" onclick="setCategory('SK செலவு', this)">📦 SK செலவு</button>
+                    <button type="button" class="cat-btn" onclick="setCategory('கொல்லை', this)">🌱 கொல்லை</button>
+                    <button type="button" class="cat-btn" onclick="setCategory('பொது', this)">📝 பொது</button>
+                `;
+                customTrips.forEach(trip => {
+                    gridHtml += `<button type="button" class="cat-btn" onclick="setCategory('${trip}', this)">🧳 ${trip}</button>`;
+                });
+                modalCatGrid.innerHTML = gridHtml;
+            }
+
             document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
 
             if (popupType === 1) { modalTitle.innerText = "பணம் எங்கு சேர வேண்டும்?"; srcSec.style.display = "block"; } 
