@@ -122,7 +122,6 @@
             font-weight: bold;
         }
 
-        /* Trip Card Custom Styling */
         .trip-card-box {
             background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
         }
@@ -173,8 +172,8 @@
             <button class="tab-btn" data-tab="வீடு" onclick="filterTab('வீடு', this)">🏠 வீடு</button>
             <button class="tab-btn" data-tab="இதர வரவு" onclick="filterTab('இதர வரவு', this)">💵 இதர வரவு</button>
             <button class="tab-btn" data-tab="கொல்லை" onclick="filterTab('கொல்லை', this)">🌱 கொல்லை</button>
-            <button class="tab-btn" data-tab="MK செலவு" onclick="filterTab('MK செலவு', this)">👤 MK</button>
-            <button class="tab-btn" data-tab="SK செலவு" onclick="filterTab('SK செலவு', this)">👤 SK</button>
+            <button class="tab-btn" data-tab="MK செலவு" onclick="filterTab('MK செலவு', this)">🛒 MK</button>
+            <button class="tab-btn" data-tab="SK செலவு" onclick="filterTab('SK செலவு', this)">📦 SK</button>
             <button class="tab-btn" data-tab="வட்டி பிசினஸ்" onclick="filterTab('வட்டி பிசினஸ்', this)">💰 வட்டி</button>
             <button class="tab-btn" data-tab="கைமாத்து" onclick="filterTab('கைமாத்து', this)">🤝 கைமாத்து</button>
         </div>
@@ -358,14 +357,7 @@
 
             <label class="modal-label">செலவு வகை (Category):</label>
             <select id="edit-category" class="form-input">
-                <option value="பொது">📝 பொது</option>
-                <option value="MK செலவு">🛒 MK செலவு</option>
-                <option value="SK செலவு">📦 SK செலவு</option>
-                <option value="கொல்லை">🌱 கொல்லை</option>
-                <option value="சம்பளம் வரவு">💼 சம்பளம் வரவு</option>
-                <option value="வீட்டு வரவு">🏠 வீட்டு வரவு</option>
-                <option value="இதர வரவு">💵 இதர வரவு</option>
-                <option value="கைமாத்து">🤝 கைமாத்து</option>
+                <!-- JavaScript மூலம் நிரப்பப்படும் -->
             </select>
 
             <label class="modal-label">வகை:</label>
@@ -475,6 +467,21 @@
             }
         });
 
+        // ------------------ Helper Function for Time Formatting ------------------ //
+        function formatDateTime(timestamp) {
+            if (!timestamp) return "-";
+            const d = new Date(timestamp);
+            return d.toLocaleString("ta-IN", {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+        }
+
         // ------------------ Dynamic Trip Categories Logic ------------------ //
         window.addNewTripCategory = function() {
             let tripName = prompt("புதிய Trip / நிகழ்வின் பெயரை உள்ளிடவும் (எ.கா: Kodaikanal Trip, கல்யாணம்):");
@@ -505,7 +512,6 @@
             const mCat = document.getElementById("m-category");
             const editCat = document.getElementById("edit-category");
             
-            // Basic options reset
             const defaultOptionsHtml = `
                 <option value="பொது">📝 பொது</option>
                 <option value="MK செலவு">🛒 MK செலவு</option>
@@ -518,7 +524,7 @@
                 tripOptionsHtml += `<option value="${trip}">🧳 ${trip}</option>`;
             });
 
-            mCat.innerHTML = defaultOptionsHtml + tripOptionsHtml;
+            if (mCat) mCat.innerHTML = defaultOptionsHtml + tripOptionsHtml;
             
             let editDefaultOptions = defaultOptionsHtml + `
                 <option value="சம்பளம் வரவு">💼 சம்பளம் வரவு</option>
@@ -526,7 +532,7 @@
                 <option value="இதர வரவு">💵 இதர வரவு</option>
                 <option value="கைமாத்து">🤝 கைமாத்து</option>
             `;
-            editCat.innerHTML = editDefaultOptions + tripOptionsHtml;
+            if (editCat) editCat.innerHTML = editDefaultOptions + tripOptionsHtml;
         }
         updateCategoryDropdowns();
 
@@ -1059,7 +1065,7 @@
             }
 
             filtered.forEach(tx => {
-                let dateStr = new Date(tx.timestamp).toLocaleDateString("ta-IN");
+                let dateTimeStr = formatDateTime(tx.timestamp);
                 let div = document.createElement("div");
                 div.className = `tx-card ${tx.type}`;
                 
@@ -1069,7 +1075,7 @@
                 div.innerHTML = `
                     <div style="flex:1;" ${clickAttr}>
                         <div class="tx-title">${tx.title}</div>
-                        <div class="tx-sub">${dateStr} | கணக்கு: <b>${tx.source || '-'}</b> | வகை: <b>${tx.category || 'பொது'}</b>${incomeSubText}</div>
+                        <div class="tx-sub">🕒 ${dateTimeStr} | கணக்கு: <b>${tx.source || '-'}</b> | வகை: <b>${tx.category || 'பொது'}</b>${incomeSubText}</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
@@ -1148,7 +1154,7 @@
                     let interest = Math.round((l.principal * (l.rate / 100) * (days / 30)));
                     let mathaVatti = Math.round(l.principal * (l.rate / 100));
                     
-                    let dateStr = new Date(l.timestamp).toISOString().split('T')[0];
+                    let dateTimeStr = formatDateTime(l.timestamp);
 
                     totalPrincipal += l.principal;
                     totalInterest += interest;
@@ -1164,7 +1170,7 @@
                                 </div>
                             </div>
                             <div style="font-size:12px; color:#64748b; margin-top:4px;">
-                                📅 தேதி: ${dateStr} (${durationText})
+                                🕒 நேரம்: ${dateTimeStr} (${durationText})
                             </div>
                             <div style="color:#d97706; font-weight:bold; margin-top:4px; font-size: 13px;">
                                 வட்டி தொகை: ₹${interest} (மாத வட்டி ₹${mathaVatti})
@@ -1202,7 +1208,7 @@
                 givenContainer.innerHTML = `<div style="padding:10px; color:gray; font-size:13px;">கொடுத்த கைமாத்து எதுவுமில்லை.</div>`;
             } else {
                 givenList.forEach(l => {
-                    let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
+                    let dateTimeStr = formatDateTime(l.timestamp);
                     let div = document.createElement("div");
                     div.className = "person-card given";
                     let sourceDisplay = l.source ? l.source : "குறிப்பிடப்படவில்லை";
@@ -1215,7 +1221,7 @@
                                 <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source || ''}', ${l.principal}, '${l.personName}', 'given', this)">
                             </div>
                         </div>
-                        <div>தொகை: <b style="color:#ef4444;">₹${l.principal}</b> | தேதி: ${dateStr}</div>
+                        <div>தொகை: <b style="color:#ef4444;">₹${l.principal}</b> | 🕒 நேரம்: ${dateTimeStr}</div>
                         <div class="km-source-tag">💼 எடுத்த கணக்கு: <b>${sourceDisplay}</b></div>
                     `;
                     givenContainer.appendChild(div);
@@ -1226,7 +1232,7 @@
                 takenContainer.innerHTML = `<div style="padding:10px; color:gray; font-size:13px;">வாங்கிய கைமாத்து எதுவுமில்லை.</div>`;
             } else {
                 takenList.forEach(l => {
-                    let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
+                    let dateTimeStr = formatDateTime(l.timestamp);
                     let div = document.createElement("div");
                     div.className = "person-card taken";
                     let sourceDisplay = l.source ? l.source : "குறிப்பிடப்படவில்லை";
@@ -1239,7 +1245,7 @@
                                 <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source || ''}', ${l.principal}, '${l.personName}', 'taken', this)">
                             </div>
                         </div>
-                        <div>தொகை: <b style="color:#10b981;">₹${l.principal}</b> | தேதி: ${dateStr}</div>
+                        <div>தொகை: <b style="color:#10b981;">₹${l.principal}</b> | 🕒 நேரம்: ${dateTimeStr}</div>
                         <div class="km-source-tag">💼 சேர்க்கப்பட்ட கணக்கு: <b>${sourceDisplay}</b></div>
                     `;
                     takenContainer.appendChild(div);
@@ -1260,7 +1266,6 @@
                         const q = query(collection(db, "users", auth.currentUser.uid, "transactions"), orderBy("timestamp", "desc"));
                         const snap = await getDocs(q);
                         
-                        // Robust matching for transaction entry deletion
                         const matchingTx = snap.docs.find(docSnap => {
                             const data = docSnap.data();
                             const isAmountMatch = Number(data.amount) === Number(amount);
@@ -1308,6 +1313,8 @@
             document.getElementById("edit-title").value = item.title || item.personName || "";
             document.getElementById("edit-amount").value = item.amount || item.principal || 0;
             document.getElementById("edit-source").value = item.source || "சம்பளம்";
+            
+            updateCategoryDropdowns();
             document.getElementById("edit-category").value = item.category || "பொது";
             document.getElementById("edit-type").value = item.type || "expense";
             
@@ -1343,9 +1350,21 @@
             try {
                 const userRef = doc(db, "users", auth.currentUser.uid, collectionType, id);
                 if (collectionType === 'vatti') {
-                    await updateDoc(userRef, { personName: title, principal: amount, source: source, timestamp: timestamp });
+                    await updateDoc(userRef, { 
+                        personName: title, 
+                        principal: amount, 
+                        source: source, 
+                        timestamp: timestamp 
+                    });
                 } else {
-                    await updateDoc(userRef, { title: title, amount: amount, source: source, category: category, type: type, timestamp: timestamp });
+                    await updateDoc(userRef, { 
+                        title: title, 
+                        amount: amount, 
+                        source: source, 
+                        category: category, 
+                        type: type, 
+                        timestamp: timestamp 
+                    });
                 }
                 closeEditModal();
             } catch (error) {
@@ -1379,7 +1398,6 @@
             srcSec.style.display = "none";
             selectedCategoryChoice = txData.category || "பொது";
             
-            // Build Modal Category Grid dynamically to include active trips
             const modalCatGrid = document.getElementById("modal-category-grid");
             if (modalCatGrid) {
                 let gridHtml = `
