@@ -135,6 +135,10 @@
         .btn-view-trip {
             background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 6px; width: 100%;
         }
+        
+        .km-source-tag {
+            background: #e2e8f0; color: #1e293b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -1201,17 +1205,18 @@
                     let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
                     let div = document.createElement("div");
                     div.className = "person-card given";
+                    let sourceDisplay = l.source ? l.source : "குறிப்பிடப்படவில்லை";
                     div.innerHTML = `
                         <div class="person-header">
                             <span>🤝 ${l.personName} (கொடுத்தது)</span>
                             <div>
                                 <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
                                 <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
-                                <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}', 'given', this)">
+                                <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source || ''}', ${l.principal}, '${l.personName}', 'given', this)">
                             </div>
                         </div>
                         <div>தொகை: <b style="color:#ef4444;">₹${l.principal}</b> | தேதி: ${dateStr}</div>
-                        <div style="font-size:12px; color:gray; margin-top:4px;">எடுக்கப்பட்ட கணக்கு: <b>${l.source || '-'}</b></div>
+                        <div class="km-source-tag">💼 எடுத்த கணக்கு: <b>${sourceDisplay}</b></div>
                     `;
                     givenContainer.appendChild(div);
                 });
@@ -1224,17 +1229,18 @@
                     let dateStr = new Date(l.timestamp).toLocaleDateString("ta-IN");
                     let div = document.createElement("div");
                     div.className = "person-card taken";
+                    let sourceDisplay = l.source ? l.source : "குறிப்பிடப்படவில்லை";
                     div.innerHTML = `
                         <div class="person-header">
                             <span>🤝 ${l.personName} (வாங்கியது)</span>
                             <div>
                                 <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
                                 <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
-                                <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source}', ${l.principal}, '${l.personName}', 'taken', this)">
+                                <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source || ''}', ${l.principal}, '${l.personName}', 'taken', this)">
                             </div>
                         </div>
                         <div>தொகை: <b style="color:#10b981;">₹${l.principal}</b> | தேதி: ${dateStr}</div>
-                        <div style="font-size:12px; color:gray; margin-top:4px;">சேர்க்கப்பட்ட கணக்கு: <b>${l.source || '-'}</b></div>
+                        <div class="km-source-tag">💼 சேர்க்கப்பட்ட கணக்கு: <b>${sourceDisplay}</b></div>
                     `;
                     takenContainer.appendChild(div);
                 });
@@ -1253,21 +1259,27 @@
                     try {
                         const q = query(collection(db, "users", auth.currentUser.uid, "transactions"), orderBy("timestamp", "desc"));
                         const snap = await getDocs(q);
+                        
+                        // Robust matching for transaction entry deletion
                         const matchingTx = snap.docs.find(docSnap => {
                             const data = docSnap.data();
-                            return data.category === "கைமாத்து" && data.amount === amount && data.title.includes(name);
+                            const isAmountMatch = Number(data.amount) === Number(amount);
+                            const isCategoryMatch = data.category === "கைமாத்து";
+                            const isNameMatch = data.title && data.title.toLowerCase().includes(name.toLowerCase());
+                            return isCategoryMatch && isAmountMatch && isNameMatch;
                         });
 
                         if (matchingTx) {
-                            deleteDoc(doc(db, "users", auth.currentUser.uid, "transactions", matchingTx.id));
+                            await deleteDoc(doc(db, "users", auth.currentUser.uid, "transactions", matchingTx.id));
                         }
-                        deleteDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId));
-                        alert(`👍 கைமாத்து கணக்கு சரிபார்க்கப்பட்டு நீக்கப்பட்டது!`);
+                        await deleteDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId));
+                        alert(`👍 கைமாத்து கணக்கு சரிபார்க்கப்பட்டு வெற்றிகரமாக நீக்கப்பட்டது!`);
                     } catch (error) {
                         console.error("Error returning KaiMaathu: ", error);
+                        alert("கணக்கை நீக்குவதில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.");
                     }
                 }
-            } else {
+            } else if (!isKaiMaathu) {
                 updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId), { isReturned: isChecked });
             }
         };
