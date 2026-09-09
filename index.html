@@ -348,6 +348,9 @@
             <label class="modal-label">தேதி:</label>
             <input type="date" id="edit-date" class="form-input">
 
+            <label class="modal-label">நேரம் (Time):</label>
+            <input type="time" id="edit-time" class="form-input">
+
             <label class="modal-label">எந்தக் கணக்கு (Source)?</label>
             <select id="edit-source" class="form-input">
                 <option value="சம்பளம்">💼 சம்பளம்</option>
@@ -1319,7 +1322,12 @@
             document.getElementById("edit-type").value = item.type || "expense";
             
             if (item.timestamp) {
-                document.getElementById("edit-date").value = new Date(item.timestamp).toISOString().split('T')[0];
+                let d = new Date(item.timestamp);
+                document.getElementById("edit-date").value = d.toISOString().split('T')[0];
+                
+                let hours = String(d.getHours()).padStart(2, '0');
+                let minutes = String(d.getMinutes()).padStart(2, '0');
+                document.getElementById("edit-time").value = `${hours}:${minutes}`;
             }
             document.getElementById("edit-modal").style.display = "flex";
         };
@@ -1336,15 +1344,22 @@
             const source = document.getElementById("edit-source").value;
             let category = document.getElementById("edit-category").value;
             const type = document.getElementById("edit-type").value;
+            
             const dateVal = document.getElementById("edit-date").value;
+            const timeVal = document.getElementById("edit-time").value;
 
             if (type === "income" && category !== "கைமாத்து") {
                 category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
             }
 
-            let now = new Date();
             let selectedDate = dateVal ? new Date(dateVal) : new Date();
-            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+            if (timeVal) {
+                const [hours, minutes] = timeVal.split(':');
+                selectedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            } else {
+                let now = new Date();
+                selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+            }
             let timestamp = selectedDate.getTime();
 
             try {
