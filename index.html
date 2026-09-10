@@ -153,7 +153,12 @@
                 <div class="user-title">வரவேற்கிறோம்,</div>
                 <div class="user-name" id="user-display-name">User</div>
             </div>
-            <button id="logout-btn" class="logout-btn">லாக்அவுட்</button>
+            <div style="display:flex; gap:5px; align-items:center;">
+                <button id="v2-backup-btn" class="logout-btn" style="background:#2563eb; padding:6px 8px;" title="Backup">💾</button>
+                <button id="v2-pdf-btn" class="logout-btn" style="background:#16a34a; padding:6px 8px;" title="PDF">📄</button>
+                <button id="v2-csv-btn" class="logout-btn" style="background:#d97706; padding:6px 8px;" title="CSV">📊</button>
+                <button id="logout-btn" class="logout-btn">லாக்அவுட்</button>
+            </div>
         </div>
 
         <div class="cards-grid">
@@ -389,6 +394,7 @@
         </div>
     </div>
 
+    <input type="file" id="v2-restore-file" accept="application/json,.json" style="display:none;">
     <div class="bottom-bar">
         <input type="text" id="voice-text-input" class="voice-input" placeholder="எ.கா: எம்கே செலவு 500">
         <button id="btn-send-tx" class="send-btn">அனுப்பு</button>
@@ -434,6 +440,8 @@
 
         // Custom Dynamic Trips Management
         let customTrips = JSON.parse(localStorage.getItem("customTrips")) || [];
+        let currentUid = null;
+        let tripsListener = null;
 
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById("m-date").value = todayStr;
@@ -455,6 +463,9 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                currentUid = user.uid;
+                customTrips = loadTripsLocal(user.uid);
+                updateCategoryDropdowns();
                 document.getElementById("auth-container").style.display = "none";
                 document.getElementById("main-app").style.display = "block";
                 document.getElementById("user-display-name").innerText = user.displayName || "User";
@@ -485,6 +496,71 @@
             });
         }
 
+        // ------------------ V2 DATA SAFETY / BACKUP ------------------ //
+        function tripsStorageKey(uid) { return "customTrips_" + uid; }
+        function loadTripsLocal(uid) {
+            try {
+                const scoped = localStorage.getItem(tripsStorageKey(uid));
+                if (scoped) return JSON.parse(scoped);
+                const legacy = localStorage.getItem("customTrips");
+                return legacy ? JSON.parse(legacy) : [];
+            } catch(e) { return []; }
+        }
+        function saveTripsLocalAndCloud() {
+            if (!currentUid) return;
+            localStorage.setItem(tripsStorageKey(currentUid), JSON.stringify(customTrips));
+            // Cloud copy is intentionally best-effort; existing transactions are never touched.
+            const ref = doc(db, "users", currentUid, "settings", "trips");
+            updateDoc(ref, { names: customTrips, updatedAt: Date.now() }).catch(async () => {
+                try { await addDoc(collection(db, "users", currentUid, "settings"), { key:"trips", names: customTrips, updatedAt: Date.now() }); } catch(e) { console.warn("Trip cloud save:", e); }
+            });
+        }
+        function safeFilename(name) { return String(name).replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0,60) || "finance_backup"; }
+        function downloadText(filename, text, mime) {
+            const blob = new Blob([text], {type:mime}); const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(()=>URL.revokeObjectURL(url),1000);
+        }
+        function makeBackup() {
+            const backup = { version:2, app:"Finance & Loan Master", exportedAt:Date.now(), userUid:currentUid || null,
+                transactions: allTransactions.map(x=>({...x})), vatti: allVattiLoans.map(x=>({...x})), customTrips:[...customTrips] };
+            downloadText("finance-master-backup-" + new Date().toISOString().slice(0,10) + ".json", JSON.stringify(backup,null,2), "application/json");
+        }
+        function exportCSV() {
+            const rows = [["ID","Date","Title","Amount","Type","Source","Category"]];
+            allTransactions.forEach(t=>rows.push([t.id||"", new Date(t.timestamp||0).toLocaleString("ta-IN"), t.title||"", t.amount||0, t.type||"", t.source||"", t.category||""]));
+            const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
+            downloadText("finance-master-transactions-"+new Date().toISOString().slice(0,10)+".csv", "\uFEFF"+csv, "text/csv;charset=utf-8");
+        }
+        function printPDF() {
+            const oldTitle=document.title; document.title="Finance & Loan Master - Statement";
+            window.print(); setTimeout(()=>document.title=oldTitle,500);
+        }
+        function restoreBackupFile(file) {
+            const reader=new FileReader();
+            reader.onload=async()=>{
+                try {
+                    const data=JSON.parse(reader.result);
+                    if (!data || !Array.isArray(data.transactions) || !Array.isArray(data.vatti)) throw new Error("Invalid backup");
+                    if (!auth.currentUser) throw new Error("Login required");
+                    const uid=auth.currentUser.uid;
+                    let addedTx=0, addedV=0;
+                    const existingTx=new Set(allTransactions.map(x=>x.id).filter(Boolean));
+                    const existingV=new Set(allVattiLoans.map(x=>x.id).filter(Boolean));
+                    for (const t of data.transactions) { if (t.id && existingTx.has(t.id)) continue; const c={...t}; delete c.id; await addDoc(collection(db,"users",uid,"transactions"),c); addedTx++; }
+                    for (const v of data.vatti) { if (v.id && existingV.has(v.id)) continue; const c={...v}; delete c.id; await addDoc(collection(db,"users",uid,"vatti"),c); addedV++; }
+                    if (Array.isArray(data.customTrips)) { customTrips=[...new Set([...customTrips,...data.customTrips.filter(x=>typeof x==='string')])]; saveTripsLocalAndCloud(); updateCategoryDropdowns(); renderApp(); }
+                    alert(`Backup restore முடிந்தது!\\nபுதிய transactions: ${addedTx}\\nபுதிய loan records: ${addedV}\\n\\nஏற்கனவே உள்ள data மாற்றப்படவில்லை.`);
+                } catch(e) { console.error(e); alert("Backup restore செய்ய முடியவில்லை. சரியான JSON backup file தேர்வு செய்யவும்."); }
+            }; reader.readAsText(file);
+        }
+        document.getElementById("v2-backup-btn").onclick=makeBackup;
+        document.getElementById("v2-pdf-btn").onclick=printPDF;
+        document.getElementById("v2-csv-btn").onclick=exportCSV;
+        document.getElementById("v2-restore-file").onchange=e=>{ if(e.target.files[0]) restoreBackupFile(e.target.files[0]); e.target.value=""; };
+        // Long-press / right-click on backup icon opens restore picker without changing the existing layout.
+        document.getElementById("v2-backup-btn").addEventListener("contextmenu", e=>{ e.preventDefault(); document.getElementById("v2-restore-file").click(); });
+
         // ------------------ Dynamic Trip Categories Logic ------------------ //
         window.addNewTripCategory = function() {
             let tripName = prompt("புதிய Trip / நிகழ்வின் பெயரை உள்ளிடவும் (எ.கா: Kodaikanal Trip, கல்யாணம்):");
@@ -492,7 +568,7 @@
                 tripName = tripName.trim();
                 if (!customTrips.includes(tripName)) {
                     customTrips.push(tripName);
-                    localStorage.setItem("customTrips", JSON.stringify(customTrips));
+                    saveTripsLocalAndCloud();
                     updateCategoryDropdowns();
                     renderApp();
                     alert(`'${tripName}' வெற்றிகரமாகச் சேர்க்கப்பட்டது!`);
@@ -505,7 +581,7 @@
         window.closeTripCard = function(tripName) {
             if (confirm(`'${tripName}' கார்டை மட்டும் முகப்புத் திரையில் இருந்து நீக்க வேண்டுமா?\n\n(குறிப்பு: இதிலுள்ள அனைத்து செலவுகளும் 'Trip' வகையிலேயே 'அனைத்துப் பதிவுகள்' பட்டியலில் பாதுகாப்பாக இருக்கும்.)`)) {
                 customTrips = customTrips.filter(t => t !== tripName);
-                localStorage.setItem("customTrips", JSON.stringify(customTrips));
+                saveTripsLocalAndCloud();
                 updateCategoryDropdowns();
                 renderApp();
             }
@@ -784,7 +860,9 @@
 
                 await addDoc(collection(db, "users", user.uid, "transactions"), {
                     ...data,
-                    timestamp: data.timestamp || Date.now()
+                    timestamp: data.timestamp || Date.now(),
+                    updatedAt: Date.now(),
+                    schemaVersion: 2
                 });
             } catch (error) {
                 console.error("Error saving transaction:", error);
@@ -1107,8 +1185,8 @@
             let timestamp = selectedDate.getTime();
 
             addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), {
-                personName: name, principal: principal, rate: rate, timestamp: timestamp, isReturned: false, isKaiMaathu: false
-            });
+                personName: name, principal: principal, rate: rate, timestamp: timestamp, isReturned: false, isKaiMaathu: false, createdAt: Date.now(), updatedAt: Date.now()
+            }).catch(e=>{ console.error(e); alert("வட்டி பதிவு சேமிக்கப்படவில்லை. மீண்டும் முயற்சிக்கவும்."); });
 
             document.getElementById("v-name").value = "";
             document.getElementById("v-principal").value = "";
