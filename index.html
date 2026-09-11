@@ -6,7 +6,10 @@
     <title>Finance & Loan Master App</title>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
-        body { background-color: #f1f5f9; overflow-x: hidden; margin: 0; padding: 10px; padding-bottom: 70px; }
+        html { width: 100%; min-height: 100%; overflow-x: hidden; }
+        body { background-color: #f1f5f9; overflow-x: hidden; margin: 0; padding: 10px; padding-bottom: calc(82px + env(safe-area-inset-bottom)); min-height: 100dvh; }
+        button, input, select, textarea { touch-action: manipulation; }
+        input, select, button { -webkit-tap-highlight-color: transparent; }
         .header { background: #0f172a; color: white; padding: 12px 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .user-title { font-size: 13px; opacity: 0.8; }
         .user-name { font-size: 18px; font-weight: bold; }
@@ -60,11 +63,40 @@
         
         .person-header { font-size: 16px; font-weight: bold; color: #1e3a8a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 
+        /* Mobile-safe modal: the popup itself scrolls, while the page stays fixed underneath. */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100dvh;
+            min-height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+            z-index: 3000;
+            overflow: hidden;
+            overscroll-behavior: contain;
         }
-        .modal-content, .modal-box { background: white; width: 90%; max-width: 380px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: left; }
+        .modal-content, .modal-box, .modal-card {
+            background: white;
+            width: min(92vw, 380px);
+            max-width: 380px;
+            max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            text-align: left;
+            position: relative;
+        }
+        .modal-content *, .modal-box *, .modal-card * { max-width: 100%; }
+        .modal-content input, .modal-content select, .modal-card input, .modal-card select { min-height: 44px; font-size: 16px; }
+        .modal-btn-group { position: sticky; bottom: 0; background: white; padding-top: 10px; margin-top: 15px; }
         .modal-title { font-size: 18px; font-weight: bold; color: #0f172a; margin-bottom: 15px; text-align: center; }
         .modal-label { font-size: 13px; font-weight: bold; color: #334155; margin-top: 8px; display: block; }
         .modal-btn-group { display: flex; gap: 10px; margin-top: 15px; }
@@ -73,15 +105,20 @@
         .delete-confirm-btn { flex: 1; background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .text-center { text-align: center; }
         
-        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 10px; display: flex; gap: 6px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; }
-        .voice-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
-        .send-btn { background: #2563eb; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .mic-btn { background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        .modal-card {
-            background: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 380px; text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2); position: relative;
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: white;
+            padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+            display: flex; gap: 6px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
         }
+        .voice-input { flex: 1 1 auto; min-width: 0; width: 0; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
+        .send-btn, .mic-btn { flex: 0 0 auto; min-width: 72px; padding: 10px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .send-btn { background: #2563eb; color: white; border: none; }
+        .mic-btn { background: #10b981; color: white; border: none; }
+
+        .modal-card { text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
         .section-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 8px; text-align: left; }
 
         .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -137,6 +174,28 @@
         
         .km-source-tag {
             background: #e2e8f0; color: #1e293b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 4px;
+        }
+        @media (max-width: 430px) {
+            body { padding: 8px; padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
+            .modal-overlay { align-items: center; padding: 10px 8px; }
+            .modal-content, .modal-box, .modal-card {
+                width: calc(100vw - 16px);
+                max-width: none;
+                max-height: calc(100dvh - 20px);
+                padding: 16px;
+                border-radius: 16px;
+            }
+            .modal-title, #modal-title { font-size: 18px; margin-bottom: 12px; }
+            .modal-label { font-size: 13px; margin-top: 7px; }
+            .form-input { margin-bottom: 6px; }
+            .modal-btn-group { gap: 8px; }
+            .save-btn, .close-btn, .delete-confirm-btn { min-height: 46px; font-size: 15px; }
+            .bottom-bar { gap: 5px; padding-left: 8px; padding-right: 8px; }
+            .send-btn, .mic-btn { min-width: 68px; padding-left: 9px; padding-right: 9px; }
+        }
+        @media (max-height: 700px) {
+            .modal-overlay { align-items: flex-start; padding-top: 8px; padding-bottom: 8px; }
+            .modal-content, .modal-box, .modal-card { max-height: calc(100dvh - 16px); }
         }
     </style>
 </head>
