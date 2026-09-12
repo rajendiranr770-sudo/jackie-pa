@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Finance & Loan Master App</title>
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="./manifest.json">
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
         html { width: 100%; min-height: 100%; overflow-x: hidden; }
@@ -502,7 +507,22 @@
         let currentUid = null;
         let tripsListener = null;
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        // India/local date helpers: never use UTC for calendar dates.
+        function getLocalDateString(date = new Date()) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function parseLocalDate(dateString) {
+            if (!dateString) return new Date();
+            const parts = String(dateString).split('-').map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) return new Date();
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+
+        const todayStr = getLocalDateString();
         document.getElementById("m-date").value = todayStr;
         document.getElementById("v-date").value = todayStr;
         document.getElementById("km-date").value = todayStr;
@@ -583,13 +603,13 @@
         function makeBackup() {
             const backup = { version:2, app:"Finance & Loan Master", exportedAt:Date.now(), userUid:currentUid || null,
                 transactions: allTransactions.map(x=>({...x})), vatti: allVattiLoans.map(x=>({...x})), customTrips:[...customTrips] };
-            downloadText("finance-master-backup-" + new Date().toISOString().slice(0,10) + ".json", JSON.stringify(backup,null,2), "application/json");
+            downloadText("finance-master-backup-" + getLocalDateString() + ".json", JSON.stringify(backup,null,2), "application/json");
         }
         function exportCSV() {
             const rows = [["ID","Date","Title","Amount","Type","Source","Category"]];
             allTransactions.forEach(t=>rows.push([t.id||"", new Date(t.timestamp||0).toLocaleString("ta-IN"), t.title||"", t.amount||0, t.type||"", t.source||"", t.category||""]));
             const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
-            downloadText("finance-master-transactions-"+new Date().toISOString().slice(0,10)+".csv", "\uFEFF"+csv, "text/csv;charset=utf-8");
+            downloadText("finance-master-transactions-"+getLocalDateString()+".csv", "\uFEFF"+csv, "text/csv;charset=utf-8");
         }
         function printPDF() {
             const oldTitle=document.title; document.title="Finance & Loan Master - Statement";
@@ -833,7 +853,7 @@
             if (!title || !amount) { alert("விவரங்களை நிரப்பவும்!"); return; }
             
             let now = new Date();
-            let selectedDate = dateVal ? new Date(dateVal) : new Date();
+            let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
             selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
             let timestamp = selectedDate.getTime();
 
@@ -859,7 +879,7 @@
             if (!name || !amt) { alert("விவரங்களை நிரப்பவும்!"); return; }
 
             let now = new Date();
-            let selectedDate = dateVal ? new Date(dateVal) : new Date();
+            let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
             selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
             let timestamp = selectedDate.getTime();
 
@@ -1239,7 +1259,7 @@
             if (!name || !principal) { alert("விவரங்களை நிரப்பவும்!"); return; }
 
             let now = new Date();
-            let selectedDate = dateVal ? new Date(dateVal) : new Date();
+            let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
             selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
             let timestamp = selectedDate.getTime();
 
@@ -1460,7 +1480,7 @@
             
             if (item.timestamp) {
                 let d = new Date(item.timestamp);
-                document.getElementById("edit-date").value = d.toISOString().split('T')[0];
+                document.getElementById("edit-date").value = getLocalDateString(d);
                 
                 let hours = String(d.getHours()).padStart(2, '0');
                 let minutes = String(d.getMinutes()).padStart(2, '0');
@@ -1489,7 +1509,7 @@
                 category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
             }
 
-            let selectedDate = dateVal ? new Date(dateVal) : new Date();
+            let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
             if (timeVal) {
                 const [hours, minutes] = timeVal.split(':');
                 selectedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
@@ -1593,6 +1613,15 @@
 
         window.openModalByScenario = openModalByScenario;
         window.setCategory = setCategory;
+    </script>
+    <script>
+        // PWA: register the repository's sw.js. It must be hosted over HTTPS.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .catch(err => console.warn('PWA Service Worker:', err));
+            });
+        }
     </script>
 </body>
 </html>
