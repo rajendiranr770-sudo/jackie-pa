@@ -4,11 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Finance & Loan Master App</title>
-    <meta name="theme-color" content="#0f172a">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="manifest" href="./manifest.json">
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
         html { width: 100%; min-height: 100%; overflow-x: hidden; }
@@ -206,7 +201,7 @@
 </head>
 <body>
 
-    <div id="auth-container" style="text-align: center; margin-top: 100px;">
+    <div id="auth-container" style="display:none;" style="text-align: center; margin-top: 100px;">
         <h2>நிதி நிர்வாகம்</h2><br>
         <button id="login-btn" style="background: #2563eb; color: white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">Google லாக்-இன்</button>
     </div>
@@ -411,8 +406,13 @@
             <label class="modal-label">விவரம் / பெயர்:</label>
             <input type="text" id="edit-title" class="form-input">
 
-            <label class="modal-label">தொகை (₹):</label>
+            <label class="modal-label" id="edit-amount-label">தொகை (₹):</label>
             <input type="number" id="edit-amount" class="form-input">
+
+            <div id="edit-rate-group" style="display:none;">
+                <label class="modal-label">வட்டி %:</label>
+                <input type="number" step="0.01" id="edit-rate" class="form-input">
+            </div>
 
             <label class="modal-label">தேதி:</label>
             <input type="date" id="edit-date" class="form-input">
@@ -420,19 +420,19 @@
             <label class="modal-label">நேரம் (Time):</label>
             <input type="time" id="edit-time" class="form-input">
 
-            <label class="modal-label">எந்தக் கணக்கு (Source)?</label>
+            <label class="modal-label" for="edit-source">எந்தக் கணக்கு (Source)?</label>
             <select id="edit-source" class="form-input">
                 <option value="சம்பளம்">💼 சம்பளம்</option>
                 <option value="வீடு">🏠 வீடு</option>
                 <option value="இதர வரவு">💵 இதர வரவு</option>
             </select>
 
-            <label class="modal-label">செலவு வகை (Category):</label>
+            <label class="modal-label" for="edit-category">செலவு வகை (Category):</label>
             <select id="edit-category" class="form-input">
                 <!-- JavaScript மூலம் நிரப்பப்படும் -->
             </select>
 
-            <label class="modal-label">வகை:</label>
+            <label class="modal-label" for="edit-type">வகை:</label>
             <select id="edit-type" class="form-input">
                 <option value="expense">செலவு (-)</option>
                 <option value="income">வரவு (+)</option>
@@ -507,7 +507,6 @@
         let currentUid = null;
         let tripsListener = null;
 
-        // India/local date helpers: never use UTC for calendar dates.
         function getLocalDateString(date = new Date()) {
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -539,26 +538,43 @@
         document.getElementById("btn-mic").onclick = startVoice;
 
         let isInitialAuthDone = false;
+        let authStateResolved = false;
+
+        // Fast app-open behavior: after a successful login, remember the last local session.
+        // Firebase remains the authority; if Firebase says signed-out, we immediately show Login.
+        const savedLoginUid = localStorage.getItem("finance_logged_in_uid");
+        if (savedLoginUid) {
+            document.getElementById("auth-container").style.display = "none";
+            document.getElementById("main-app").style.display = "block";
+        }
 
         onAuthStateChanged(auth, (user) => {
+            authStateResolved = true;
             if (user) {
                 currentUid = user.uid;
+                localStorage.setItem("finance_logged_in_uid", user.uid);
                 customTrips = loadTripsLocal(user.uid);
                 updateCategoryDropdowns();
                 document.getElementById("auth-container").style.display = "none";
                 document.getElementById("main-app").style.display = "block";
                 document.getElementById("user-display-name").innerText = user.displayName || "User";
-                
                 if (!isInitialAuthDone) {
                     isInitialAuthDone = true;
-                    setTimeout(() => { listenToData(user.uid); }, 50);
+                    listenToData(user.uid);
                 }
             } else {
+                currentUid = null;
+                localStorage.removeItem("finance_logged_in_uid");
                 isInitialAuthDone = false;
                 document.getElementById("auth-container").style.display = "block";
                 document.getElementById("main-app").style.display = "none";
             }
         });
+
+        document.getElementById("logout-btn").onclick = async () => {
+            localStorage.removeItem("finance_logged_in_uid");
+            try { await signOut(auth); } catch (e) { console.error("Logout Error:", e); }
+        };
 
         // ------------------ Helper Function for Time Formatting ------------------ //
         function formatDateTime(timestamp) {
@@ -901,7 +917,7 @@
             document.getElementById("source-modal").style.display = "flex";
         };
 
-        window.confirmSource = function(sourceName) {
+        window.confirmSource = async function(sourceName) {
             if (pendingAction && pendingAction.data) {
                 if (pendingAction.type === "TX") {
                     pendingAction.data.source = sourceName;
@@ -915,17 +931,42 @@
                 else if (pendingAction.type === "KM") {
                     let kmData = pendingAction.data;
                     kmData.source = sourceName;
-                    
-                    addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), kmData);
+                    let vRef = await addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), {
+                        ...kmData, updatedAt: Date.now(), schemaVersion: 2
+                    });
 
                     let isGiven = kmData.kmType === "given";
-                    saveTransaction({
+                    const txId = await saveTransaction({
                         title: isGiven ? ("கைமாத்து கொடுத்தது: " + kmData.personName) : ("கைமாத்து வாங்கியது: " + kmData.personName),
                         amount: kmData.principal,
                         type: isGiven ? "expense" : "income",
                         category: "கைமாத்து",
                         source: sourceName,
-                        timestamp: kmData.timestamp
+                        timestamp: kmData.timestamp,
+                        linkedKaiMaathuId: vRef.id,
+                        kaiMaathuEntry: true
+                    });
+                    if (txId) await updateDoc(vRef, { originalTxId: txId, updatedAt: Date.now() });
+                }
+                else if (pendingAction.type === "KM_RETURN") {
+                    const km = pendingAction.data;
+                    const isGiven = km.kmType === "given";
+                    const returnTxId = await saveTransaction({
+                        title: isGiven ? (km.personName + " கைமாத்து பணத்தை திரும்பக் கொடுத்தார்") : (km.personName + " கைமாத்தாக வாங்கிய பணத்தை திரும்பக் கொடுத்துவிட்டேன்"),
+                        amount: Number(km.principal),
+                        type: isGiven ? "income" : "expense",
+                        category: "கைமாத்து",
+                        source: sourceName,
+                        timestamp: Date.now(),
+                        linkedKaiMaathuId: km.id,
+                        kaiMaathuReturn: true
+                    });
+                    await updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", km.id), {
+                        isReturned: true,
+                        returnTxId: returnTxId || null,
+                        returnSource: sourceName,
+                        returnTimestamp: Date.now(),
+                        updatedAt: Date.now()
                     });
                 }
                 closeModal();
@@ -937,12 +978,13 @@
                 let user = auth.currentUser;
                 if (!user) { alert("உள்நுழையப்படவில்லை!"); return; }
 
-                await addDoc(collection(db, "users", user.uid, "transactions"), {
+                const ref = await addDoc(collection(db, "users", user.uid, "transactions"), {
                     ...data,
                     timestamp: data.timestamp || Date.now(),
                     updatedAt: Date.now(),
                     schemaVersion: 2
                 });
+                return ref.id;
             } catch (error) {
                 console.error("Error saving transaction:", error);
             }
@@ -1364,6 +1406,25 @@
             let givenList = kmList.filter(v => (v.kmType || "given") === "given");
             let takenList = kmList.filter(v => v.kmType === "taken");
 
+            // Return-history fallback: older KaiMaathu records may have isReturned=true
+            // without returnSource/returnTimestamp saved on the loan document. In that
+            // case, recover the return details from the linked transaction history.
+            function getKaiMaathuReturnInfo(loan) {
+                let tx = null;
+                if (loan.returnTxId) {
+                    tx = allTransactions.find(t => t.id === loan.returnTxId);
+                }
+                if (!tx) {
+                    tx = allTransactions.find(t => t.kaiMaathuReturn && t.linkedKaiMaathuId === loan.id);
+                }
+                return {
+                    tx,
+                    amount: tx && Number(tx.amount) ? Number(tx.amount) : Number(loan.principal || 0),
+                    source: loan.returnSource || (tx && tx.source) || loan.source || "குறிப்பிடப்படவில்லை",
+                    timestamp: loan.returnTimestamp || (tx && tx.timestamp) || null
+                };
+            }
+
             if (givenList.length === 0) {
                 givenContainer.innerHTML = `<div style="padding:10px; color:gray; font-size:13px;">கொடுத்த கைமாத்து எதுவுமில்லை.</div>`;
             } else {
@@ -1382,7 +1443,13 @@
                             </div>
                         </div>
                         <div>தொகை: <b style="color:#ef4444;">₹${l.principal}</b> | 🕒 நேரம்: ${dateTimeStr}</div>
-                        <div class="km-source-tag">💼 எடுத்த கணக்கு: <b>${sourceDisplay}</b></div>
+                        <div class="km-source-tag">💼 கொடுத்த கணக்கு: <b>${sourceDisplay}</b></div>
+                        ${l.isReturned ? (() => { const r=getKaiMaathuReturnInfo(l); return `<div style="margin-top:7px; padding:9px; border-radius:8px; background:#dcfce7; color:#166534; font-size:12px; font-weight:bold;">
+                            ✅ கைமாத்து முழுமையாக திரும்பப் பெற்றுவிட்டீர்கள்<br>
+                            👤 ${l.personName} ₹${r.amount.toFixed(2)} திரும்பக் கொடுத்தார்<br>
+                            💰 வரவு: ₹${r.amount.toFixed(2)} | 🕒 ${r.timestamp ? formatDateTime(r.timestamp) : '-'}<br>
+                            💼 வரவு வைக்கப்பட்ட கணக்கு: ${r.source}
+                        </div>`; })() : `<div style="margin-top:7px; color:#b91c1c; font-size:12px; font-weight:bold;">🔴 இன்னும் ₹${Number(l.principal || 0).toFixed(2)} வாங்க வேண்டியுள்ளது</div>`}
                     `;
                     givenContainer.appendChild(div);
                 });
@@ -1406,7 +1473,13 @@
                             </div>
                         </div>
                         <div>தொகை: <b style="color:#10b981;">₹${l.principal}</b> | 🕒 நேரம்: ${dateTimeStr}</div>
-                        <div class="km-source-tag">💼 சேர்க்கப்பட்ட கணக்கு: <b>${sourceDisplay}</b></div>
+                        <div class="km-source-tag">💼 வாங்கிய கணக்கு: <b>${sourceDisplay}</b></div>
+                        ${l.isReturned ? (() => { const r=getKaiMaathuReturnInfo(l); return `<div style="margin-top:7px; padding:9px; border-radius:8px; background:#fee2e2; color:#991b1b; font-size:12px; font-weight:bold;">
+                            ✅ கைமாத்தாக வாங்கிய பணத்தை முழுமையாக திரும்பக் கொடுத்துவிட்டீர்கள்<br>
+                            👤 ${l.personName}-க்கு ₹${r.amount.toFixed(2)} திரும்பக் கொடுத்தீர்கள்<br>
+                            💸 செலவு: ₹${r.amount.toFixed(2)} | 🕒 ${r.timestamp ? formatDateTime(r.timestamp) : '-'}<br>
+                            💼 கொடுத்த கணக்கு: ${r.source}
+                        </div>`; })() : `<div style="margin-top:7px; color:#15803d; font-size:12px; font-weight:bold;">🟢 இன்னும் ₹${Number(l.principal || 0).toFixed(2)} கொடுக்க வேண்டும்</div>`}
                     `;
                     takenContainer.appendChild(div);
                 });
@@ -1414,38 +1487,47 @@
         }
 
         window.toggleLoanReturn = async function(loanId, isChecked, isKaiMaathu, source, amount, name, kmType, element) {
-            if (isKaiMaathu && isChecked) {
+            if (!isKaiMaathu) {
+                try {
+                    await updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId), { isReturned: isChecked, updatedAt: Date.now() });
+                } catch (e) { console.error(e); }
+                return;
+            }
+
+            const loan = allVattiLoans.find(v => v.id === loanId);
+            if (!loan) return;
+
+            if (isChecked) {
                 element.checked = false;
-                let msg = (kmType === "given") 
-                    ? `🤝 ${name}-டமிருந்து ₹${amount} பணம் திரும்ப வந்துவிட்டதா?` 
-                    : `🤝 ${name}-க்கு ₹${amount} பணத்தை திரும்ப கொடுத்துவிட்டீர்களா?`;
+                const isGiven = (loan.kmType || "given") === "given";
+                const msg = isGiven
+                    ? `🤝 ${loan.personName}-டமிருந்து ₹${loan.principal} கைமாத்து பணம் திரும்ப வந்துவிட்டதா?`
+                    : `🤝 ${loan.personName}-க்கு ₹${loan.principal} கைமாத்தாக வாங்கிய பணத்தை திரும்பக் கொடுத்துவிட்டீர்களா?`;
+                if (!confirm(msg)) return;
 
-                const confirmReturn = confirm(msg);
-                if (confirmReturn) {
-                    try {
-                        const q = query(collection(db, "users", auth.currentUser.uid, "transactions"), orderBy("timestamp", "desc"));
-                        const snap = await getDocs(q);
-                        
-                        const matchingTx = snap.docs.find(docSnap => {
-                            const data = docSnap.data();
-                            const isAmountMatch = Number(data.amount) === Number(amount);
-                            const isCategoryMatch = data.category === "கைமாத்து";
-                            const isNameMatch = data.title && data.title.toLowerCase().includes(name.toLowerCase());
-                            return isCategoryMatch && isAmountMatch && isNameMatch;
-                        });
-
-                        if (matchingTx) {
-                            await deleteDoc(doc(db, "users", auth.currentUser.uid, "transactions", matchingTx.id));
-                        }
-                        await deleteDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId));
-                        alert(`👍 கைமாத்து கணக்கு சரிபார்க்கப்பட்டு வெற்றிகரமாக நீக்கப்பட்டது!`);
-                    } catch (error) {
-                        console.error("Error returning KaiMaathu: ", error);
-                        alert("கணக்கை நீக்குவதில் பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.");
+                pendingAction = { type: "KM_RETURN", data: { ...loan } };
+                document.getElementById("modal-title").innerText = isGiven
+                    ? `${loan.personName} பணம் திரும்ப கொடுத்தார் — எங்கு வரவு வைக்கப்பட்டது?`
+                    : `${loan.personName}-க்கு பணம் திரும்பக் கொடுத்தீர்கள் — எந்தக் கணக்கிலிருந்து?`;
+                document.getElementById("source-section-label").innerText = isGiven
+                    ? "எந்தக் கணக்கில் வரவு வைக்கப்பட்டது?"
+                    : "எந்தக் கணக்கிலிருந்து கொடுக்கப்பட்டது?";
+                document.getElementById("category-section").style.display = "none";
+                document.getElementById("source-section").style.display = "block";
+                document.getElementById("source-modal").style.display = "flex";
+            } else {
+                try {
+                    const returnTxId = loan.returnTxId;
+                    if (returnTxId) {
+                        await deleteDoc(doc(db, "users", auth.currentUser.uid, "transactions", returnTxId));
                     }
+                    await updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId), {
+                        isReturned: false, returnTxId: null, returnSource: null, returnTimestamp: null, updatedAt: Date.now()
+                    });
+                } catch (e) {
+                    console.error("KaiMaathu undo error:", e);
+                    alert("திரும்பப் பதிவு மாற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
                 }
-            } else if (!isKaiMaathu) {
-                updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", loanId), { isReturned: isChecked });
             }
         };
 
@@ -1468,23 +1550,59 @@
         };
 
         window.openEditModal = function(item, collectionType = 'transactions') {
+            const isVatti = collectionType === 'vatti' && !item.isKaiMaathu;
+            const isKaiMaathu = collectionType === 'vatti' && item.isKaiMaathu;
+
             document.getElementById("edit-id").value = item.id;
             document.getElementById("edit-collection-type").value = collectionType;
             document.getElementById("edit-title").value = item.title || item.personName || "";
-            document.getElementById("edit-amount").value = item.amount || item.principal || 0;
+            document.getElementById("edit-amount").value = item.amount ?? item.principal ?? 0;
+            document.getElementById("edit-rate").value = item.rate ?? 0;
             document.getElementById("edit-source").value = item.source || "சம்பளம்";
-            
-            updateCategoryDropdowns();
-            document.getElementById("edit-category").value = item.category || "பொது";
-            document.getElementById("edit-type").value = item.type || "expense";
-            
+
+            const sourceLabel = document.querySelector('label[for="edit-source"]');
+            const sourceSelect = document.getElementById("edit-source");
+            const categoryLabel = document.querySelector('label[for="edit-category"]');
+            const typeLabel = document.querySelector('label[for="edit-type"]');
+            const rateGroup = document.getElementById("edit-rate-group");
+            const amountLabel = document.getElementById("edit-amount-label");
+
+            // Hide all optional fields first.
+            sourceSelect.style.display = "none";
+            document.getElementById("edit-category").style.display = "none";
+            document.getElementById("edit-type").style.display = "none";
+            if (sourceLabel) sourceLabel.style.display = "none";
+            if (categoryLabel) categoryLabel.style.display = "none";
+            if (typeLabel) typeLabel.style.display = "none";
+            rateGroup.style.display = "none";
+
+            if (isVatti) {
+                document.getElementById("edit-title").previousElementSibling.innerText = "விவரம் / பெயர்:";
+                amountLabel.innerText = "அசல் தொகை (₹):";
+                rateGroup.style.display = "block";
+            } else if (isKaiMaathu) {
+                document.getElementById("edit-title").previousElementSibling.innerText = "பேர்:";
+                amountLabel.innerText = "தொகை (₹):";
+                sourceSelect.style.display = "block";
+                if (sourceLabel) { sourceLabel.style.display = "block"; sourceLabel.innerText = item.kmType === "taken" ? "எந்தக் கணக்கில் பணம் சேர்க்கப்பட்டது?" : "எந்தக் கணக்கிலிருந்து கொடுத்தோம்?"; }
+            } else {
+                document.getElementById("edit-title").previousElementSibling.innerText = "விவரம் / பெயர்:";
+                amountLabel.innerText = "தொகை (₹):";
+                sourceSelect.style.display = "block";
+                document.getElementById("edit-category").style.display = "block";
+                document.getElementById("edit-type").style.display = "block";
+                if (sourceLabel) sourceLabel.style.display = "block";
+                if (categoryLabel) categoryLabel.style.display = "block";
+                if (typeLabel) typeLabel.style.display = "block";
+                updateCategoryDropdowns();
+                document.getElementById("edit-category").value = item.category || "பொது";
+                document.getElementById("edit-type").value = item.type || "expense";
+            }
+
             if (item.timestamp) {
-                let d = new Date(item.timestamp);
+                const d = new Date(item.timestamp);
                 document.getElementById("edit-date").value = getLocalDateString(d);
-                
-                let hours = String(d.getHours()).padStart(2, '0');
-                let minutes = String(d.getMinutes()).padStart(2, '0');
-                document.getElementById("edit-time").value = `${hours}:${minutes}`;
+                document.getElementById("edit-time").value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
             }
             document.getElementById("edit-modal").style.display = "flex";
         };
@@ -1496,51 +1614,60 @@
         window.saveEditData = async function() {
             const id = document.getElementById("edit-id").value;
             const collectionType = document.getElementById("edit-collection-type").value;
-            const title = document.getElementById("edit-title").value;
+            const title = document.getElementById("edit-title").value.trim();
             const amount = parseFloat(document.getElementById("edit-amount").value);
-            const source = document.getElementById("edit-source").value;
-            let category = document.getElementById("edit-category").value;
-            const type = document.getElementById("edit-type").value;
-            
             const dateVal = document.getElementById("edit-date").value;
             const timeVal = document.getElementById("edit-time").value;
+            const original = allVattiLoans.find(v => v.id === id);
+            const isVatti = collectionType === 'vatti' && original && !original.isKaiMaathu;
+            const isKaiMaathu = collectionType === 'vatti' && original && original.isKaiMaathu;
 
-            if (type === "income" && category !== "கைமாத்து") {
-                category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
-            }
+            if (!title || !amount) { alert("பெர் மற்றும் தொகையை சரியாக உள்ளிடவும்!"); return; }
 
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
             if (timeVal) {
-                const [hours, minutes] = timeVal.split(':');
-                selectedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-            } else {
-                let now = new Date();
-                selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+                const [hours, minutes] = timeVal.split(':').map(Number);
+                selectedDate.setHours(hours, minutes, 0, 0);
             }
-            let timestamp = selectedDate.getTime();
+            const timestamp = selectedDate.getTime();
 
             try {
                 const userRef = doc(db, "users", auth.currentUser.uid, collectionType, id);
-                if (collectionType === 'vatti') {
-                    await updateDoc(userRef, { 
-                        personName: title, 
-                        principal: amount, 
-                        source: source, 
-                        timestamp: timestamp 
-                    });
+                if (isVatti) {
+                    const rate = parseFloat(document.getElementById("edit-rate").value) || 0;
+                    await updateDoc(userRef, { personName: title, principal: amount, rate, timestamp, updatedAt: Date.now() });
+                } else if (isKaiMaathu) {
+                    const source = document.getElementById("edit-source").value;
+                    await updateDoc(userRef, { personName: title, principal: amount, source, timestamp, updatedAt: Date.now() });
+
+                    // Keep the original linked transaction synchronized when it exists.
+                    if (original && original.originalTxId) {
+                        const isGiven = (original.kmType || "given") === "given";
+                        await updateDoc(doc(db, "users", auth.currentUser.uid, "transactions", original.originalTxId), {
+                            title: isGiven ? ("கைமாத்து கொடுத்தது: " + title) : ("கைமாத்து வாங்கியது: " + title),
+                            amount, source, timestamp, updatedAt: Date.now()
+                        });
+                    }
+                    if (original && original.returnTxId) {
+                        const isGiven = (original.kmType || "given") === "given";
+                        await updateDoc(doc(db, "users", auth.currentUser.uid, "transactions", original.returnTxId), {
+                            title: isGiven ? (title + " கைமாத்து பணத்தை திரும்பக் கொடுத்தார்") : (title + " கைமாத்தாக வாங்கிய பணத்தை திரும்பக் கொடுத்துவிட்டேன்"),
+                            amount, source: original.returnSource || source, updatedAt: Date.now()
+                        });
+                    }
                 } else {
-                    await updateDoc(userRef, { 
-                        title: title, 
-                        amount: amount, 
-                        source: source, 
-                        category: category, 
-                        type: type, 
-                        timestamp: timestamp 
-                    });
+                    const source = document.getElementById("edit-source").value;
+                    let category = document.getElementById("edit-category").value;
+                    const type = document.getElementById("edit-type").value;
+                    if (type === "income" && category !== "கைமாத்து") {
+                        category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
+                    }
+                    await updateDoc(userRef, { title, amount, source, category, type, timestamp, updatedAt: Date.now() });
                 }
                 closeEditModal();
             } catch (error) {
                 console.error("Edit Error: ", error);
+                alert("பதிவை திருத்த முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
             }
         };
 
@@ -1613,15 +1740,6 @@
 
         window.openModalByScenario = openModalByScenario;
         window.setCategory = setCategory;
-    </script>
-    <script>
-        // PWA: register the repository's sw.js. It must be hosted over HTTPS.
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js', { scope: './' })
-                    .catch(err => console.warn('PWA Service Worker:', err));
-            });
-        }
     </script>
 </body>
 </html>
