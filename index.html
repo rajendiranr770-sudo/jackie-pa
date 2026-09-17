@@ -185,6 +185,13 @@
         .multi-source-add { border:1px solid #93c5fd; background:#eff6ff; color:#1d4ed8; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; }
         .split-total { background:#0f172a; color:white; border-radius:8px; padding:9px; text-align:center; font-weight:bold; margin-top:8px; }
         .split-detail { margin-top:6px; padding:7px; border-radius:7px; background:#f1f5f9; font-size:11px; color:#334155; }
+        .purchase-payment-history { margin-top:8px; padding:8px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; font-size:11px; }
+        .purchase-payment-row { display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px dashed #cbd5e1; }
+        .purchase-payment-row:last-child { border-bottom:none; }
+        .purchase-status { margin-top:7px; padding:7px 9px; border-radius:8px; font-size:12px; font-weight:bold; }
+        .purchase-status.pending { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+        .purchase-status.done { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+        .purchase-pay-btn { margin-top:7px; border:none; background:#7c3aed; color:white; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; }
         @media (max-width:430px) {
             .multi-source-row { grid-template-columns: 1fr 1fr auto; }
         }
@@ -331,6 +338,7 @@
                 </div>
                 <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
                 <button class="btn-blue" style="margin-top:8px; background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
+                <button class="btn-blue" style="margin-top:8px; background:#0891b2;" onclick="openInstallmentPurchaseModal()">🧾 அட்வான்ஸ் + மீதி செலவு</button>
             </div>
 
             <!-- Active Trip Cards Area -->
@@ -493,6 +501,62 @@
             <div class="modal-btn-group">
                 <button type="button" onclick="saveMultiSourceExpense()" class="save-btn">சேமி</button>
                 <button type="button" onclick="closeMultiSourceModal()" class="close-btn">மூடு</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="installment-purchase-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3 class="modal-title">🧾 அட்வான்ஸ் + மீதி செலவு</h3>
+            <label class="modal-label">பொருள் / செலவு விவரம்:</label>
+            <input type="text" id="ip-title" class="form-input" placeholder="எ.கா: TV வாங்கியது">
+            <label class="modal-label">மொத்த விலை (₹):</label>
+            <input type="number" id="ip-total" class="form-input" min="0" step="0.01" placeholder="100000">
+            <label class="modal-label">செலவு வகை:</label>
+            <select id="ip-category" class="form-input"></select>
+            <div class="multi-source-box">
+                <div style="font-weight:bold;color:#334155;margin-bottom:7px;">முதல் கட்ட பணம் / அட்வான்ஸ்</div>
+                <label class="modal-label">அட்வான்ஸ் தொகை (₹):</label>
+                <input type="number" id="ip-advance" class="form-input" min="0" step="0.01" placeholder="20000">
+                <label class="modal-label">எந்தக் கணக்கிலிருந்து?</label>
+                <select id="ip-advance-source" class="form-input">
+                    <option value="சம்பளம்">💼 சம்பளம்</option>
+                    <option value="வீடு">🏠 வீடு</option>
+                    <option value="இதர வரவு">💵 இதர வரவு</option>
+                </select>
+                <label class="modal-label">அட்வான்ஸ் தேதி:</label>
+                <input type="date" id="ip-advance-date" class="form-input">
+            </div>
+            <div style="background:#ecfeff;border:1px solid #a5f3fc;padding:10px;border-radius:9px;margin-top:8px;font-size:13px;">
+                மீதி தொகை தானாக கணக்கிடப்படும்: <b id="ip-remaining">₹0.00</b>
+            </div>
+            <div class="modal-btn-group">
+                <button type="button" onclick="saveInstallmentPurchase()" class="save-btn">சேமி</button>
+                <button type="button" onclick="closeInstallmentPurchaseModal()" class="close-btn">மூடு</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="purchase-payment-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3 class="modal-title">💰 மீதி தொகை செலுத்து</h3>
+            <input type="hidden" id="pp-id">
+            <div id="pp-summary" style="background:#f8fafc;padding:10px;border-radius:9px;margin-bottom:10px;font-size:13px;"></div>
+            <label class="modal-label">மீதி செலுத்தும் தொகை (₹):</label>
+            <input type="number" id="pp-amount" class="form-input" min="0" step="0.01">
+            <label class="modal-label">எந்தக் கணக்கிலிருந்து?</label>
+            <select id="pp-source" class="form-input">
+                <option value="சம்பளம்">💼 சம்பளம்</option>
+                <option value="வீடு">🏠 வீடு</option>
+                <option value="இதர வரவு">💵 இதர வரவு</option>
+            </select>
+            <label class="modal-label">மீதி கொடுத்த தேதி:</label>
+            <input type="date" id="pp-date" class="form-input">
+            <label class="modal-label">நேரம்:</label>
+            <input type="time" id="pp-time" class="form-input">
+            <div class="modal-btn-group">
+                <button type="button" onclick="savePurchasePayment()" class="save-btn">சேமி</button>
+                <button type="button" onclick="closePurchasePaymentModal()" class="close-btn">மூடு</button>
             </div>
         </div>
     </div>
@@ -1143,22 +1207,24 @@
                 }
 
                 let matchesDate = true;
-                if (monthFilter === 'CURRENT_WEEK') { matchesDate = itemDate >= last7Start && itemDate <= last7End; } 
-                else if (monthFilter === 'ALL') { matchesDate = true; } 
+                if (monthFilter === 'CURRENT_WEEK') {
+                    matchesDate = (itemDate >= last7Start && itemDate <= last7End) || purchaseHasDateInRange(item, last7Start, last7End);
+                }
+                else if (monthFilter === 'ALL') { matchesDate = true; }
                 else if (monthFilter === 'CUSTOM_DATE') {
-                    if (fromDateVal) {
-                        const fDate = new Date(fromDateVal + 'T00:00:00');
-                        matchesDate = matchesDate && (itemDate >= fDate);
-                    }
-                    if (toDateVal) {
-                        const tDate = new Date(toDateVal + 'T23:59:59');
-                        matchesDate = matchesDate && (itemDate <= tDate);
-                    }
-                } 
+                    let start = fromDateVal ? parseLocalDate(fromDateVal) : new Date(0);
+                    let end = toDateVal ? parseLocalDate(toDateVal) : new Date(8640000000000000);
+                    if (fromDateVal) start.setHours(0,0,0,0);
+                    if (toDateVal) end.setHours(23,59,59,999);
+                    matchesDate = (itemDate >= start && itemDate <= end) || purchaseHasDateInRange(item,start,end);
+                }
                 else if (monthFilter.includes('-')) {
                     let d = new Date(itemTime);
                     let monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
                     matchesDate = (monthKey === monthFilter);
+                    if (!matchesDate && Array.isArray(item.purchasePayments)) {
+                        matchesDate = item.purchasePayments.some(p=>{ const pd=new Date(p.timestamp||0); return `${pd.getFullYear()}-${String(pd.getMonth()+1).padStart(2,'0')}`===monthFilter; });
+                    }
                 }
 
                 return matchesSearch && matchesDate;
@@ -1207,7 +1273,9 @@
                 if (tx.type === "income") {
                     if (tx.source) totals[tx.source] = (totals[tx.source] || 0) + Number(tx.amount || 0);
                 } else {
-                    if (Array.isArray(tx.splitSources) && tx.splitSources.length) {
+                    if (Array.isArray(tx.purchasePayments) && tx.purchasePayments.length) {
+                        tx.purchasePayments.forEach(p => { const src=p.source; const amt=Number(p.amount||0); if(src) totals[src]=(totals[src]||0)-amt; });
+                    } else if (Array.isArray(tx.splitSources) && tx.splitSources.length) {
                         tx.splitSources.forEach(s => {
                             const src = s.source;
                             const amt = Number(s.amount || 0);
@@ -1285,20 +1353,20 @@
             else renderStandardView();
         };
 
-        function transactionUsesSource(tx, source) {
-            return tx.source === source ||
-                (Array.isArray(tx.splitSources) && tx.splitSources.some(s => s.source === source && Number(s.amount) > 0));
+        function getPurchasePayments(tx) {
+            return Array.isArray(tx.purchasePayments) ? tx.purchasePayments : [];
         }
 
-        function splitSourceText(tx) {
-            if (!Array.isArray(tx.splitSources) || tx.splitSources.length === 0) return "";
-            return tx.splitSources
-                .map(s => `${s.source} ₹${Number(s.amount || 0).toLocaleString("en-IN")}`)
-                .join(" + ");
+        function transactionUsesSource(tx, source) {
+            if (tx.source === source) return true;
+            if (Array.isArray(tx.splitSources) && tx.splitSources.some(s => s.source === source && Number(s.amount) > 0)) return true;
+            if (Array.isArray(tx.purchasePayments) && tx.purchasePayments.some(p => p.source === source && Number(p.amount) > 0)) return true;
+            return false;
         }
 
         function getTransactionExpenseForSource(tx, source) {
             if (tx.type !== "expense") return 0;
+            if (Array.isArray(tx.purchasePayments)) return tx.purchasePayments.filter(p => p.source === source).reduce((a,p)=>a+Number(p.amount||0),0);
             if (Array.isArray(tx.splitSources)) {
                 const row = tx.splitSources.find(s => s.source === source);
                 return row ? Number(row.amount || 0) : 0;
@@ -1306,99 +1374,128 @@
             return tx.source === source ? Number(tx.amount || 0) : 0;
         }
 
+        function getTransactionDisplayAmount(tx, source) {
+            if (source && tx.type === 'expense') return getTransactionExpenseForSource(tx, source);
+            return Number(tx.amount || 0);
+        }
+
+        function purchaseHasDateInRange(tx, start, end) {
+            if (!Array.isArray(tx.purchasePayments)) return false;
+            return tx.purchasePayments.some(p => { const t=Number(p.timestamp||0); return t>=start.getTime() && t<=end.getTime(); });
+        }
+
+        function purchaseLatestTimestamp(tx) {
+            const payments = getPurchasePayments(tx);
+            return payments.reduce((m,p)=>Math.max(m,Number(p.timestamp||0)), Number(tx.timestamp||0));
+        }
+
         function renderStandardView() {
             renderActiveTripCards();
-
             const container = document.getElementById("tx-list-container");
             const searchInput = document.getElementById('search-input') ? document.getElementById('search-input').value.trim() : "";
             const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
 
             let filtered = filterTransactions(allTransactions).filter(tx => {
                 if (activeTab === "All") return true;
-                if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) {
-                    return transactionUsesSource(tx, activeTab);
-                }
+                if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) return transactionUsesSource(tx, activeTab);
                 return tx.category === activeTab;
             });
 
             if (activeIncomeFilter) {
                 filtered = filtered.filter(tx => {
-                    let txTime = tx.timestamp || 0;
-                    return tx.type === 'expense' &&
-                        txTime >= activeIncomeFilter.timestamp &&
-                        txTime < activeIncomeFilter.nextTimestamp &&
-                        transactionUsesSource(tx, activeIncomeFilter.source);
+                    const txTime = tx.timestamp || 0;
+                    return tx.type === 'expense' && txTime >= activeIncomeFilter.timestamp && txTime < activeIncomeFilter.nextTimestamp && transactionUsesSource(tx, activeIncomeFilter.source);
                 });
             }
 
-            filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            filtered.sort((a,b)=>purchaseLatestTimestamp(b)-purchaseLatestTimestamp(a));
 
-            let totalIncome = 0;
-            let totalExpense = 0;
+            let totalIncome = 0, totalExpense = 0;
             filtered.forEach(tx => {
-                let amt = Number(tx.amount || 0);
-                if (tx.type === 'income') totalIncome += amt;
-                else totalExpense += amt;
+                if (tx.type === 'income') totalIncome += Number(tx.amount||0);
+                else totalExpense += Number(tx.amount||0);
             });
-
-            let netBalance = totalIncome - totalExpense;
-            const totalBox = document.getElementById("search-total-box");
-            const incomeElem = document.getElementById("search-total-income");
-            const expenseElem = document.getElementById("search-total-expense");
-            const balanceElem = document.getElementById("search-net-balance");
-
+            const totalBox=document.getElementById("search-total-box"), incomeElem=document.getElementById("search-total-income"), expenseElem=document.getElementById("search-total-expense"), balanceElem=document.getElementById("search-net-balance");
             if (searchInput !== "" || monthFilter !== "ALL" || activeIncomeFilter !== null || activeTab !== "All") {
-                if (totalBox && incomeElem && expenseElem && balanceElem) {
-                    totalBox.style.display = "block";
-                    incomeElem.innerText = `+₹${totalIncome.toFixed(2)}`;
-                    expenseElem.innerText = `-₹${totalExpense.toFixed(2)}`;
-                    balanceElem.style.color = netBalance >= 0 ? "#16a34a" : "#dc2626";
-                    balanceElem.innerText = netBalance >= 0 ? `+₹${netBalance.toFixed(2)}` : `-₹${Math.abs(netBalance).toFixed(2)}`;
+                if(totalBox&&incomeElem&&expenseElem&&balanceElem){ totalBox.style.display="block"; incomeElem.innerText=`+₹${totalIncome.toFixed(2)}`; expenseElem.innerText=`-₹${totalExpense.toFixed(2)}`; const net=totalIncome-totalExpense; balanceElem.style.color=net>=0?"#16a34a":"#dc2626"; balanceElem.innerText=net>=0?`+₹${net.toFixed(2)}`:`-₹${Math.abs(net).toFixed(2)}`; }
+            } else if(totalBox) totalBox.style.display="none";
+
+            container.innerHTML="";
+            if(!filtered.length){ container.innerHTML=`<div style="text-align:center; padding:20px; color:gray;">பதிவுகள் எதுவும் இல்லை.</div>`; return; }
+
+            filtered.forEach(tx=>{
+                const isPurchase = tx.type==='expense' && Array.isArray(tx.purchasePayments) && tx.purchasePayments.length>0;
+                const dateTimeStr=formatDateTime(tx.timestamp);
+                const div=document.createElement("div"); div.className=`tx-card ${tx.type}`;
+                const safeTx=JSON.stringify(tx).replace(/'/g,"&#39;");
+                const clickAttr=tx.type==='income' ? `onclick="filterExpensesByIncome(${JSON.stringify(tx.source||'')}, ${tx.timestamp}, ${JSON.stringify(tx.title||'')})"` : '';
+                let amount = Number(tx.amount||0);
+                if(activeTab!=="All" && ["சம்பளம்","வீடு","இதர வரவு"].includes(activeTab) && tx.type==='expense') amount=getTransactionDisplayAmount(tx,activeTab);
+                let titleText=tx.title||'-';
+                let details='';
+                if(isPurchase){
+                    const payments=getPurchasePayments(tx);
+                    const paid=payments.reduce((a,p)=>a+Number(p.amount||0),0);
+                    const remaining=Math.max(0,Number(tx.amount||0)-paid);
+                    details=`<div class="purchase-payment-history"><b>💳 Payment History</b>${payments.map((p,i)=>`<div class="purchase-payment-row"><span>📅 ${formatDateTime(p.timestamp)}<br>　${p.label||'Payment'} — ${p.source||'-'}</span><b>₹${Number(p.amount||0).toLocaleString('en-IN')}</b></div>`).join('')}<div style="padding-top:6px;font-weight:bold;">செலுத்தியது: ₹${paid.toLocaleString('en-IN')} / ₹${Number(tx.amount||0).toLocaleString('en-IN')}</div></div>`;
+                    details += remaining>0 ? `<div class="purchase-status pending">⏳ மீதி தொகை: ₹${remaining.toLocaleString('en-IN')}</div><button class="purchase-pay-btn" onclick="event.stopPropagation(); openPurchasePaymentModal('${tx.id}')">💰 மீதி செலுத்து ₹${remaining.toLocaleString('en-IN')}</button>` : `<div class="purchase-status done">✅ முழுமையாக செலுத்தப்பட்டது — ₹${Number(tx.amount||0).toLocaleString('en-IN')}</div>`;
+                } else if(Array.isArray(tx.splitSources)&&tx.splitSources.length){
+                    details=`<div class="split-detail">💳 ${tx.splitSources.map(s=>`${s.source} ₹${Number(s.amount||0).toLocaleString('en-IN')}`).join(' + ')}</div>`;
                 }
-            } else if (totalBox) {
-                totalBox.style.display = "none";
-            }
-
-            container.innerHTML = "";
-            if (filtered.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding:20px; color:gray;">பதிவுகள் எதுவும் இல்லை.</div>`;
-                return;
-            }
-
-            filtered.forEach(tx => {
-                let dateTimeStr = formatDateTime(tx.timestamp);
-                let div = document.createElement("div");
-                div.className = `tx-card ${tx.type}`;
-
-                const safeTx = JSON.stringify(tx).replace(/'/g, "&#39;");
-                let clickAttr = tx.type === 'income' ? `onclick="filterExpensesByIncome(${JSON.stringify(tx.source || '')}, ${tx.timestamp}, ${JSON.stringify(tx.title || '')})"` : '';
-                let incomeSubText = tx.type === 'income' ? ` | <span style="color:#10b981; font-weight:bold;">👆 தொட்டு செலவுகளைப் பார்</span>` : '';
-                let accountText = Array.isArray(tx.splitSources) && tx.splitSources.length
-                    ? `பல கணக்குகள்: <b>${splitSourceText(tx)}</b>`
-                    : `கணக்கு: <b>${tx.source || '-'}</b>`;
-                let splitDetail = Array.isArray(tx.splitSources) && tx.splitSources.length
-                    ? `<div class="split-detail">💳 ${accountText}</div>` : '';
-
-                div.innerHTML = `
-                    <div style="flex:1;" ${clickAttr}>
-                        <div class="tx-title">${tx.title || '-'}</div>
-                        <div class="tx-sub">🕒 ${dateTimeStr} | ${Array.isArray(tx.splitSources) && tx.splitSources.length ? 'பல கணக்குகள்' : accountText}${!Array.isArray(tx.splitSources) || !tx.splitSources.length ? '' : ''} | வகை: <b>${tx.category || 'பொது'}</b>${incomeSubText}</div>
-                        ${splitDetail}
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
-                            ${tx.type === 'income' ? '+' : '-'}₹${Number(tx.amount || 0).toLocaleString("en-IN")}
-                        </div>
-                        <div class="action-btns">
-                            <span onclick='event.stopPropagation(); openEditModal(${safeTx}, "transactions")' style="cursor:pointer; margin-right: 8px;">✏️</span>
-                            <span onclick="event.stopPropagation(); openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span>
-                        </div>
-                    </div>
-                `;
+                const accountText=isPurchase ? 'பல கணக்குகள் / Payment' : (Array.isArray(tx.splitSources)&&tx.splitSources.length ? 'பல கணக்குகள்' : `கணக்கு: <b>${tx.source||'-'}</b>`);
+                div.innerHTML=`<div style="flex:1;" ${clickAttr}><div class="tx-title">${titleText}</div><div class="tx-sub">🕒 ${dateTimeStr} | ${accountText} | வகை: <b>${tx.category||'பொது'}</b>${tx.type==='income'?` | <span style="color:#10b981;font-weight:bold;">👆 தொட்டு செலவுகளைப் பார்</span>`:''}</div>${details}</div><div style="display:flex;align-items:center;gap:10px;"><div class="tx-amt" style="color:${tx.type==='income'?'#10b981':'#ef4444'}">${tx.type==='income'?'+':'-'}₹${amount.toLocaleString('en-IN')}</div><div class="action-btns"><span onclick='event.stopPropagation(); openEditModal(${safeTx}, "transactions")' style="cursor:pointer;margin-right:8px;">✏️</span><span onclick="event.stopPropagation(); openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span></div></div>`;
                 container.appendChild(div);
             });
         }
 
+        // ------------------ Advance + Balance Purchase Logic ------------------ //
+        window.openInstallmentPurchaseModal = function() {
+            document.getElementById('ip-title').value='';
+            document.getElementById('ip-total').value='';
+            document.getElementById('ip-advance').value='';
+            document.getElementById('ip-category').innerHTML=categoryOptionsHtml('பொது');
+            document.getElementById('ip-advance-date').value=getLocalDateString();
+            document.getElementById('ip-remaining').innerText='₹0.00';
+            document.getElementById('installment-purchase-modal').style.display='flex';
+        };
+        window.closeInstallmentPurchaseModal=function(){ document.getElementById('installment-purchase-modal').style.display='none'; };
+        document.addEventListener('input',function(e){ if(e.target && (e.target.id==='ip-total'||e.target.id==='ip-advance')){ const t=Number(document.getElementById('ip-total').value||0), a=Number(document.getElementById('ip-advance').value||0); document.getElementById('ip-remaining').innerText='₹'+Math.max(0,t-a).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }});
+
+        window.saveInstallmentPurchase=async function(){
+            const title=document.getElementById('ip-title').value.trim();
+            const total=Number(document.getElementById('ip-total').value||0);
+            const advance=Number(document.getElementById('ip-advance').value||0);
+            const source=document.getElementById('ip-advance-source').value;
+            const dateVal=document.getElementById('ip-advance-date').value;
+            const category=document.getElementById('ip-category').value||'பொது';
+            if(!title||total<=0){ alert('பொருள் மற்றும் மொத்த விலையை சரியாக உள்ளிடவும்.'); return; }
+            if(advance<=0||advance>total){ alert('அட்வான்ஸ் தொகை மொத்த விலையை விட அதிகமாக இருக்கக்கூடாது.'); return; }
+            let d=dateVal?parseLocalDate(dateVal):new Date(); const now=new Date(); d.setHours(now.getHours(),now.getMinutes(),now.getSeconds(),now.getMilliseconds());
+            const payment={amount:advance,source,label:'அட்வான்ஸ்',timestamp:d.getTime()};
+            closeInstallmentPurchaseModal();
+            await saveTransaction({title,amount:total,type:'expense',category,source:'அட்வான்ஸ் + மீதி',purchasePayments:[payment],installmentPurchase:true,timestamp:d.getTime()});
+        };
+
+        window.openPurchasePaymentModal=function(id){
+            const tx=allTransactions.find(t=>t.id===id); if(!tx) return;
+            const paid=getPurchasePayments(tx).reduce((a,p)=>a+Number(p.amount||0),0); const remaining=Math.max(0,Number(tx.amount||0)-paid); if(remaining<=0) return;
+            document.getElementById('pp-id').value=id; document.getElementById('pp-amount').value=remaining; document.getElementById('pp-date').value=getLocalDateString();
+            const now=new Date(); document.getElementById('pp-time').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            document.getElementById('pp-summary').innerHTML=`<b>${tx.title||'Purchase'}</b><br>மொத்தம்: ₹${Number(tx.amount||0).toLocaleString('en-IN')}<br>ஏற்கனவே செலுத்தியது: ₹${paid.toLocaleString('en-IN')}<br><b>மீதி: ₹${remaining.toLocaleString('en-IN')}</b>`;
+            document.getElementById('purchase-payment-modal').style.display='flex';
+        };
+        window.closePurchasePaymentModal=function(){ document.getElementById('purchase-payment-modal').style.display='none'; };
+        window.savePurchasePayment=async function(){
+            const id=document.getElementById('pp-id').value; const tx=allTransactions.find(t=>t.id===id); if(!tx) return;
+            const paid=getPurchasePayments(tx).reduce((a,p)=>a+Number(p.amount||0),0); const remaining=Math.max(0,Number(tx.amount||0)-paid); const amount=Number(document.getElementById('pp-amount').value||0);
+            if(amount<=0||amount>remaining){ alert(`மீதி தொகை ₹${remaining.toFixed(2)}. அதற்குள் தொகை உள்ளிடவும்.`); return; }
+            const dateVal=document.getElementById('pp-date').value; const timeVal=document.getElementById('pp-time').value; let d=dateVal?parseLocalDate(dateVal):new Date(); if(timeVal){const [h,m]=timeVal.split(':').map(Number);d.setHours(h,m,0,0);} else {const n=new Date();d.setHours(n.getHours(),n.getMinutes(),n.getSeconds(),n.getMilliseconds());}
+            const payment={amount,source:document.getElementById('pp-source').value,label:amount===remaining?'மீதி தொகை':'பகுதி மீதி',timestamp:d.getTime()};
+            const payments=[...getPurchasePayments(tx),payment];
+            const latest=Math.max(...payments.map(p=>Number(p.timestamp||0)));
+            closePurchasePaymentModal();
+            try{ await updateDoc(doc(db,'users',auth.currentUser.uid,'transactions',id),{purchasePayments:payments,timestamp:latest,updatedAt:Date.now(),source:'அட்வான்ஸ் + மீதி',installmentPurchase:true}); }catch(e){console.error(e);alert('மீதி தொகையை சேமிக்க முடியவில்லை.');}
+        };
 
         // ------------------ Multi-Source Expense Logic ------------------ //
         function sourceOptionsHtml(selected="சம்பளம்") {
@@ -1477,7 +1574,8 @@
             const now = new Date();
             selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
 
-            const ok = await saveTransaction({
+            closeMultiSourceModal();
+            await saveTransaction({
                 title,
                 amount: total,
                 type: "expense",
@@ -1487,10 +1585,6 @@
                 timestamp: selectedDate.getTime(),
                 multiSourceExpense: true
             });
-
-            if (ok) {
-                closeMultiSourceModal();
-            }
         };
 
         // ------------------ End Multi-Source Expense Logic ------------------ //
