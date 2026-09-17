@@ -918,18 +918,26 @@
         };
 
         window.confirmSource = async function(sourceName) {
-            if (pendingAction && pendingAction.data) {
-                if (pendingAction.type === "TX") {
-                    pendingAction.data.source = sourceName;
-                    if (pendingAction.data.type === "income") {
-                        pendingAction.data.category = (sourceName === "சம்பளம்") ? "சம்பளம் வரவு" : (sourceName === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
+            if (!pendingAction || !pendingAction.data) return;
+
+            // Close the popup immediately after the user taps the account.
+            // Keep a local copy because closeModal() clears pendingAction.
+            const action = pendingAction;
+            pendingAction = null;
+            document.getElementById("source-modal").style.display = "none";
+
+            try {
+                if (action.type === "TX") {
+                    action.data.source = sourceName;
+                    if (action.data.type === "income") {
+                        action.data.category = (sourceName === "சம்பளம்") ? "சம்பளம் வரவு" : (sourceName === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
                     } else {
-                        pendingAction.data.category = selectedCategoryChoice || "பொது";
+                        action.data.category = selectedCategoryChoice || "பொது";
                     }
-                    saveTransaction(pendingAction.data);
-                } 
-                else if (pendingAction.type === "KM") {
-                    let kmData = pendingAction.data;
+                    await saveTransaction(action.data);
+                }
+                else if (action.type === "KM") {
+                    let kmData = action.data;
                     kmData.source = sourceName;
                     let vRef = await addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), {
                         ...kmData, updatedAt: Date.now(), schemaVersion: 2
@@ -948,16 +956,17 @@
                     });
                     if (txId) await updateDoc(vRef, { originalTxId: txId, updatedAt: Date.now() });
                 }
-                else if (pendingAction.type === "KM_RETURN") {
-                    const km = pendingAction.data;
+                else if (action.type === "KM_RETURN") {
+                    const km = action.data;
                     const isGiven = km.kmType === "given";
+                    const returnNow = Date.now();
                     const returnTxId = await saveTransaction({
                         title: isGiven ? (km.personName + " கைமாத்து பணத்தை திரும்பக் கொடுத்தார்") : (km.personName + " கைமாத்தாக வாங்கிய பணத்தை திரும்பக் கொடுத்துவிட்டேன்"),
                         amount: Number(km.principal),
                         type: isGiven ? "income" : "expense",
                         category: "கைமாத்து",
                         source: sourceName,
-                        timestamp: Date.now(),
+                        timestamp: returnNow,
                         linkedKaiMaathuId: km.id,
                         kaiMaathuReturn: true
                     });
@@ -965,11 +974,13 @@
                         isReturned: true,
                         returnTxId: returnTxId || null,
                         returnSource: sourceName,
-                        returnTimestamp: Date.now(),
+                        returnTimestamp: returnNow,
                         updatedAt: Date.now()
                     });
                 }
-                closeModal();
+            } catch (error) {
+                console.error("Source/Return save error:", error);
+                alert("பதிவு சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
             }
         };
 
@@ -1284,8 +1295,8 @@
                             ${tx.type === 'income' ? '+' : '-'}₹${tx.amount}
                         </div>
                         <div class="action-btns">
-                            <span onclick='openEditModal(${JSON.stringify(tx)}, "transactions")' style="cursor:pointer; margin-right: 8px;">✏️</span>
-                            <span onclick="openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span>
+                            <span onclick='event.stopPropagation(); openEditModal(${JSON.stringify(tx)}, "transactions")' style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick="event.stopPropagation(); openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span>
                         </div>
                     </div>
                 `;
@@ -1366,8 +1377,8 @@
                             <div style="display:flex; justify-content:space-between; font-weight:bold; color:#1e293b; font-size:14px;">
                                 <span>கடன் ${index + 1}: அசல்: ₹${l.principal} | வட்டி: ${l.rate}%</span>
                                 <div>
-                                    <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 5px;">✏️</span>
-                                    <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 5px;">🗑️</span>
+                                    <span onclick='event.stopPropagation(); openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 5px;">✏️</span>
+                                    <span onclick="event.stopPropagation(); openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 5px;">🗑️</span>
                                     <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, false)">
                                 </div>
                             </div>
@@ -1406,25 +1417,6 @@
             let givenList = kmList.filter(v => (v.kmType || "given") === "given");
             let takenList = kmList.filter(v => v.kmType === "taken");
 
-            // Return-history fallback: older KaiMaathu records may have isReturned=true
-            // without returnSource/returnTimestamp saved on the loan document. In that
-            // case, recover the return details from the linked transaction history.
-            function getKaiMaathuReturnInfo(loan) {
-                let tx = null;
-                if (loan.returnTxId) {
-                    tx = allTransactions.find(t => t.id === loan.returnTxId);
-                }
-                if (!tx) {
-                    tx = allTransactions.find(t => t.kaiMaathuReturn && t.linkedKaiMaathuId === loan.id);
-                }
-                return {
-                    tx,
-                    amount: tx && Number(tx.amount) ? Number(tx.amount) : Number(loan.principal || 0),
-                    source: loan.returnSource || (tx && tx.source) || loan.source || "குறிப்பிடப்படவில்லை",
-                    timestamp: loan.returnTimestamp || (tx && tx.timestamp) || null
-                };
-            }
-
             if (givenList.length === 0) {
                 givenContainer.innerHTML = `<div style="padding:10px; color:gray; font-size:13px;">கொடுத்த கைமாத்து எதுவுமில்லை.</div>`;
             } else {
@@ -1437,19 +1429,18 @@
                         <div class="person-header">
                             <span>🤝 ${l.personName} (கொடுத்தது)</span>
                             <div>
-                                <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
-                                <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
+                                <span onclick='event.stopPropagation(); openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
+                                <span onclick="event.stopPropagation(); openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
                                 <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source || ''}', ${l.principal}, '${l.personName}', 'given', this)">
                             </div>
                         </div>
                         <div>தொகை: <b style="color:#ef4444;">₹${l.principal}</b> | 🕒 நேரம்: ${dateTimeStr}</div>
                         <div class="km-source-tag">💼 கொடுத்த கணக்கு: <b>${sourceDisplay}</b></div>
-                        ${l.isReturned ? (() => { const r=getKaiMaathuReturnInfo(l); return `<div style="margin-top:7px; padding:9px; border-radius:8px; background:#dcfce7; color:#166534; font-size:12px; font-weight:bold;">
-                            ✅ கைமாத்து முழுமையாக திரும்பப் பெற்றுவிட்டீர்கள்<br>
-                            👤 ${l.personName} ₹${r.amount.toFixed(2)} திரும்பக் கொடுத்தார்<br>
-                            💰 வரவு: ₹${r.amount.toFixed(2)} | 🕒 ${r.timestamp ? formatDateTime(r.timestamp) : '-'}<br>
-                            💼 வரவு வைக்கப்பட்ட கணக்கு: ${r.source}
-                        </div>`; })() : `<div style="margin-top:7px; color:#b91c1c; font-size:12px; font-weight:bold;">🔴 இன்னும் ₹${Number(l.principal || 0).toFixed(2)} வாங்க வேண்டியுள்ளது</div>`}
+                        ${l.isReturned ? `<div style="margin-top:7px; padding:8px; border-radius:8px; background:#dcfce7; color:#166534; font-size:12px; font-weight:bold;">
+                            ✅ ${l.personName} கைமாத்து பணத்தை திரும்பக் கொடுத்தார்<br>
+                            💰 திரும்ப வந்தது: ₹${Number(l.principal || 0).toFixed(2)} | 🕒 ${l.returnTimestamp ? formatDateTime(l.returnTimestamp) : '-'}<br>
+                            💼 வரவு வைக்கப்பட்ட கணக்கு: ${l.returnSource || sourceDisplay}
+                        </div>` : `<div style="margin-top:7px; color:#b91c1c; font-size:12px; font-weight:bold;">🔴 இன்னும் ₹${Number(l.principal || 0).toFixed(2)} வாங்க வேண்டியுள்ளது</div>`}
                     `;
                     givenContainer.appendChild(div);
                 });
@@ -1467,19 +1458,18 @@
                         <div class="person-header">
                             <span>🤝 ${l.personName} (வாங்கியது)</span>
                             <div>
-                                <span onclick='openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
-                                <span onclick="openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
+                                <span onclick='event.stopPropagation(); openEditModal(${JSON.stringify(l)}, "vatti")' style="cursor:pointer; margin-right: 8px;">✏️</span>
+                                <span onclick="event.stopPropagation(); openDeleteModal('${l.id}', 'vatti')" style="cursor:pointer; margin-right: 8px;">🗑️</span>
                                 <input type="checkbox" ${l.isReturned ? 'checked' : ''} onchange="toggleLoanReturn('${l.id}', this.checked, true, '${l.source || ''}', ${l.principal}, '${l.personName}', 'taken', this)">
                             </div>
                         </div>
                         <div>தொகை: <b style="color:#10b981;">₹${l.principal}</b> | 🕒 நேரம்: ${dateTimeStr}</div>
                         <div class="km-source-tag">💼 வாங்கிய கணக்கு: <b>${sourceDisplay}</b></div>
-                        ${l.isReturned ? (() => { const r=getKaiMaathuReturnInfo(l); return `<div style="margin-top:7px; padding:9px; border-radius:8px; background:#fee2e2; color:#991b1b; font-size:12px; font-weight:bold;">
-                            ✅ கைமாத்தாக வாங்கிய பணத்தை முழுமையாக திரும்பக் கொடுத்துவிட்டீர்கள்<br>
-                            👤 ${l.personName}-க்கு ₹${r.amount.toFixed(2)} திரும்பக் கொடுத்தீர்கள்<br>
-                            💸 செலவு: ₹${r.amount.toFixed(2)} | 🕒 ${r.timestamp ? formatDateTime(r.timestamp) : '-'}<br>
-                            💼 கொடுத்த கணக்கு: ${r.source}
-                        </div>`; })() : `<div style="margin-top:7px; color:#15803d; font-size:12px; font-weight:bold;">🟢 இன்னும் ₹${Number(l.principal || 0).toFixed(2)} கொடுக்க வேண்டும்</div>`}
+                        ${l.isReturned ? `<div style="margin-top:7px; padding:8px; border-radius:8px; background:#fee2e2; color:#991b1b; font-size:12px; font-weight:bold;">
+                            ✅ ${l.personName}-க்கு கைமாத்தாக வாங்கிய பணத்தை திரும்பக் கொடுத்துவிட்டேன்<br>
+                            💰 திரும்பக் கொடுத்தது: ₹${Number(l.principal || 0).toFixed(2)} | 🕒 ${l.returnTimestamp ? formatDateTime(l.returnTimestamp) : '-'}<br>
+                            💼 கொடுத்த கணக்கு: ${l.returnSource || sourceDisplay}
+                        </div>` : `<div style="margin-top:7px; color:#15803d; font-size:12px; font-weight:bold;">🟢 இன்னும் ₹${Number(l.principal || 0).toFixed(2)} கொடுக்க வேண்டும்</div>`}
                     `;
                     takenContainer.appendChild(div);
                 });
@@ -1618,7 +1608,7 @@
             const amount = parseFloat(document.getElementById("edit-amount").value);
             const dateVal = document.getElementById("edit-date").value;
             const timeVal = document.getElementById("edit-time").value;
-            const original = allVattiLoans.find(v => v.id === id);
+            const original = collectionType === 'vatti' ? allVattiLoans.find(v => v.id === id) : allTransactions.find(t => t.id === id);
             const isVatti = collectionType === 'vatti' && original && !original.isKaiMaathu;
             const isKaiMaathu = collectionType === 'vatti' && original && original.isKaiMaathu;
 
@@ -1630,6 +1620,9 @@
                 selectedDate.setHours(hours, minutes, 0, 0);
             }
             const timestamp = selectedDate.getTime();
+
+            // Close immediately on Save. Firestore update continues in the background.
+            closeEditModal();
 
             try {
                 const userRef = doc(db, "users", auth.currentUser.uid, collectionType, id);
@@ -1652,7 +1645,9 @@
                         const isGiven = (original.kmType || "given") === "given";
                         await updateDoc(doc(db, "users", auth.currentUser.uid, "transactions", original.returnTxId), {
                             title: isGiven ? (title + " கைமாத்து பணத்தை திரும்பக் கொடுத்தார்") : (title + " கைமாத்தாக வாங்கிய பணத்தை திரும்பக் கொடுத்துவிட்டேன்"),
-                            amount, source: original.returnSource || source, updatedAt: Date.now()
+                            amount,
+                            source: original.returnSource || source,
+                            updatedAt: Date.now()
                         });
                     }
                 } else {
@@ -1664,7 +1659,6 @@
                     }
                     await updateDoc(userRef, { title, amount, source, category, type, timestamp, updatedAt: Date.now() });
                 }
-                closeEditModal();
             } catch (error) {
                 console.error("Edit Error: ", error);
                 alert("பதிவை திருத்த முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
