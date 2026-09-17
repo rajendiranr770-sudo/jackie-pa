@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Finance & Loan Master App</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
         html { width: 100%; min-height: 100%; overflow-x: hidden; }
@@ -175,6 +178,17 @@
         .km-source-tag {
             background: #e2e8f0; color: #1e293b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 4px;
         }
+        .multi-source-box { background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin:8px 0; }
+        .multi-source-row { display:grid; grid-template-columns: 1.2fr 1fr auto; gap:6px; align-items:center; margin-bottom:7px; }
+        .multi-source-row select, .multi-source-row input { min-height:42px; padding:8px; border:1px solid #cbd5e1; border-radius:7px; font-size:14px; width:100%; background:white; }
+        .multi-source-remove { border:none; background:#fee2e2; color:#b91c1c; border-radius:7px; min-height:42px; min-width:42px; font-weight:bold; cursor:pointer; }
+        .multi-source-add { border:1px solid #93c5fd; background:#eff6ff; color:#1d4ed8; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; }
+        .split-total { background:#0f172a; color:white; border-radius:8px; padding:9px; text-align:center; font-weight:bold; margin-top:8px; }
+        .split-detail { margin-top:6px; padding:7px; border-radius:7px; background:#f1f5f9; font-size:11px; color:#334155; }
+        @media (max-width:430px) {
+            .multi-source-row { grid-template-columns: 1fr 1fr auto; }
+        }
+
         @media (max-width: 430px) {
             body { padding: 8px; padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
             .modal-overlay { align-items: center; padding: 10px 8px; }
@@ -316,6 +330,7 @@
                     <input type="date" id="m-date" class="form-input">
                 </div>
                 <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
+                <button class="btn-blue" style="margin-top:8px; background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
             </div>
 
             <!-- Active Trip Cards Area -->
@@ -426,6 +441,12 @@
                 <option value="வீடு">🏠 வீடு</option>
                 <option value="இதர வரவு">💵 இதர வரவு</option>
             </select>
+            <div id="edit-split-group" style="display:none;" class="multi-source-box">
+                <div style="font-weight:bold;color:#334155;margin-bottom:7px;">பல கணக்குகளில் இருந்து பயன்படுத்தியது:</div>
+                <div id="edit-split-rows"></div>
+                <button type="button" class="multi-source-add" onclick="addEditSplitRow()">+ இன்னொரு கணக்கு சேர்</button>
+                <div class="split-total">பிரிக்கப்பட்ட மொத்தம்: <span id="edit-split-total">₹0.00</span></div>
+            </div>
 
             <label class="modal-label" for="edit-category">செலவு வகை (Category):</label>
             <select id="edit-category" class="form-input">
@@ -441,6 +462,37 @@
             <div class="modal-btn-group">
                 <button onclick="saveEditData()" class="save-btn">சேமி</button>
                 <button onclick="closeEditModal()" class="close-btn">மூடு</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="multi-source-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3 class="modal-title">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</h3>
+
+            <label class="modal-label">பொருள் / செலவு விவரம்:</label>
+            <input type="text" id="ms-title" class="form-input" placeholder="எ.கா: TV வாங்கியது">
+
+            <label class="modal-label">செலவு வகை:</label>
+            <select id="ms-category" class="form-input"></select>
+
+            <label class="modal-label">தேதி:</label>
+            <input type="date" id="ms-date" class="form-input">
+
+            <div class="multi-source-box">
+                <div style="font-weight:bold;color:#334155;margin-bottom:7px;">பணம் எங்கெங்கிருந்து பயன்படுத்தப்பட்டது?</div>
+                <div id="ms-rows"></div>
+                <button type="button" class="multi-source-add" onclick="addMultiSourceRow()">+ இன்னொரு கணக்கு சேர்</button>
+                <div class="split-total">மொத்தம்: <span id="ms-total">₹0.00</span></div>
+                <div style="font-size:11px;color:#64748b;margin-top:6px;text-align:center;">
+                    உதாரணம்: சம்பளம் ₹20,000 + இதர வரவு ₹60,000 + வீடு ₹20,000 = ₹1,00,000
+                </div>
+            </div>
+
+            <div class="modal-btn-group">
+                <button type="button" onclick="saveMultiSourceExpense()" class="save-btn">சேமி</button>
+                <button type="button" onclick="closeMultiSourceModal()" class="close-btn">மூடு</button>
             </div>
         </div>
     </div>
@@ -575,6 +627,14 @@
             localStorage.removeItem("finance_logged_in_uid");
             try { await signOut(auth); } catch (e) { console.error("Logout Error:", e); }
         };
+
+
+        // PWA service worker
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("./sw.js").catch(err => console.warn("SW:", err));
+            });
+        }
 
         // ------------------ Helper Function for Time Formatting ------------------ //
         function formatDateTime(timestamp) {
@@ -1076,7 +1136,10 @@
                     const amountMatch = item.amount && item.amount.toString().includes(searchVal);
                     const catMatch = item.category && item.category.toLowerCase().includes(searchVal);
                     const sourceMatch = item.source && item.source.toLowerCase().includes(searchVal);
-                    matchesSearch = titleMatch || amountMatch || catMatch || sourceMatch;
+                    const splitSourceMatch = Array.isArray(item.splitSources) && item.splitSources.some(s =>
+                        String(s.source || '').toLowerCase().includes(searchVal)
+                    );
+                    matchesSearch = titleMatch || amountMatch || catMatch || sourceMatch || splitSourceMatch;
                 }
 
                 let matchesDate = true;
@@ -1142,14 +1205,23 @@
                 let txMonthKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
 
                 if (tx.type === "income") {
-                    if (tx.source) totals[tx.source] = (totals[tx.source] || 0) + tx.amount;
+                    if (tx.source) totals[tx.source] = (totals[tx.source] || 0) + Number(tx.amount || 0);
                 } else {
-                    if (tx.source) totals[tx.source] = (totals[tx.source] || 0) - tx.amount;
+                    if (Array.isArray(tx.splitSources) && tx.splitSources.length) {
+                        tx.splitSources.forEach(s => {
+                            const src = s.source;
+                            const amt = Number(s.amount || 0);
+                            if (src) totals[src] = (totals[src] || 0) - amt;
+                        });
+                    } else if (tx.source) {
+                        totals[tx.source] = (totals[tx.source] || 0) - Number(tx.amount || 0);
+                    }
+
                     if (tx.category && tx.category !== "பொது" && !tx.category.includes("வரவு")) {
                         if (["MK செலவு", "SK செலவு", "கொல்லை"].includes(tx.category)) {
-                            if (txMonthKey === currentMonth) { totals[tx.category] = (totals[tx.category] || 0) + tx.amount; }
+                            if (txMonthKey === currentMonth) totals[tx.category] = (totals[tx.category] || 0) + Number(tx.amount || 0);
                         } else {
-                            totals[tx.category] = (totals[tx.category] || 0) + tx.amount;
+                            totals[tx.category] = (totals[tx.category] || 0) + Number(tx.amount || 0);
                         }
                     }
                 }
@@ -1157,7 +1229,7 @@
 
             let vattiTotal = 0;
             allVattiLoans.forEach(v => {
-                if (!v.isReturned && !v.isKaiMaathu) vattiTotal += v.principal;
+                if (!v.isReturned && !v.isKaiMaathu) vattiTotal += Number(v.principal || 0);
             });
             totals["வட்டி பிசினஸ்"] = vattiTotal;
 
@@ -1213,17 +1285,38 @@
             else renderStandardView();
         };
 
+        function transactionUsesSource(tx, source) {
+            return tx.source === source ||
+                (Array.isArray(tx.splitSources) && tx.splitSources.some(s => s.source === source && Number(s.amount) > 0));
+        }
+
+        function splitSourceText(tx) {
+            if (!Array.isArray(tx.splitSources) || tx.splitSources.length === 0) return "";
+            return tx.splitSources
+                .map(s => `${s.source} ₹${Number(s.amount || 0).toLocaleString("en-IN")}`)
+                .join(" + ");
+        }
+
+        function getTransactionExpenseForSource(tx, source) {
+            if (tx.type !== "expense") return 0;
+            if (Array.isArray(tx.splitSources)) {
+                const row = tx.splitSources.find(s => s.source === source);
+                return row ? Number(row.amount || 0) : 0;
+            }
+            return tx.source === source ? Number(tx.amount || 0) : 0;
+        }
+
         function renderStandardView() {
             renderActiveTripCards();
-            
+
             const container = document.getElementById("tx-list-container");
             const searchInput = document.getElementById('search-input') ? document.getElementById('search-input').value.trim() : "";
             const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
-            
+
             let filtered = filterTransactions(allTransactions).filter(tx => {
                 if (activeTab === "All") return true;
                 if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) {
-                    return tx.source === activeTab;
+                    return transactionUsesSource(tx, activeTab);
                 }
                 return tx.category === activeTab;
             });
@@ -1231,7 +1324,10 @@
             if (activeIncomeFilter) {
                 filtered = filtered.filter(tx => {
                     let txTime = tx.timestamp || 0;
-                    return tx.type === 'expense' && tx.source === activeIncomeFilter.source && txTime >= activeIncomeFilter.timestamp && txTime < activeIncomeFilter.nextTimestamp;
+                    return tx.type === 'expense' &&
+                        txTime >= activeIncomeFilter.timestamp &&
+                        txTime < activeIncomeFilter.nextTimestamp &&
+                        transactionUsesSource(tx, activeIncomeFilter.source);
                 });
             }
 
@@ -1239,7 +1335,6 @@
 
             let totalIncome = 0;
             let totalExpense = 0;
-
             filtered.forEach(tx => {
                 let amt = Number(tx.amount || 0);
                 if (tx.type === 'income') totalIncome += amt;
@@ -1247,7 +1342,6 @@
             });
 
             let netBalance = totalIncome - totalExpense;
-
             const totalBox = document.getElementById("search-total-box");
             const incomeElem = document.getElementById("search-total-income");
             const expenseElem = document.getElementById("search-total-expense");
@@ -1258,17 +1352,11 @@
                     totalBox.style.display = "block";
                     incomeElem.innerText = `+₹${totalIncome.toFixed(2)}`;
                     expenseElem.innerText = `-₹${totalExpense.toFixed(2)}`;
-                    
-                    if (netBalance >= 0) {
-                        balanceElem.style.color = "#16a34a";
-                        balanceElem.innerText = `+₹${netBalance.toFixed(2)}`;
-                    } else {
-                        balanceElem.style.color = "#dc2626";
-                        balanceElem.innerText = `-₹${Math.abs(netBalance).toFixed(2)}`;
-                    }
+                    balanceElem.style.color = netBalance >= 0 ? "#16a34a" : "#dc2626";
+                    balanceElem.innerText = netBalance >= 0 ? `+₹${netBalance.toFixed(2)}` : `-₹${Math.abs(netBalance).toFixed(2)}`;
                 }
-            } else {
-                if (totalBox) totalBox.style.display = "none";
+            } else if (totalBox) {
+                totalBox.style.display = "none";
             }
 
             container.innerHTML = "";
@@ -1281,21 +1369,28 @@
                 let dateTimeStr = formatDateTime(tx.timestamp);
                 let div = document.createElement("div");
                 div.className = `tx-card ${tx.type}`;
-                
-                let clickAttr = tx.type === 'income' ? `onclick="filterExpensesByIncome('${tx.source}', ${tx.timestamp}, '${tx.title}')"` : '';
+
+                const safeTx = JSON.stringify(tx).replace(/'/g, "&#39;");
+                let clickAttr = tx.type === 'income' ? `onclick="filterExpensesByIncome(${JSON.stringify(tx.source || '')}, ${tx.timestamp}, ${JSON.stringify(tx.title || '')})"` : '';
                 let incomeSubText = tx.type === 'income' ? ` | <span style="color:#10b981; font-weight:bold;">👆 தொட்டு செலவுகளைப் பார்</span>` : '';
+                let accountText = Array.isArray(tx.splitSources) && tx.splitSources.length
+                    ? `பல கணக்குகள்: <b>${splitSourceText(tx)}</b>`
+                    : `கணக்கு: <b>${tx.source || '-'}</b>`;
+                let splitDetail = Array.isArray(tx.splitSources) && tx.splitSources.length
+                    ? `<div class="split-detail">💳 ${accountText}</div>` : '';
 
                 div.innerHTML = `
                     <div style="flex:1;" ${clickAttr}>
-                        <div class="tx-title">${tx.title}</div>
-                        <div class="tx-sub">🕒 ${dateTimeStr} | கணக்கு: <b>${tx.source || '-'}</b> | வகை: <b>${tx.category || 'பொது'}</b>${incomeSubText}</div>
+                        <div class="tx-title">${tx.title || '-'}</div>
+                        <div class="tx-sub">🕒 ${dateTimeStr} | ${Array.isArray(tx.splitSources) && tx.splitSources.length ? 'பல கணக்குகள்' : accountText}${!Array.isArray(tx.splitSources) || !tx.splitSources.length ? '' : ''} | வகை: <b>${tx.category || 'பொது'}</b>${incomeSubText}</div>
+                        ${splitDetail}
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div class="tx-amt" style="color: ${tx.type === 'income' ? '#10b981' : '#ef4444'}">
-                            ${tx.type === 'income' ? '+' : '-'}₹${tx.amount}
+                            ${tx.type === 'income' ? '+' : '-'}₹${Number(tx.amount || 0).toLocaleString("en-IN")}
                         </div>
                         <div class="action-btns">
-                            <span onclick='event.stopPropagation(); openEditModal(${JSON.stringify(tx)}, "transactions")' style="cursor:pointer; margin-right: 8px;">✏️</span>
+                            <span onclick='event.stopPropagation(); openEditModal(${safeTx}, "transactions")' style="cursor:pointer; margin-right: 8px;">✏️</span>
                             <span onclick="event.stopPropagation(); openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span>
                         </div>
                     </div>
@@ -1303,6 +1398,102 @@
                 container.appendChild(div);
             });
         }
+
+
+        // ------------------ Multi-Source Expense Logic ------------------ //
+        function sourceOptionsHtml(selected="சம்பளம்") {
+            return `
+                <option value="சம்பளம்" ${selected==="சம்பளம்"?"selected":""}>💼 சம்பளம்</option>
+                <option value="வீடு" ${selected==="வீடு"?"selected":""}>🏠 வீடு</option>
+                <option value="இதர வரவு" ${selected==="இதர வரவு"?"selected":""}>💵 இதர வரவு</option>
+            `;
+        }
+
+        function categoryOptionsHtml(selected="பொது") {
+            const cats = ["பொது","MK செலவு","SK செலவு","கொல்லை",...customTrips];
+            return cats.map(c => `<option value="${String(c).replace(/"/g,'&quot;')}" ${c===selected?"selected":""}>${c}</option>`).join("");
+        }
+
+        window.openMultiSourceModal = function() {
+            document.getElementById("ms-title").value = "";
+            document.getElementById("ms-date").value = getLocalDateString();
+            document.getElementById("ms-category").innerHTML = categoryOptionsHtml("பொது");
+            const rows = document.getElementById("ms-rows");
+            rows.innerHTML = "";
+            addMultiSourceRow("சம்பளம்", "");
+            addMultiSourceRow("இதர வரவு", "");
+            addMultiSourceRow("வீடு", "");
+            updateMultiSourceTotal();
+            document.getElementById("multi-source-modal").style.display = "flex";
+        };
+
+        window.closeMultiSourceModal = function() {
+            document.getElementById("multi-source-modal").style.display = "none";
+        };
+
+        window.addMultiSourceRow = function(source="சம்பளம்", amount="") {
+            const rows = document.getElementById("ms-rows");
+            const row = document.createElement("div");
+            row.className = "multi-source-row";
+            row.innerHTML = `
+                <select class="ms-source">${sourceOptionsHtml(source)}</select>
+                <input type="number" class="ms-amount" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை">
+                <button type="button" class="multi-source-remove" title="நீக்கு">✕</button>
+            `;
+            row.querySelector(".ms-amount").addEventListener("input", updateMultiSourceTotal);
+            row.querySelector(".ms-source").addEventListener("change", updateMultiSourceTotal);
+            row.querySelector(".multi-source-remove").onclick = () => {
+                row.remove();
+                updateMultiSourceTotal();
+            };
+            rows.appendChild(row);
+            updateMultiSourceTotal();
+        };
+
+        function readMultiSourceRows(containerId, rowClass, sourceClass, amountClass) {
+            return Array.from(document.querySelectorAll(`#${containerId} .${rowClass}`)).map(row => ({
+                source: row.querySelector(`.${sourceClass}`).value,
+                amount: Number(row.querySelector(`.${amountClass}`).value || 0)
+            })).filter(x => x.amount > 0);
+        }
+
+        window.updateMultiSourceTotal = function() {
+            const rows = readMultiSourceRows("ms-rows", "multi-source-row", "ms-source", "ms-amount");
+            const total = rows.reduce((sum, x) => sum + x.amount, 0);
+            document.getElementById("ms-total").innerText = "₹" + total.toLocaleString("en-IN", {minimumFractionDigits:2, maximumFractionDigits:2});
+        };
+
+        window.saveMultiSourceExpense = async function() {
+            const title = document.getElementById("ms-title").value.trim();
+            const dateVal = document.getElementById("ms-date").value;
+            const category = document.getElementById("ms-category").value;
+            const splitSources = readMultiSourceRows("ms-rows", "multi-source-row", "ms-source", "ms-amount");
+            const total = splitSources.reduce((sum, x) => sum + Number(x.amount || 0), 0);
+
+            if (!title) { alert("செலவு விவரத்தை உள்ளிடவும்."); return; }
+            if (!splitSources.length || total <= 0) { alert("குறைந்தது ஒரு கணக்கில் தொகை உள்ளிடவும்."); return; }
+
+            let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
+            const now = new Date();
+            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+
+            const ok = await saveTransaction({
+                title,
+                amount: total,
+                type: "expense",
+                category: category || "பொது",
+                source: "பல கணக்குகள்",
+                splitSources,
+                timestamp: selectedDate.getTime(),
+                multiSourceExpense: true
+            });
+
+            if (ok) {
+                closeMultiSourceModal();
+            }
+        };
+
+        // ------------------ End Multi-Source Expense Logic ------------------ //
 
         window.addVattiLoan = function() {
             let name = document.getElementById("v-name").value.trim();
@@ -1542,6 +1733,7 @@
         window.openEditModal = function(item, collectionType = 'transactions') {
             const isVatti = collectionType === 'vatti' && !item.isKaiMaathu;
             const isKaiMaathu = collectionType === 'vatti' && item.isKaiMaathu;
+            const isMultiSource = collectionType === 'transactions' && item.type === 'expense' && Array.isArray(item.splitSources) && item.splitSources.length > 0;
 
             document.getElementById("edit-id").value = item.id;
             document.getElementById("edit-collection-type").value = collectionType;
@@ -1556,8 +1748,8 @@
             const typeLabel = document.querySelector('label[for="edit-type"]');
             const rateGroup = document.getElementById("edit-rate-group");
             const amountLabel = document.getElementById("edit-amount-label");
+            const splitGroup = document.getElementById("edit-split-group");
 
-            // Hide all optional fields first.
             sourceSelect.style.display = "none";
             document.getElementById("edit-category").style.display = "none";
             document.getElementById("edit-type").style.display = "none";
@@ -1565,6 +1757,7 @@
             if (categoryLabel) categoryLabel.style.display = "none";
             if (typeLabel) typeLabel.style.display = "none";
             rateGroup.style.display = "none";
+            if (splitGroup) splitGroup.style.display = "none";
 
             if (isVatti) {
                 document.getElementById("edit-title").previousElementSibling.innerText = "விவரம் / பெயர்:";
@@ -1574,7 +1767,27 @@
                 document.getElementById("edit-title").previousElementSibling.innerText = "பேர்:";
                 amountLabel.innerText = "தொகை (₹):";
                 sourceSelect.style.display = "block";
-                if (sourceLabel) { sourceLabel.style.display = "block"; sourceLabel.innerText = item.kmType === "taken" ? "எந்தக் கணக்கில் பணம் சேர்க்கப்பட்டது?" : "எந்தக் கணக்கிலிருந்து கொடுத்தோம்?"; }
+                if (sourceLabel) {
+                    sourceLabel.style.display = "block";
+                    sourceLabel.innerText = item.kmType === "taken" ? "எந்தக் கணக்கில் பணம் சேர்க்கப்பட்டது?" : "எந்தக் கணக்கிலிருந்து கொடுத்தோம்?";
+                }
+            } else if (isMultiSource) {
+                document.getElementById("edit-title").previousElementSibling.innerText = "விவரம் / பொருள்:";
+                amountLabel.innerText = "மொத்த செலவு (₹):";
+                amountLabel.style.display = "block";
+                document.getElementById("edit-amount").style.display = "block";
+                document.getElementById("edit-category").style.display = "block";
+                if (categoryLabel) categoryLabel.style.display = "block";
+                updateCategoryDropdowns();
+                document.getElementById("edit-category").value = item.category || "பொது";
+
+                if (splitGroup) {
+                    splitGroup.style.display = "block";
+                    const rows = document.getElementById("edit-split-rows");
+                    rows.innerHTML = "";
+                    (item.splitSources || []).forEach(s => addEditSplitRow(s.source, s.amount));
+                    updateEditSplitTotal();
+                }
             } else {
                 document.getElementById("edit-title").previousElementSibling.innerText = "விவரம் / பெயர்:";
                 amountLabel.innerText = "தொகை (₹):";
@@ -1601,6 +1814,36 @@
             document.getElementById("edit-modal").style.display = "none";
         };
 
+
+        window.addEditSplitRow = function(source="சம்பளம்", amount="") {
+            const rows = document.getElementById("edit-split-rows");
+            const row = document.createElement("div");
+            row.className = "multi-source-row";
+            row.innerHTML = `
+                <select class="edit-split-source">${sourceOptionsHtml(source)}</select>
+                <input type="number" class="edit-split-amount" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை">
+                <button type="button" class="multi-source-remove">✕</button>
+            `;
+            row.querySelector(".edit-split-amount").addEventListener("input", updateEditSplitTotal);
+            row.querySelector(".edit-split-source").addEventListener("change", updateEditSplitTotal);
+            row.querySelector(".multi-source-remove").onclick = () => { row.remove(); updateEditSplitTotal(); };
+            rows.appendChild(row);
+            updateEditSplitTotal();
+        };
+
+        window.updateEditSplitTotal = function() {
+            const rows = Array.from(document.querySelectorAll("#edit-split-rows .multi-source-row"));
+            const total = rows.reduce((sum,row) => sum + Number(row.querySelector(".edit-split-amount").value || 0), 0);
+            document.getElementById("edit-split-total").innerText = "₹" + total.toLocaleString("en-IN", {minimumFractionDigits:2, maximumFractionDigits:2});
+        };
+
+        function readEditSplitSources() {
+            return Array.from(document.querySelectorAll("#edit-split-rows .multi-source-row")).map(row => ({
+                source: row.querySelector(".edit-split-source").value,
+                amount: Number(row.querySelector(".edit-split-amount").value || 0)
+            })).filter(x => x.amount > 0);
+        }
+
         window.saveEditData = async function() {
             const id = document.getElementById("edit-id").value;
             const collectionType = document.getElementById("edit-collection-type").value;
@@ -1611,8 +1854,9 @@
             const original = collectionType === 'vatti' ? allVattiLoans.find(v => v.id === id) : allTransactions.find(t => t.id === id);
             const isVatti = collectionType === 'vatti' && original && !original.isKaiMaathu;
             const isKaiMaathu = collectionType === 'vatti' && original && original.isKaiMaathu;
+            const isMultiSource = collectionType === 'transactions' && original && original.type === 'expense' && Array.isArray(original.splitSources);
 
-            if (!title || !amount) { alert("பெர் மற்றும் தொகையை சரியாக உள்ளிடவும்!"); return; }
+            if (!title || !amount || amount <= 0) { alert("பெர் மற்றும் தொகையை சரியாக உள்ளிடவும்!"); return; }
 
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
             if (timeVal) {
@@ -1621,7 +1865,35 @@
             }
             const timestamp = selectedDate.getTime();
 
-            // Close immediately on Save. Firestore update continues in the background.
+            if (isMultiSource) {
+                const splitSources = readEditSplitSources();
+                const splitTotal = splitSources.reduce((sum,x) => sum + Number(x.amount || 0), 0);
+                if (!splitSources.length) { alert("குறைந்தது ஒரு கணக்கில் தொகை உள்ளிடவும்."); return; }
+                if (Math.abs(splitTotal - amount) > 0.009) {
+                    alert(`மொத்த செலவு ₹${amount.toFixed(2)}. கணக்குகளின் தொகை ₹${splitTotal.toFixed(2)}. இரண்டும் சமமாக இருக்க வேண்டும்.`);
+                    return;
+                }
+                closeEditModal();
+                try {
+                    await updateDoc(doc(db, "users", auth.currentUser.uid, "transactions", id), {
+                        title,
+                        amount,
+                        source: "பல கணக்குகள்",
+                        splitSources,
+                        category: document.getElementById("edit-category").value || "பொது",
+                        type: "expense",
+                        timestamp,
+                        multiSourceExpense: true,
+                        updatedAt: Date.now()
+                    });
+                } catch (error) {
+                    console.error("Multi-source edit error:", error);
+                    alert("பதிவை திருத்த முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
+                }
+                return;
+            }
+
+            // Close immediately before the network write, so the popup never waits for Firebase.
             closeEditModal();
 
             try {
@@ -1633,7 +1905,6 @@
                     const source = document.getElementById("edit-source").value;
                     await updateDoc(userRef, { personName: title, principal: amount, source, timestamp, updatedAt: Date.now() });
 
-                    // Keep the original linked transaction synchronized when it exists.
                     if (original && original.originalTxId) {
                         const isGiven = (original.kmType || "given") === "given";
                         await updateDoc(doc(db, "users", auth.currentUser.uid, "transactions", original.originalTxId), {
@@ -1720,10 +1991,11 @@
             document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
             btnElement.classList.add('selected');
 
-            if (document.getElementById("source-section").style.display === "none") {
-                pendingAction.data.category = catName;
-                saveTransaction(pendingAction.data);
+            if (document.getElementById("source-section").style.display === "none" && pendingAction && pendingAction.data) {
+                const actionData = pendingAction.data;
+                actionData.category = catName;
                 closeModal();
+                saveTransaction(actionData);
             }
         }
 
