@@ -178,12 +178,12 @@
         
         .pending-card { background:#fff7ed; border:1px solid #fed7aa; border-left:5px solid #f97316; border-radius:12px; padding:12px; margin-bottom:10px; }
         .pending-payments { margin-top:8px; background:#fff; border-radius:8px; padding:8px; }
-        .batch-row { display:grid; grid-template-columns:1.5fr .8fr 1fr 1fr; gap:6px; margin-bottom:7px; align-items:center; }
+        .batch-row { display:grid; grid-template-columns:1.4fr .7fr .8fr .9fr 1fr .9fr; gap:6px; margin-bottom:7px; align-items:center; }
         .batch-row input,.batch-row select { min-height:42px; padding:8px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; }
         .income-card-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:12px; margin-bottom:10px; }
         .income-card-header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #dbeafe; padding-bottom:6px; margin-bottom:8px; }
         .btn-income-card { background:#2563eb; color:#fff; border:0; padding:6px 10px; border-radius:7px; font-size:12px; font-weight:bold; }
-        @media (max-width:430px){ .batch-row{grid-template-columns:1.4fr .7fr 1fr 1fr;} .batch-row input,.batch-row select{font-size:13px;} }
+        @media (max-width:430px){ .batch-row{grid-template-columns:1.4fr .8fr 1fr 1fr;} .batch-row input,.batch-row select{font-size:13px;} }
 
 .km-source-tag {
             background: #e2e8f0; color: #1e293b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 4px;
@@ -1478,11 +1478,6 @@
             const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
 
             let filtered = filterTransactions(allTransactions).filter(tx => {
-                // Unfinished advance purchases stay only in the Pending/Advance tab.
-                if (tx.installmentPurchase && getPurchasePayments(tx).length) {
-                    const paid = getPurchasePayments(tx).reduce((a,p)=>a+Number(p.amount||0),0);
-                    if (paid + 0.009 < Number(tx.amount||0)) return false;
-                }
                 if (activeTab === "All") return true;
                 if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) return transactionUsesSource(tx, activeTab);
                 return tx.category === activeTab;
@@ -1525,7 +1520,7 @@
                     const paid=payments.reduce((a,p)=>a+Number(p.amount||0),0);
                     const remaining=Math.max(0,Number(tx.amount||0)-paid);
                     details=`<div class="purchase-payment-history"><b>💳 Payment History</b>${payments.map((p,i)=>`<div class="purchase-payment-row"><span>📅 ${formatDateTime(p.timestamp)}<br>　${p.label||'Payment'} — ${p.source||'-'}</span><b>₹${Number(p.amount||0).toLocaleString('en-IN')}</b></div>`).join('')}<div style="padding-top:6px;font-weight:bold;">செலுத்தியது: ₹${paid.toLocaleString('en-IN')} / ₹${Number(tx.amount||0).toLocaleString('en-IN')}</div></div>`;
-                    details += remaining>0 ? `<div class="purchase-status pending">⏳ மீதி தொகை: ₹${remaining.toLocaleString('en-IN')}</div><button class="purchase-pay-btn" onclick="event.stopPropagation(); openPurchasePaymentModal('${tx.id}')">💰 மீதி செலுத்து ₹${remaining.toLocaleString('en-IN')}</button>` : `<div class="purchase-status done">✅ முழுமையாக செலுத்தப்பட்டது — ₹${Number(tx.amount||0).toLocaleString('en-IN')}</div>`;
+                    details += remaining>0 ? `<div class="purchase-status pending">🟠 அட்வான்ஸ் கொடுக்கப்பட்டது — மீதி ₹${remaining.toLocaleString('en-IN')}</div><button class="purchase-pay-btn" onclick="event.stopPropagation(); openPurchasePaymentModal('${tx.id}')">💰 மீதி செலுத்து ₹${remaining.toLocaleString('en-IN')}</button>` : `<div class="purchase-status done">✅ முழுமையாக செலுத்தப்பட்டது — ₹${Number(tx.amount||0).toLocaleString('en-IN')}</div>`;
                 } else if(Array.isArray(tx.splitSources)&&tx.splitSources.length){
                     details=`<div class="split-detail">💳 ${tx.splitSources.map(s=>`${s.source} ₹${Number(s.amount||0).toLocaleString('en-IN')}`).join(' + ')}</div>`;
                 }
@@ -1693,11 +1688,33 @@
 
         window.openBatchEntryModal=function(){ const box=document.getElementById('batch-rows'); box.innerHTML=''; addBatchRow(); addBatchRow(); document.getElementById('batch-entry-modal').style.display='flex'; updateBatchTotal(); };
         window.closeBatchEntryModal=function(){ document.getElementById('batch-entry-modal').style.display='none'; };
-        window.addBatchRow=function(){ const box=document.getElementById('batch-rows'); const r=document.createElement('div'); r.className='batch-row'; r.innerHTML=`<input class="be-title" placeholder="விவரம்"><input class="be-amount" type="number" min="0" step="0.01" placeholder="₹"><select class="be-type"><option value="expense">செலவு</option><option value="income">வரவு</option></select><select class="be-source"><option>சம்பளம்</option><option>வீடு</option><option>இதர வரவு</option></select>`; r.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',updateBatchTotal)); box.appendChild(r); };
+        window.addBatchRow=function(){
+            const box=document.getElementById('batch-rows');
+            const r=document.createElement('div'); r.className='batch-row';
+            const now=new Date();
+            const date=getLocalDateString(now);
+            const time=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            r.innerHTML=`<input class="be-title" placeholder="விவரம்"><input class="be-amount" type="number" min="0" step="0.01" placeholder="₹"><select class="be-type"><option value="expense">செலவு (-)</option><option value="income">வரவு (+)</option></select><select class="be-source"><option>சம்பளம்</option><option>வீடு</option><option>இதர வரவு</option></select><input class="be-date" type="date" value="${date}"><input class="be-time" type="time" value="${time}">`;
+            r.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',updateBatchTotal));
+            box.appendChild(r);
+        };
         window.updateBatchTotal=function(){ let inc=0,exp=0; document.querySelectorAll('#batch-rows .batch-row').forEach(r=>{const a=Number(r.querySelector('.be-amount').value||0); if(r.querySelector('.be-type').value==='income')inc+=a;else exp+=a;}); document.getElementById('batch-total').innerText=`வரவு: ₹${inc.toFixed(2)} | செலவு: ₹${exp.toFixed(2)}`; };
-        window.saveBatchEntries=async function(){ const rows=[...document.querySelectorAll('#batch-rows .batch-row')].map(r=>({title:r.querySelector('.be-title').value.trim(),amount:Number(r.querySelector('.be-amount').value||0),type:r.querySelector('.be-type').value,source:r.querySelector('.be-source').value})).filter(x=>x.title&&x.amount>0); if(!rows.length){alert('குறைந்தது ஒரு பதிவாவது உள்ளிடவும்.');return;} const staged=[]; let ok=0; for(const x of rows){ const data={...x,category:x.type==='income'?(x.source==='சம்பளம்'?'சம்பளம் வரவு':x.source==='வீடு'?'வீட்டு வரவு':'இதர வரவு'):'பொது',timestamp:Date.now()}; if(!validateExpenseBalance(data,staged)) continue; staged.push(data); } closeBatchEntryModal(); for(const data of staged){ if(await saveTransaction(data)) ok++; } if(ok<rows.length) alert(`${ok} பதிவுகள் மட்டும் சேமிக்கப்பட்டன. போதுமான பேலன்ஸ் இல்லாத செலவுகள் சேமிக்கப்படவில்லை.`); };
+        window.saveBatchEntries=async function(){
+            const rows=[...document.querySelectorAll('#batch-rows .batch-row')].map(r=>{
+                const dateVal=r.querySelector('.be-date').value; const timeVal=r.querySelector('.be-time').value;
+                let d=dateVal?parseLocalDate(dateVal):new Date();
+                if(timeVal){const [h,m]=timeVal.split(':').map(Number); d.setHours(h,m,0,0);}
+                return {title:r.querySelector('.be-title').value.trim(),amount:Number(r.querySelector('.be-amount').value||0),type:r.querySelector('.be-type').value,source:r.querySelector('.be-source').value,timestamp:d.getTime()};
+            }).filter(x=>x.title&&x.amount>0);
+            if(!rows.length){alert('குறைந்தது ஒரு பதிவாவது உள்ளிடவும்.');return;}
+            const staged=[]; let ok=0;
+            for(const x of rows){ const data={...x,category:x.type==='income'?(x.source==='சம்பளம்'?'சம்பளம் வரவு':x.source==='வீடு'?'வீட்டு வரவு':'இதர வரவு'):'பொது'}; if(!validateExpenseBalance(data,staged)) continue; staged.push(data); }
+            closeBatchEntryModal();
+            for(const data of staged){ if(await saveTransaction(data)) ok++; }
+            if(ok<rows.length) alert(`${ok} பதிவுகள் மட்டும் சேமிக்கப்பட்டன. போதுமான பேலன்ஸ் இல்லாத செலவுகள் சேமிக்கப்படவில்லை.`);
+        };
 
-        function renderPendingPurchases(){ const c=document.getElementById('pending-purchases-container'); if(!c)return; const pending=allTransactions.filter(tx=>tx.installmentPurchase&&getPurchasePayments(tx).length&&getPurchasePayments(tx).reduce((a,p)=>a+Number(p.amount||0),0)+0.009<Number(tx.amount||0)); c.innerHTML=''; if(!pending.length){c.innerHTML='<div style="padding:15px;text-align:center;color:#64748b;">🟢 நிலுவையில் உள்ள Advance எதுவும் இல்லை.</div>';return;} pending.sort((a,b)=>purchaseLatestTimestamp(b)-purchaseLatestTimestamp(a)); pending.forEach(tx=>{const payments=getPurchasePayments(tx);const paid=payments.reduce((a,p)=>a+Number(p.amount||0),0);const rem=Math.max(0,Number(tx.amount||0)-paid);const d=document.createElement('div');d.className='pending-card';d.innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px;"><b>🧾 ${tx.title}</b><span style="color:#ea580c;font-weight:bold;">மீதி ₹${rem.toLocaleString('en-IN')}</span></div><div style="font-size:12px;color:#64748b;margin-top:4px;">மொத்தம் ₹${Number(tx.amount||0).toLocaleString('en-IN')} | செலுத்தியது ₹${paid.toLocaleString('en-IN')}</div><div class="pending-payments">${payments.map(p=>`<div style="font-size:12px;margin:3px 0;">📅 ${formatDateTime(p.timestamp)} — ${p.label||'Payment'} — ${p.source||'-'} — <b>₹${Number(p.amount||0).toLocaleString('en-IN')}</b></div>`).join('')}</div><button class="purchase-pay-btn" style="margin-top:8px;" onclick="openPurchasePaymentModal('${tx.id}')">💰 மீதி செலுத்து ₹${rem.toLocaleString('en-IN')}</button>`;c.appendChild(d);}); }
+        function renderPendingPurchases(){ const c=document.getElementById('pending-purchases-container'); if(!c)return; const pending=allTransactions.filter(tx=>tx.installmentPurchase&&getPurchasePayments(tx).length&&getPurchasePayments(tx).reduce((a,p)=>a+Number(p.amount||0),0)+0.009<Number(tx.amount||0)); c.innerHTML=''; if(!pending.length){c.innerHTML='<div style="padding:15px;text-align:center;color:#64748b;">🟢 நிலுவையில் உள்ள Advance எதுவும் இல்லை.</div>';return;} pending.sort((a,b)=>purchaseLatestTimestamp(b)-purchaseLatestTimestamp(a)); pending.forEach(tx=>{const payments=getPurchasePayments(tx);const paid=payments.reduce((a,p)=>a+Number(p.amount||0),0);const rem=Math.max(0,Number(tx.amount||0)-paid);const d=document.createElement('div');d.className='pending-card';d.innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><b>🧾 ${tx.title}</b><span style="color:#ea580c;font-weight:bold;">மீதி ₹${rem.toLocaleString('en-IN')}</span></div><div style="font-size:12px;color:#64748b;margin-top:4px;">மொத்தம் ₹${Number(tx.amount||0).toLocaleString('en-IN')} | செலுத்தியது ₹${paid.toLocaleString('en-IN')}</div><div class="pending-payments">${payments.map(p=>`<div style="font-size:12px;margin:3px 0;">📅 ${formatDateTime(p.timestamp)} — ${p.label||'Payment'} — ${p.source||'-'} — <b>₹${Number(p.amount||0).toLocaleString('en-IN')}</b></div>`).join('')}</div><div style="display:flex;gap:7px;margin-top:8px;"><button class="purchase-pay-btn" style="margin-top:0;flex:1;" onclick="openPurchasePaymentModal('${tx.id}')">💰 மீதி செலுத்து ₹${rem.toLocaleString('en-IN')}</button><button class="close-btn" style="width:auto;padding:8px 12px;" onclick="openDeleteModal('${tx.id}','transactions')">🗑️ Delete</button></div>`;c.appendChild(d);}); }
 
         window.addVattiLoan = function() {
             let name = document.getElementById("v-name").value.trim();
