@@ -353,7 +353,7 @@
                 <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
                 <button class="btn-blue" style="margin-top:8px; background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
                 <button class="btn-blue" style="margin-top:8px; background:#0891b2;" onclick="openInstallmentPurchaseModal()">🧾 அட்வான்ஸ் + மீதி செலவு</button>
-                <button class="btn-blue" style="margin-top:8px; background:#9333ea;" onclick="openBatchEntryModal()">🌙 இரவு மொத்த Entry</button>
+                <button class="btn-blue" style="margin-top:8px; background:#9333ea;" onclick="openSplitCategoryExpenseModal()">🧾 ஒரே செலவை பிரித்து பதிவு</button>
                 <button class="btn-blue" style="margin-top:8px; background:#0f766e;" onclick="addNewIncomeCard()">💵 புதிய வரவு Card சேர்</button>
             </div>
 
@@ -579,6 +579,41 @@
             <div class="modal-btn-group">
                 <button type="button" onclick="savePurchasePayment()" class="save-btn">சேமி</button>
                 <button type="button" onclick="closePurchasePaymentModal()" class="close-btn">மூடு</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="split-category-expense-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="width:min(96vw,620px);max-width:620px;">
+            <h3 class="modal-title">🧾 ஒரே செலவை பிரித்து பதிவு</h3>
+            <div style="font-size:12px;color:#64748b;margin-bottom:10px;">உதாரணம்: மொத்தம் ₹500 → MK செலவு ₹300 + பொது செலவு ₹200. ஒரே முறையில் பதிவு செய்யலாம்.</div>
+            <label class="modal-label">விவரம் / பொருள்:</label>
+            <input id="sc-title" class="form-input" placeholder="எ.கா: காய்கறி + பொது செலவு">
+            <div class="form-row">
+                <div style="flex:1;">
+                    <label class="modal-label">எந்தக் கணக்கு?</label>
+                    <select id="sc-source" class="form-input">
+                        <option value="சம்பளம்">💼 சம்பளம்</option>
+                        <option value="வீடு">🏠 வீடு</option>
+                        <option value="இதர வரவு">💵 இதர வரவு</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label class="modal-label">தேதி:</label>
+                    <input id="sc-date" type="date" class="form-input">
+                </div>
+            </div>
+            <label class="modal-label">நேரம்:</label>
+            <input id="sc-time" type="time" class="form-input">
+            <div class="multi-source-box" style="margin-top:10px;">
+                <div style="font-weight:bold;color:#334155;margin-bottom:7px;">செலவு வகை + தொகை</div>
+                <div id="sc-rows"></div>
+                <button type="button" class="multi-source-add" onclick="addSplitCategoryRow()">+ இன்னொரு வகை சேர்</button>
+                <div class="split-total">மொத்த செலவு: <span id="sc-total">₹0.00</span></div>
+            </div>
+            <div class="modal-btn-group">
+                <button type="button" onclick="saveSplitCategoryExpense()" class="save-btn">சேமி</button>
+                <button type="button" onclick="closeSplitCategoryExpenseModal()" class="close-btn">மூடு</button>
             </div>
         </div>
     </div>
@@ -1686,6 +1721,55 @@
         window.filterByIncomeCard=function(name){ document.getElementById('search-input').value=name; activeTab='All'; document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='All')); renderStandardView(); };
         updateIncomeCardDropdown();
 
+        // ------------------ Split Category Expense ------------------ //
+        function splitCategoryOptions(selected='பொது'){
+            const cats=[['MK செலவு','🛒 MK செலவு'],['SK செலவு','📦 SK செலவு'],['கொல்லை','🌱 கொல்லை'],['பொது','📝 பொது']];
+            return cats.map(([v,t])=>`<option value="${v}" ${v===selected?'selected':''}>${t}</option>`).join('');
+        }
+        window.openSplitCategoryExpenseModal=function(){
+            const now=new Date();
+            document.getElementById('sc-title').value='';
+            document.getElementById('sc-source').value='சம்பளம்';
+            document.getElementById('sc-date').value=getLocalDateString(now);
+            document.getElementById('sc-time').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            const rows=document.getElementById('sc-rows'); rows.innerHTML='';
+            addSplitCategoryRow('MK செலவு'); addSplitCategoryRow('பொது');
+            updateSplitCategoryTotal();
+            document.getElementById('split-category-expense-modal').style.display='flex';
+        };
+        window.closeSplitCategoryExpenseModal=function(){ document.getElementById('split-category-expense-modal').style.display='none'; };
+        window.addSplitCategoryRow=function(category='பொது', amount=''){
+            const row=document.createElement('div'); row.className='multi-source-row';
+            row.innerHTML=`<select class="sc-category form-input">${splitCategoryOptions(category)}</select><input class="sc-amount form-input" type="number" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை"><button type="button" class="close-btn" style="width:auto;padding:8px 10px;" onclick="this.parentElement.remove();updateSplitCategoryTotal();">✕</button>`;
+            row.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',updateSplitCategoryTotal));
+            document.getElementById('sc-rows').appendChild(row);
+        };
+        window.updateSplitCategoryTotal=function(){
+            let total=0; document.querySelectorAll('#sc-rows .sc-amount').forEach(el=>total+=Number(el.value||0));
+            document.getElementById('sc-total').innerText=`₹${total.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+        };
+        window.saveSplitCategoryExpense=async function(){
+            const title=document.getElementById('sc-title').value.trim();
+            const source=document.getElementById('sc-source').value;
+            const dateVal=document.getElementById('sc-date').value;
+            const timeVal=document.getElementById('sc-time').value;
+            const rows=[...document.querySelectorAll('#sc-rows .multi-source-row')].map(r=>({category:r.querySelector('.sc-category').value,amount:Number(r.querySelector('.sc-amount').value||0)})).filter(x=>x.amount>0);
+            if(!title || !rows.length){ alert('விவரம் மற்றும் குறைந்தது ஒரு செலவு தொகை உள்ளிடவும்.'); return; }
+            const total=rows.reduce((a,x)=>a+x.amount,0);
+            if(total<=0){ alert('தொகையை சரியாக உள்ளிடவும்.'); return; }
+            let d=dateVal?parseLocalDate(dateVal):new Date();
+            if(timeVal){ const [h,m]=timeVal.split(':').map(Number); d.setHours(h,m,0,0); }
+            const groupId='SC_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+            const staged=rows.map(x=>({title,amount:x.amount,type:'expense',source,category:x.category,timestamp:d.getTime(),splitCategoryGroupId:groupId,splitCategoryTotal:total}));
+            if(!validateExpenseBalance({type:'expense',source,amount:total},[])){ return; }
+            closeSplitCategoryExpenseModal();
+            let saved=0;
+            try{
+                for(const data of staged){ const id=await saveTransaction(data); if(id) saved++; }
+                if(saved!==staged.length) alert(`${saved} பதிவுகள் மட்டும் சேமிக்கப்பட்டன.`);
+            }catch(e){ console.error('Split category expense error:',e); alert('பதிவு சேமிக்க முடியவில்லை.'); }
+        };
+
         window.openBatchEntryModal=function(){ const box=document.getElementById('batch-rows'); box.innerHTML=''; addBatchRow(); addBatchRow(); document.getElementById('batch-entry-modal').style.display='flex'; updateBatchTotal(); };
         window.closeBatchEntryModal=function(){ document.getElementById('batch-entry-modal').style.display='none'; };
         window.addBatchRow=function(){
@@ -1825,7 +1909,9 @@
             givenContainer.innerHTML = "";
             takenContainer.innerHTML = "";
 
-            let kmList = allVattiLoans.filter(v => v.isKaiMaathu);
+            // திரும்பப் பெற்ற / திருப்பிக் கொடுத்த கைமாத்து Tab-ல் இருந்து மறையும்;
+            // ஆனால் அதன் transaction history main list-ல் அப்படியே இருக்கும்.
+            let kmList = allVattiLoans.filter(v => v.isKaiMaathu && !v.isReturned);
             let givenList = kmList.filter(v => (v.kmType || "given") === "given");
             let takenList = kmList.filter(v => v.kmType === "taken");
 
