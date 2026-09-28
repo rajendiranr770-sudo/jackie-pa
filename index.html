@@ -1449,14 +1449,16 @@
             renderApp();
         };
 
-        window.filterExpensesByIncome = function(source, incomeTimestamp, incomeTitle) {
-            let sameSourceIncomes = allTransactions
-                .filter(tx => tx.type === 'income' && tx.source === source && (tx.timestamp || 0) > incomeTimestamp)
-                .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-            let nextIncomeTime = sameSourceIncomes.length > 0 ? sameSourceIncomes[0].timestamp : Infinity;
-
-            activeIncomeFilter = { source: source, timestamp: incomeTimestamp, nextTimestamp: nextIncomeTime, title: incomeTitle };
+        // ஒரு குறிப்பிட்ட வரவைத் தொட்டால், அந்த வரவுக்கு உண்மையில் ஒதுக்கப்பட்ட
+        // செலவுகளை மட்டும் காட்ட வேண்டும். பழைய "next income timestamp" logic-க்கு பதிலாக
+        // FIFO allocation பயன்படுத்தப்படுகிறது.
+        window.filterExpensesByIncome = function(source, incomeTimestamp, incomeTitle, incomeId) {
+            activeIncomeFilter = {
+                incomeId: incomeId || null,
+                source: source,
+                timestamp: Number(incomeTimestamp || 0),
+                title: incomeTitle
+            };
             document.getElementById("list-title").innerText = `📌 ${incomeTitle} (${source}) வரவிலிருந்து செய்யப்பட்ட செலவுகள்`;
             renderStandardView();
         };
@@ -1494,6 +1496,142 @@
             return Number(tx.amount || 0);
         }
 
+        // ஒரு செலவு எந்த source-லிருந்து எவ்வளவு எடுத்தது என்பதை தனித்தனி rows-ஆக தருகிறது.
+        // purchasePayments இருந்தால் parent expense amount-ஐ பயன்படுத்தாமல் actual payments-ஐயே பயன்படுத்துகிறோம்.
+        function getExpenseSourceEntries(tx) {
+            if (!tx || tx.type !== 'expense') return [];
+            const entries = [];
+
+            if (Array.isArray(tx.purchasePayments) && tx.purchasePayments.length) {
+                tx.purchasePayments.forEach((p, index) => {
+                    const amount = Number(p.amount || 0);
+                    if (p.source && amount > 0) {
+                        entries.push({
+                            source: p.source,
+                            amount,
+                            timestamp: Number(p.timestamp || tx.timestamp || 0),
+                            txId: tx.id,
+                            partIndex: index
+                        });
+                    }
+                });
+                return entries;
+            }
+
+            if (Array.isArray(tx.splitSources) && tx.splitSources.length) {
+                tx.splitSources.forEach((part, index) => {
+                    const amount = Number(part.amount || 0);
+                    if (part.source && amount > 0) {
+                        entries.push({
+                            source: part.source,
+                            amount,
+                            timestamp: Number(tx.timestamp || 0),
+                            txId: tx.id,
+                            partIndex: index
+                        });
+                    }
+                });
+                return entries;
+            }
+
+            const amount = Number(tx.amount || 0);
+            if (tx.source && amount > 0) {
+                entries.push({
+                    source: tx.source,
+                    amount,
+                    timestamp: Number(tx.timestamp || 0),
+                    txId: tx.id,
+                    partIndex: 0
+                });
+            }
+            return entries;
+        }
+
+        // ஒவ்வொரு source-க்கும்: பழைய வரவு -> முதலில் வரும் செலவு என்ற FIFO முறையில்
+        // செலவுகளை வரவுகளுடன் இணைக்கிறது. ஒரு செலவு ஒரு வரவின் மீதியைத் தாண்டினால்
+        // மீதித் தொகை அடுத்த வரவுக்கு தானாகப் பிரிக்கப்படும்.
+        function buildIncomeExpenseAllocations() {
+            const incomeBySource = new Map();
+            const expenseBySource = new Map();
+
+            allTransactions.forEach(tx => {
+                if (tx.type === 'income') {
+                    const source = tx.source;
+                    const amount = Number(tx.amount || 0);
+                    if (!source || amount <= 0) return;
+                    if (!incomeBySource.has(source)) incomeBySource.set(source, []);
+                    incomeBySource.get(source).push({
+                        id: tx.id,
+                        source,
+                        timestamp: Number(tx.timestamp || 0),
+                        title: tx.title || '',
+                        amount,
+                        remaining: amount
+                    });
+                    return;
+                }
+
+                if (tx.type === 'expense') {
+                    getExpenseSourceEntries(tx).forEach(entry => {
+                        if (!expenseBySource.has(entry.source)) expenseBySource.set(entry.source, []);
+                        expenseBySource.get(entry.source).push(entry);
+                    });
+                }
+            });
+
+            const allocationsByIncomeId = new Map();
+
+            for (const [source, incomes] of incomeBySource.entries()) {
+                incomes.sort((a, b) => (a.timestamp - b.timestamp) || String(a.id || '').localeCompare(String(b.id || '')));
+                const expenses = (expenseBySource.get(source) || []).sort((a, b) =>
+                    (a.timestamp - b.timestamp) ||
+                    String(a.txId || '').localeCompare(String(b.txId || '')) ||
+                    (a.partIndex - b.partIndex)
+                );
+
+                let incomeIndex = 0;
+                for (const expense of expenses) {
+                    let remainingExpense = Number(expense.amount || 0);
+                    if (remainingExpense <= 0) continue;
+
+                    // எதிர்காலத்தில் இன்னும் வராத வரவை இன்றைய/முந்தைய செலவுக்கு பயன்படுத்தக் கூடாது.
+                    while (incomeIndex < incomes.length && (incomes[incomeIndex].remaining <= 0.009 || incomes[incomeIndex].timestamp > expense.timestamp)) {
+                        if (incomes[incomeIndex].remaining > 0.009 && incomes[incomeIndex].timestamp > expense.timestamp) break;
+                        incomeIndex++;
+                    }
+
+                    while (remainingExpense > 0.009 && incomeIndex < incomes.length) {
+                        const income = incomes[incomeIndex];
+                        if (income.timestamp > expense.timestamp) break;
+                        if (income.remaining <= 0.009) { incomeIndex++; continue; }
+
+                        const used = Math.min(remainingExpense, income.remaining);
+                        if (used > 0.009) {
+                            if (!allocationsByIncomeId.has(income.id)) allocationsByIncomeId.set(income.id, []);
+                            allocationsByIncomeId.get(income.id).push({
+                                txId: expense.txId,
+                                source,
+                                amount: used,
+                                expenseTimestamp: expense.timestamp,
+                                partIndex: expense.partIndex
+                            });
+                            income.remaining -= used;
+                            remainingExpense -= used;
+                        }
+
+                        if (income.remaining <= 0.009) incomeIndex++;
+                    }
+                }
+            }
+
+            return allocationsByIncomeId;
+        }
+
+        function getAllocationsForIncome(incomeId) {
+            const map = buildIncomeExpenseAllocations();
+            return map.get(incomeId) || [];
+        }
+
         function purchaseHasDateInRange(tx, start, end) {
             if (!Array.isArray(tx.purchasePayments)) return false;
             return tx.purchasePayments.some(p => { const t=Number(p.timestamp||0); return t>=start.getTime() && t<=end.getTime(); });
@@ -1512,16 +1650,36 @@
             const searchInput = document.getElementById('search-input') ? document.getElementById('search-input').value.trim() : "";
             const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
 
-            let filtered = filterTransactions(allTransactions).filter(tx => {
-                if (activeTab === "All") return true;
-                if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) return transactionUsesSource(tx, activeTab);
-                return tx.category === activeTab;
-            });
+            let filtered;
+            let incomeAllocationMap = new Map();
 
             if (activeIncomeFilter) {
-                filtered = filtered.filter(tx => {
-                    const txTime = tx.timestamp || 0;
-                    return tx.type === 'expense' && txTime >= activeIncomeFilter.timestamp && txTime < activeIncomeFilter.nextTimestamp && transactionUsesSource(tx, activeIncomeFilter.source);
+                // வரவு detail view-ல் search/month filter காரணமாக பழைய செலவுகள் மறையக் கூடாது.
+                // இந்த view-க்கு FIFO allocation தான் source of truth.
+                const selectedIncome = allTransactions.find(tx =>
+                    tx.type === 'income' &&
+                    ((activeIncomeFilter.incomeId && tx.id === activeIncomeFilter.incomeId) ||
+                     (!activeIncomeFilter.incomeId && tx.source === activeIncomeFilter.source && Number(tx.timestamp || 0) === Number(activeIncomeFilter.timestamp || 0)))
+                );
+
+                if (selectedIncome) {
+                    const allocations = getAllocationsForIncome(selectedIncome.id);
+                    incomeAllocationMap = new Map();
+                    allocations.forEach(a => {
+                        const prev = incomeAllocationMap.get(a.txId);
+                        if (prev) prev.amount += Number(a.amount || 0);
+                        else incomeAllocationMap.set(a.txId, { ...a, amount: Number(a.amount || 0) });
+                    });
+                    const txIds = new Set(incomeAllocationMap.keys());
+                    filtered = allTransactions.filter(tx => tx.type === 'expense' && txIds.has(tx.id));
+                } else {
+                    filtered = [];
+                }
+            } else {
+                filtered = filterTransactions(allTransactions).filter(tx => {
+                    if (activeTab === "All") return true;
+                    if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) return transactionUsesSource(tx, activeTab);
+                    return tx.category === activeTab;
                 });
             }
 
@@ -1530,6 +1688,7 @@
             let totalIncome = 0, totalExpense = 0;
             filtered.forEach(tx => {
                 if (tx.type === 'income') totalIncome += Number(tx.amount||0);
+                else if (activeIncomeFilter) totalExpense += Number(incomeAllocationMap.get(tx.id)?.amount || 0);
                 else totalExpense += Number(tx.amount||0);
             });
             const totalBox=document.getElementById("search-total-box"), incomeElem=document.getElementById("search-total-income"), expenseElem=document.getElementById("search-total-expense"), balanceElem=document.getElementById("search-net-balance");
@@ -1545,11 +1704,19 @@
                 const dateTimeStr=formatDateTime(tx.timestamp);
                 const div=document.createElement("div"); div.className=`tx-card ${tx.type}`;
                 const safeTx=JSON.stringify(tx).replace(/'/g,"&#39;");
-                const clickAttr=tx.type==='income' ? `onclick="filterExpensesByIncome(${JSON.stringify(tx.source||'')}, ${tx.timestamp}, ${JSON.stringify(tx.title||'')})"` : '';
+                const clickAttr=tx.type==='income' ? `onclick="filterExpensesByIncome(${JSON.stringify(tx.source||'')}, ${Number(tx.timestamp||0)}, ${JSON.stringify(tx.title||'')}, ${JSON.stringify(tx.id||'')})"` : '';
                 let amount = Number(tx.amount||0);
-                if(activeTab!=="All" && ["சம்பளம்","வீடு","இதர வரவு"].includes(activeTab) && tx.type==='expense') amount=getTransactionDisplayAmount(tx,activeTab);
+                if(activeIncomeFilter && tx.type==='expense') {
+                    amount = Number(incomeAllocationMap.get(tx.id)?.amount || 0);
+                } else if(activeTab!=="All" && ["சம்பளம்","வீடு","இதர வரவு"].includes(activeTab) && tx.type==='expense') {
+                    amount=getTransactionDisplayAmount(tx,activeTab);
+                }
                 let titleText=tx.title||'-';
                 let details='';
+                if(activeIncomeFilter && tx.type==='expense') {
+                    const allocated = Number(incomeAllocationMap.get(tx.id)?.amount || 0);
+                    details += `<div class="split-detail" style="color:#1d4ed8;font-weight:bold;">📌 இந்த வரவிலிருந்து செலவு: ₹${allocated.toLocaleString('en-IN')}</div>`;
+                }
                 if(isPurchase){
                     const payments=getPurchasePayments(tx);
                     const paid=payments.reduce((a,p)=>a+Number(p.amount||0),0);
