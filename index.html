@@ -1704,7 +1704,9 @@
                 const dateTimeStr=formatDateTime(tx.timestamp);
                 const div=document.createElement("div"); div.className=`tx-card ${tx.type}`;
                 const safeTx=JSON.stringify(tx).replace(/'/g,"&#39;");
-                const clickAttr=tx.type==='income' ? `onclick="filterExpensesByIncome(${JSON.stringify(tx.source||'')}, ${Number(tx.timestamp||0)}, ${JSON.stringify(tx.title||'')}, ${JSON.stringify(tx.id||'')})"` : '';
+                // Income card click is attached with addEventListener below.
+                // This is more reliable than an inline onclick on the inner flex div.
+                const clickAttr = '';
                 let amount = Number(tx.amount||0);
                 if(activeIncomeFilter && tx.type==='expense') {
                     amount = Number(incomeAllocationMap.get(tx.id)?.amount || 0);
@@ -1727,7 +1729,23 @@
                     details=`<div class="split-detail">💳 ${tx.splitSources.map(s=>`${s.source} ₹${Number(s.amount||0).toLocaleString('en-IN')}`).join(' + ')}</div>`;
                 }
                 const accountText=isPurchase ? 'பல கணக்குகள் / Payment' : (Array.isArray(tx.splitSources)&&tx.splitSources.length ? 'பல கணக்குகள்' : `கணக்கு: <b>${tx.source||'-'}</b>`);
-                div.innerHTML=`<div style="flex:1;" ${clickAttr}><div class="tx-title">${titleText}</div><div class="tx-sub">🕒 ${dateTimeStr} | ${accountText} | வகை: <b>${tx.category||'பொது'}</b>${tx.type==='income'?` | <span style="color:#10b981;font-weight:bold;">👆 தொட்டு செலவுகளைப் பார்</span>`:''}</div>${details}</div><div style="display:flex;align-items:center;gap:10px;"><div class="tx-amt" style="color:${tx.type==='income'?'#10b981':'#ef4444'}">${tx.type==='income'?'+':'-'}₹${amount.toLocaleString('en-IN')}</div><div class="action-btns"><span onclick='event.stopPropagation(); openEditModal(${safeTx}, "transactions")' style="cursor:pointer;margin-right:8px;">✏️</span><span onclick="event.stopPropagation(); openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span></div></div>`;
+                div.innerHTML=`<div style="flex:1;"><div class="tx-title">${titleText}</div><div class="tx-sub">🕒 ${dateTimeStr} | ${accountText} | வகை: <b>${tx.category||'பொது'}</b>${tx.type==='income'?` | <span class="income-expense-link" style="color:#10b981;font-weight:bold;cursor:pointer;text-decoration:underline;">👆 தொட்டு செலவுகளைப் பார்</span>`:''}</div>${details}</div><div style="display:flex;align-items:center;gap:10px;"><div class="tx-amt" style="color:${tx.type==='income'?'#10b981':'#ef4444'}">${tx.type==='income'?'+':'-'}₹${amount.toLocaleString('en-IN')}</div><div class="action-btns"><span onclick='event.stopPropagation(); openEditModal(${safeTx}, "transactions")' style="cursor:pointer;margin-right:8px;">✏️</span><span onclick="event.stopPropagation(); openDeleteModal('${tx.id}', 'transactions')" style="cursor:pointer;">🗑️</span></div></div>`;
+                if (tx.type === 'income') {
+                    const openIncomeExpenses = (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        window.filterExpensesByIncome(
+                            tx.source || '',
+                            Number(tx.timestamp || 0),
+                            tx.title || '',
+                            tx.id || ''
+                        );
+                    };
+                    div.addEventListener('click', openIncomeExpenses);
+                    const link = div.querySelector('.income-expense-link');
+                    if (link) link.addEventListener('click', openIncomeExpenses);
+                    div.style.cursor = 'pointer';
+                }
                 container.appendChild(div);
             });
         }
