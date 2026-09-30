@@ -980,11 +980,21 @@
             });
         }
 
-        // History-ல் Trip முடித்த தேதியே நிரந்தரமாக காட்ட வேண்டும்.
-        // பின்னர் அதே category-க்கு transaction வந்தாலும் History தேதி மாறக்கூடாது.
+        // History-ல் Trip-ன் உண்மையான கடைசி expense Entry-யின் தேதி/நேரமே காட்ட வேண்டும்.
+        // Trip Card 30-ம் தேதி முடிக்கப்பட்டாலும், கடைசி expense 29-ம் தேதி என்றால்
+        // History-ல் 29-ம் தேதி + அந்த Entry-யின் சரியான நேரமே காட்டப்படும்.
         function getTripHistoryTimestamp(name) {
             const meta = getTripMeta(name);
-            return Number(meta.completedAt || meta.closedAt || meta.lastEntryAt || meta.createdAt || 0);
+            return Number(meta.lastEntryAt || meta.closedAt || meta.completedAt || meta.createdAt || 0);
+        }
+
+        function formatTripDateTime(timestamp) {
+            if (!timestamp) return "-";
+            return new Date(timestamp).toLocaleString("ta-IN", {
+                year:"numeric", month:"2-digit", day:"2-digit",
+                hour:"2-digit", minute:"2-digit", second:"2-digit",
+                hour12:true
+            });
         }
 
         function openTripModal(mode="new", tripName="") {
@@ -1190,8 +1200,8 @@
             const names = Object.keys(tripMeta).filter(name => tripMeta[name] && tripMeta[name].archived);
             if (!names.length) return;
 
-            // History order = Trip முடித்த தேதி (completedAt).
-            // பின்னர் வந்த transaction காரணமாக பழைய Trip மேலே/கீழே நகரக்கூடாது.
+            // History order = அந்த Trip-ன் கடைசி Entry தேதி/நேரம்.
+            // Trip-ஐ எந்த நாளில் Card-ஆக முடித்தோம் என்பது இதை மாற்றாது.
             names.sort((a,b) => getTripHistoryTimestamp(b) - getTripHistoryTimestamp(a));
 
             const title = document.createElement("div");
@@ -1217,7 +1227,7 @@
                         மொத்த செலவு: <b style="color:#b91c1c;">₹${total.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
                     </div>
                     <div style="font-size:11px;color:#64748b;margin-top:3px;">
-                        முடித்த தேதி: ${formatTripDate(getTripHistoryTimestamp(tripName))}
+                        கடைசி Entry: ${formatTripDateTime(getTripHistoryTimestamp(tripName))}
                     </div>
                     <div class="trip-link-tags">
                         ${labels.length ? labels.map(x=>`<span class="trip-link-tag">${escapeHtml(x)}</span>`).join("") : `<span style="font-size:11px;color:#64748b;">பொது Trip List மட்டும்</span>`}
