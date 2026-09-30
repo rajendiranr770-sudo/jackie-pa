@@ -1024,6 +1024,8 @@
         }
 
         window.addNewTripCategory = function() {
+            // பல Active Trip-களை அனுமதிக்கலாம்.
+            // ஆனால் ஒரே பெயரில் ஏற்கனவே Active-ல் இருக்கும் Trip-ஐ மட்டும் மீண்டும் உருவாக்கக்கூடாது.
             openTripModal("new");
         };
 
@@ -1046,7 +1048,14 @@
             }
 
             if (!isEdit && customTrips.includes(name)) {
-                alert("இந்த Trip ஏற்கனவே உள்ளது. Edit செய்து அதன் List-ஐ மாற்றலாம்.");
+                alert("இந்த Trip ஏற்கனவே Active-ல் உள்ளது. முதலில் அதை முடிக்கவும்.");
+                return;
+            }
+
+            // History-ல் ஏற்கனவே இருக்கும் அதே பெயரை மீண்டும் பயன்படுத்த வேண்டாம்.
+            // ஒவ்வொரு புதிய Trip-மும் தனி புதிய Card/History ஆக இருக்க வேண்டும்.
+            if (!isEdit && tripMeta[name] && tripMeta[name].archived) {
+                alert(`"${name}" ஏற்கனவே முடிந்த Trip History-ல் உள்ளது.\n\nபுதிய Trip-க்கு புதிய பெயரை கொடுக்கவும்.`);
                 return;
             }
 
