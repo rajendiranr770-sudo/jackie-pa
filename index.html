@@ -1171,7 +1171,10 @@
                 d.innerHTML = `
                     <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
                         <div style="font-weight:bold;color:#0f172a;font-size:15px;">🗂️ ${escapeHtml(tripName)}</div>
-                        <button class="btn-add-more" onclick="event.stopPropagation(); editTripSettings('${String(tripName).replace(/'/g,"\\'")}')">✏️ List</button>
+                        <div style="display:flex;gap:5px;align-items:center;">
+                            <button class="btn-add-more" onclick="event.stopPropagation(); editTripSettings('${String(tripName).replace(/'/g,"\\'")}')">✏️ List</button>
+                            <button class="btn-close-trip" style="background:#dc2626;color:#fff;" onclick="event.stopPropagation(); deleteTripHistory('${String(tripName).replace(/'/g,"\\'")}')">🗑️ Delete</button>
+                        </div>
                     </div>
                     <div style="font-size:13px;margin-top:6px;color:#334155;">
                         மொத்த செலவு: <b style="color:#b91c1c;">₹${total.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
