@@ -980,6 +980,13 @@
             });
         }
 
+        // History-ல் Trip முடித்த தேதியே நிரந்தரமாக காட்ட வேண்டும்.
+        // பின்னர் அதே category-க்கு transaction வந்தாலும் History தேதி மாறக்கூடாது.
+        function getTripHistoryTimestamp(name) {
+            const meta = getTripMeta(name);
+            return Number(meta.completedAt || meta.closedAt || meta.lastEntryAt || meta.createdAt || 0);
+        }
+
         function openTripModal(mode="new", tripName="") {
             const modal = document.getElementById("trip-modal");
             const title = document.getElementById("trip-modal-title");
@@ -1075,12 +1082,40 @@
             const lastEntry = getTripLastEntryTimestamp(tripName);
             const meta = getTripMeta(tripName);
             meta.archived = true;
+            // இந்த நேரம்தான் Trip முடிக்கப்பட்ட நிரந்தர தேதி.
+            // பின்னர் transaction வந்தாலும் History தேதி இதிலிருந்தே வரும்.
             meta.completedAt = Date.now();
             meta.lastEntryAt = lastEntry;
             meta.totalAtClose = getTripTotal(tripName);
             meta.updatedAt = Date.now();
 
             customTrips = customTrips.filter(t => t !== tripName);
+            saveTripsLocalAndCloud();
+            saveTripMetaLocalAndCloud();
+            updateCategoryDropdowns();
+            renderApp();
+        };
+
+        // History-ல் உள்ள Trip card/list மட்டும் முழுமையாக நீக்கப்படும்.
+        // அந்த Trip-ன் ஏற்கனவே உள்ள expense transactions நீக்கப்படாது.
+        window.deleteTripHistory = function(tripName) {
+            const meta = getTripMeta(tripName);
+            if (!meta.archived) {
+                alert("இந்த Trip இன்னும் Active-ல் உள்ளது. முதலில் Trip-ஐ முடிக்கவும்.");
+                return;
+            }
+
+            const total = getTripTotal(tripName);
+            const message = total > 0
+                ? `\"${tripName}\" Trip History-ஐ முழுமையாக நீக்கவா?\n\nமொத்த Trip செலவு: ₹${total.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}\n\nHistory Card/List மட்டும் நீக்கப்படும். ஏற்கனவே உள்ள செலவு பதிவுகள் நீக்கப்படாது.`
+                : `\"${tripName}\" Trip History-ஐ முழுமையாக நீக்கவா?\n\nஇந்த Trip-ன் செலவு ₹0.00.\n\nHistory Card/List மட்டும் நீக்கப்படும்.`;
+
+            if (!confirm(message)) return;
+
+            delete tripMeta[tripName];
+            customTrips = customTrips.filter(t => t !== tripName);
+            if (activeTripFilter === tripName) activeTripFilter = null;
+
             saveTripsLocalAndCloud();
             saveTripMetaLocalAndCloud();
             updateCategoryDropdowns();
@@ -1155,7 +1190,9 @@
             const names = Object.keys(tripMeta).filter(name => tripMeta[name] && tripMeta[name].archived);
             if (!names.length) return;
 
-            names.sort((a,b) => getTripLastEntryTimestamp(b) - getTripLastEntryTimestamp(a));
+            // History order = Trip முடித்த தேதி (completedAt).
+            // பின்னர் வந்த transaction காரணமாக பழைய Trip மேலே/கீழே நகரக்கூடாது.
+            names.sort((a,b) => getTripHistoryTimestamp(b) - getTripHistoryTimestamp(a));
 
             const title = document.createElement("div");
             title.className = "section-title";
@@ -1180,7 +1217,7 @@
                         மொத்த செலவு: <b style="color:#b91c1c;">₹${total.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
                     </div>
                     <div style="font-size:11px;color:#64748b;margin-top:3px;">
-                        கடைசி Entry: ${formatTripDate(lastEntry)}
+                        முடித்த தேதி: ${formatTripDate(getTripHistoryTimestamp(tripName))}
                     </div>
                     <div class="trip-link-tags">
                         ${labels.length ? labels.map(x=>`<span class="trip-link-tag">${escapeHtml(x)}</span>`).join("") : `<span style="font-size:11px;color:#64748b;">பொது Trip List மட்டும்</span>`}
