@@ -967,10 +967,28 @@
                 .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
         }
 
-        function getTripLastEntryTimestamp(name) {
+        function getTripActualLastEntryTimestamp(name) {
             const txs = allTransactions.filter(tx => tx.category === name && tx.type === "expense");
-            if (!txs.length) return Number(getTripMeta(name).createdAt || 0);
+            if (!txs.length) return 0;
             return Math.max(...txs.map(tx => Number(tx.timestamp || 0)));
+        }
+
+        function getTripLastEntryTimestamp(name) {
+            return getTripActualLastEntryTimestamp(name) || Number(getTripMeta(name).createdAt || 0);
+        }
+
+        function getTripOpeningTimestamp(name) {
+            const meta = getTripMeta(name);
+            const firstEntry = allTransactions
+                .filter(tx => tx.category === name && tx.type === "expense")
+                .reduce((min, tx) => Math.min(min, Number(tx.timestamp || Infinity)), Infinity);
+            return Number(meta.createdAt || (Number.isFinite(firstEntry) ? firstEntry : 0));
+        }
+
+        function isTripCategory(category) {
+            return typeof category === "string" && (
+                customTrips.includes(category) || Object.prototype.hasOwnProperty.call(tripMeta, category)
+            );
         }
 
         function formatTripDate(timestamp) {
@@ -980,11 +998,21 @@
             });
         }
 
-        // History-ல் Trip முடித்த தேதியே நிரந்தரமாக காட்ட வேண்டும்.
-        // பின்னர் அதே category-க்கு transaction வந்தாலும் History தேதி மாறக்கூடாது.
+        // History-ல் Trip-ன் உண்மையான கடைசி expense Entry-யின் தேதி/நேரமே காட்ட வேண்டும்.
+        // Trip Card 30-ம் தேதி முடிக்கப்பட்டாலும், கடைசி expense 29-ம் தேதி என்றால்
+        // History-ல் 29-ம் தேதி + அந்த Entry-யின் சரியான நேரமே காட்டப்படும்.
         function getTripHistoryTimestamp(name) {
-            const meta = getTripMeta(name);
-            return Number(meta.completedAt || meta.closedAt || meta.lastEntryAt || meta.createdAt || 0);
+            // History order/date always follows the actual last expense, not the close time.
+            return getTripActualLastEntryTimestamp(name) || Number(getTripMeta(name).createdAt || 0);
+        }
+
+        function formatTripDateTime(timestamp) {
+            if (!timestamp) return "-";
+            return new Date(timestamp).toLocaleString("ta-IN", {
+                year:"numeric", month:"2-digit", day:"2-digit",
+                hour:"2-digit", minute:"2-digit", second:"2-digit",
+                hour12:true
+            });
         }
 
         function openTripModal(mode="new", tripName="") {
@@ -1014,6 +1042,8 @@
         }
 
         window.addNewTripCategory = function() {
+            // பல Active Trip-களை அனுமதிக்கலாம்.
+            // ஆனால் ஒரே பெயரில் ஏற்கனவே Active-ல் இருக்கும் Trip-ஐ மட்டும் மீண்டும் உருவாக்கக்கூடாது.
             openTripModal("new");
         };
 
@@ -1036,7 +1066,14 @@
             }
 
             if (!isEdit && customTrips.includes(name)) {
-                alert("இந்த Trip ஏற்கனவே உள்ளது. Edit செய்து அதன் List-ஐ மாற்றலாம்.");
+                alert("இந்த Trip ஏற்கனவே Active-ல் உள்ளது. முதலில் அதை முடிக்கவும்.");
+                return;
+            }
+
+            // History-ல் ஏற்கனவே இருக்கும் அதே பெயரை மீண்டும் பயன்படுத்த வேண்டாம்.
+            // ஒவ்வொரு புதிய Trip-மும் தனி புதிய Card/History ஆக இருக்க வேண்டும்.
+            if (!isEdit && tripMeta[name] && (tripMeta[name].archived || tripMeta[name].deletedFromHistory)) {
+                alert(`"${name}" ஏற்கனவே பயன்படுத்தப்பட்ட Trip பெயர்.\n\nபுதிய Trip-க்கு வேறு பெயரை கொடுக்கவும்.`);
                 return;
             }
 
@@ -1112,7 +1149,11 @@
 
             if (!confirm(message)) return;
 
-            delete tripMeta[tripName];
+            // Keep a hidden tombstone so old expense rows do not leak back into the main list.
+            meta.deletedFromHistory = true;
+            meta.archived = false;
+            meta.linkedLists = [];
+            meta.deletedAt = Date.now();
             customTrips = customTrips.filter(t => t !== tripName);
             if (activeTripFilter === tripName) activeTripFilter = null;
 
@@ -1173,6 +1214,8 @@
                     <div style="font-size:13px; color:#334155;">
                         மொத்தச் செலவு: <b style="color:#b91c1c; font-size:15px;">₹${totalSpent.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
                     </div>
+                    <div style="font-size:11px;color:#64748b;margin-top:4px;">Opening Date: ${formatTripDateTime(getTripOpeningTimestamp(tripName))}</div>
+                    <div style="font-size:11px;color:#64748b;margin-top:2px;">Last Entry: ${getTripActualLastEntryTimestamp(tripName) ? formatTripDateTime(getTripActualLastEntryTimestamp(tripName)) : "இன்னும் Entry இல்லை"}</div>
                     <div class="trip-link-tags">
                         ${labels.length ? labels.map(x=>`<span class="trip-link-tag">${escapeHtml(x)}</span>`).join("") : `<span style="font-size:11px;color:#64748b;">பொது Trip List மட்டும்</span>`}
                     </div>
@@ -1183,79 +1226,62 @@
         }
 
         function renderCompletedTripHistory() {
+            // Completed Trip cards are rendered inside the main chronological list.
+            // This container is intentionally kept empty so a completed Trip never
+            // appears above newer records.
             const box = document.getElementById("completed-trips-container");
-            if (!box) return;
-            box.innerHTML = "";
-
-            const names = Object.keys(tripMeta).filter(name => tripMeta[name] && tripMeta[name].archived);
-            if (!names.length) return;
-
-            // History order = Trip முடித்த தேதி (completedAt).
-            // பின்னர் வந்த transaction காரணமாக பழைய Trip மேலே/கீழே நகரக்கூடாது.
-            names.sort((a,b) => getTripHistoryTimestamp(b) - getTripHistoryTimestamp(a));
-
-            const title = document.createElement("div");
-            title.className = "section-title";
-            title.innerText = "🗂️ முடிந்த Trip / நிகழ்வு History";
-            box.appendChild(title);
-
-            names.forEach(tripName => {
-                const total = getTripTotal(tripName);
-                const lastEntry = getTripLastEntryTimestamp(tripName);
-                const labels = getTripLinkedLabels(tripName);
-                const d = document.createElement("div");
-                d.className = "trip-history-box";
-                d.innerHTML = `
-                    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
-                        <div style="font-weight:bold;color:#0f172a;font-size:15px;">🗂️ ${escapeHtml(tripName)}</div>
-                        <div style="display:flex;gap:5px;align-items:center;">
-                            <button class="btn-add-more" onclick="event.stopPropagation(); editTripSettings('${String(tripName).replace(/'/g,"\\'")}')">✏️ List</button>
-                            <button class="btn-close-trip" style="background:#dc2626;color:#fff;" onclick="event.stopPropagation(); deleteTripHistory('${String(tripName).replace(/'/g,"\\'")}')">🗑️ Delete</button>
-                        </div>
-                    </div>
-                    <div style="font-size:13px;margin-top:6px;color:#334155;">
-                        மொத்த செலவு: <b style="color:#b91c1c;">₹${total.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
-                    </div>
-                    <div style="font-size:11px;color:#64748b;margin-top:3px;">
-                        முடித்த தேதி: ${formatTripDate(getTripHistoryTimestamp(tripName))}
-                    </div>
-                    <div class="trip-link-tags">
-                        ${labels.length ? labels.map(x=>`<span class="trip-link-tag">${escapeHtml(x)}</span>`).join("") : `<span style="font-size:11px;color:#64748b;">பொது Trip List மட்டும்</span>`}
-                    </div>
-                    <button class="btn-view-trip" style="background:#2563eb;" onclick="filterByTripCategory('${String(tripName).replace(/'/g,"\\'")}')">👆 ${escapeHtml(tripName)} செலவுகளைப் பார்</button>
-                `;
-                box.appendChild(d);
-            });
+            if (box) box.innerHTML = "";
         }
 
         function renderLinkedTripSummaries() {
+            // Linked completed Trip summaries are inserted into the main list at the
+            // Trip's actual last-entry timestamp. Nothing is rendered at the top.
             const box = document.getElementById("linked-trip-container");
-            if (!box) return;
-            box.innerHTML = "";
-            if (!["MK செலவு","SK செலவு"].includes(activeTab)) return;
+            if (box) box.innerHTML = "";
+        }
 
-            const names = Object.keys(tripMeta).filter(name =>
-                getTripMeta(name).linkedLists.includes(activeTab)
-            );
-            if (!names.length) return;
-
-            const title = document.createElement("div");
-            title.className = "section-title";
-            title.innerText = activeTab === "MK செலவு" ? "🧳 MK-க்கு இணைக்கப்பட்ட Trip-கள்" : "🧳 SK-க்கு இணைக்கப்பட்ட Trip-கள்";
-            box.appendChild(title);
-
-            names.sort((a,b)=>getTripLastEntryTimestamp(b)-getTripLastEntryTimestamp(a));
-            names.forEach(tripName => {
-                const d=document.createElement("div");
-                d.className="trip-history-box";
-                d.innerHTML=`
-                    <div style="font-weight:bold;color:#0f172a;font-size:15px;">🧳 ${escapeHtml(tripName)}</div>
-                    <div style="font-size:13px;margin-top:5px;">Trip மொத்த செலவு: <b style="color:#b91c1c;">₹${getTripTotal(tripName).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
-                    <div style="font-size:11px;color:#64748b;margin-top:3px;">கடைசி Entry: ${formatTripDate(getTripLastEntryTimestamp(tripName))}</div>
-                    <button class="btn-view-trip" style="background:#2563eb;" onclick="filterByTripCategory('${String(tripName).replace(/'/g,"\\'")}')">👆 இந்த Trip செலவுகளைப் பார்</button>
-                `;
-                box.appendChild(d);
+        function getCompletedTripNamesForCurrentView() {
+            const names = Object.keys(tripMeta).filter(name => {
+                const meta = getTripMeta(name);
+                if (!meta || !meta.archived || meta.deletedFromHistory) return false;
+                if (activeTab === "MK செலவு" || activeTab === "SK செலவு") {
+                    return (meta.linkedLists || []).includes(activeTab);
+                }
+                // In the general list, show every completed Trip once.
+                return activeTab === "All";
             });
+            return names;
+        }
+
+        function createCompletedTripSummaryElement(tripName) {
+            const meta = getTripMeta(tripName);
+            const total = getTripTotal(tripName);
+            const opening = getTripOpeningTimestamp(tripName);
+            const lastEntry = getTripActualLastEntryTimestamp(tripName) || Number(meta.createdAt || 0);
+            const labels = getTripLinkedLabels(tripName);
+            const d = document.createElement("div");
+            d.className = "trip-history-box";
+            d.style.marginBottom = "10px";
+            d.innerHTML = `
+                <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+                    <div style="font-weight:bold;color:#0f172a;font-size:15px;">🧳 ${escapeHtml(tripName)}</div>
+                    <div style="display:flex;gap:5px;align-items:center;">
+                        <button class="btn-add-more" onclick="event.stopPropagation(); editTripSettings('${String(tripName).replace(/'/g,"\\'")}')">✏️ List</button>
+                        <button class="btn-close-trip" style="background:#dc2626;color:#fff;" onclick="event.stopPropagation(); deleteTripHistory('${String(tripName).replace(/'/g,"\\'")}')">🗑️ Delete</button>
+                    </div>
+                </div>
+                <div style="font-size:13px;margin-top:6px;color:#334155;">
+                    மொத்த செலவு: <b style="color:#b91c1c;">₹${total.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
+                </div>
+                <div style="font-size:11px;color:#64748b;margin-top:3px;">Opening Date: ${formatTripDateTime(opening)}</div>
+                <div style="font-size:11px;color:#64748b;margin-top:3px;">Last Entry: ${formatTripDateTime(lastEntry)}</div>
+                <div style="font-size:11px;color:#64748b;margin-top:3px;">Closing Date: ${formatTripDateTime(lastEntry)}</div>
+                <div class="trip-link-tags">
+                    ${labels.length ? labels.map(x=>`<span class="trip-link-tag">${escapeHtml(x)}</span>`).join("") : `<span style="font-size:11px;color:#64748b;">பொது Trip List மட்டும்</span>`}
+                </div>
+                <button class="btn-view-trip" style="background:#2563eb;" onclick="filterByTripCategory('${String(tripName).replace(/'/g,"\\'")}')">👆 ${escapeHtml(tripName)} செலவுகளைப் பார்</button>
+            `;
+            return d;
         }
 
         window.filterByTripCategory = function(tripName) {
@@ -1890,6 +1916,8 @@
 
             allTransactions.forEach(tx => {
                 if (tx.type === 'income') {
+                    // கைமாத்து திரும்ப வந்தது (kaiMaathuReturn) என்பது உண்மையான வரவு.
+                    // அது தேர்ந்தெடுக்கப்பட்ட source-ல் புதிய income ஆக FIFO-வில் சேர வேண்டும்.
                     const source = tx.source;
                     const amount = Number(tx.amount || 0);
                     if (!source || amount <= 0) return;
@@ -1906,6 +1934,10 @@
                 }
 
                 if (tx.type === 'expense') {
+                    // கைமாத்து கொடுத்தது = பணம் தற்காலிகமாக வெளியே சென்ற பதிவு.
+                    // இதை சம்பளம்/வீடு/இதர வரவின் சாதாரண செலவாக மீண்டும் ஒதுக்கக்கூடாது.
+                    // கைமாத்து திரும்ப வந்த income மட்டும் அந்த source-ன் புதிய வரவாக கணக்கில் சேரும்.
+                    if (tx.kaiMaathuEntry === true) return;
                     getExpenseSourceEntries(tx).forEach(entry => {
                         if (!expenseBySource.has(entry.source)) expenseBySource.set(entry.source, []);
                         expenseBySource.get(entry.source).push(entry);
@@ -1977,33 +2009,9 @@
         }
 
         function renderStandardView() {
-            /*
-             * Income -> Expense drill-down mode:
-             * When the user taps “தொட்டு செலவுகளைப் பார்” on one income card,
-             * this view must contain ONLY the expenses allocated to that income.
-             * Do not render Trip cards/history above the result list; otherwise the
-             * selected income appears to show unrelated Trip data (the bug seen
-             * when a ₹1,000 கைமாத்து repayment was tapped).
-             */
-            const incomeDrillDown = !!activeIncomeFilter;
-            const incomeCardsContainer = document.getElementById("income-cards-container");
-            const activeTripsContainer = document.getElementById("active-trips-container");
-            const completedTripsContainer = document.getElementById("completed-trips-container");
-            const linkedTripContainer = document.getElementById("linked-trip-container");
-
-            if (incomeDrillDown) {
-                if (incomeCardsContainer) incomeCardsContainer.innerHTML = "";
-                if (activeTripsContainer) activeTripsContainer.innerHTML = "";
-                if (completedTripsContainer) completedTripsContainer.innerHTML = "";
-                if (linkedTripContainer) linkedTripContainer.innerHTML = "";
-            } else {
-                renderIncomeCards();
-                renderActiveTripCards();
-                renderCompletedTripHistory();
-                renderLinkedTripSummaries();
-                renderPendingPurchases();
-            }
-
+            renderIncomeCards();
+            renderActiveTripCards();
+            renderPendingPurchases();
             const container = document.getElementById("tx-list-container");
             const searchInput = document.getElementById('search-input') ? document.getElementById('search-input').value.trim() : "";
             const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
@@ -2033,6 +2041,8 @@
                 filtered = allTransactions.filter(tx => tx.type === "expense" && tx.category === activeTripFilter);
             } else {
                 filtered = filterTransactions(allTransactions).filter(tx => {
+                    // Trip/Event expense rows stay inside their summary card, not the general or MK/SK list.
+                    if (isTripCategory(tx.category)) return false;
                     if (activeTab === "All") return true;
                     if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) return transactionUsesSource(tx, activeTab);
                     if (["MK செலவு","SK செலவு"].includes(activeTab)) {
@@ -2058,15 +2068,35 @@
             } else if(totalBox) totalBox.style.display="none";
 
             container.innerHTML="";
-            if(!filtered.length){ container.innerHTML=`<div style="text-align:center; padding:20px; color:gray;">பதிவுகள் எதுவும் இல்லை.</div>`; return; }
 
-            filtered.forEach(tx=>{
+            // Completed Trip/Event summaries live in the same chronological stream as
+            // ordinary records. Their timestamp is the REAL last expense entry, so a
+            // Trip closed on 30/09 with its last expense on 29/09 stays at the 29/09
+            // position. Trip expense rows themselves remain hidden here.
+            const completedTripNames = getCompletedTripNamesForCurrentView();
+            const completedTripItems = completedTripNames.map(name => ({
+                kind: "trip",
+                name,
+                timestamp: getTripActualLastEntryTimestamp(name) || Number(getTripMeta(name).createdAt || 0)
+            }));
+
+            const recordItems = filtered.map(tx => ({ kind: "tx", tx, timestamp: purchaseLatestTimestamp(tx) }));
+            const timelineItems = [...recordItems, ...completedTripItems];
+            timelineItems.sort((a,b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+
+            if(!timelineItems.length){ container.innerHTML=`<div style="text-align:center; padding:20px; color:gray;">பதிவுகள் எதுவும் இல்லை.</div>`; return; }
+
+            timelineItems.forEach(item=>{
+                if (item.kind === "trip") {
+                    container.appendChild(createCompletedTripSummaryElement(item.name));
+                    return;
+                }
+
+                const tx = item.tx;
                 const isPurchase = tx.type==='expense' && Array.isArray(tx.purchasePayments) && tx.purchasePayments.length>0;
                 const dateTimeStr=formatDateTime(tx.timestamp);
                 const div=document.createElement("div"); div.className=`tx-card ${tx.type}`;
                 const safeTx=JSON.stringify(tx).replace(/'/g,"&#39;");
-                // Income card click is attached with addEventListener below.
-                // This is more reliable than an inline onclick on the inner flex div.
                 const clickAttr = '';
                 let amount = Number(tx.amount||0);
                 if(activeIncomeFilter && tx.type==='expense') {
@@ -2102,10 +2132,11 @@
                             tx.id || ''
                         );
                     };
-                    div.addEventListener('click', openIncomeExpenses);
                     const link = div.querySelector('.income-expense-link');
                     if (link) link.addEventListener('click', openIncomeExpenses);
-                    div.style.cursor = 'pointer';
+                    // முழு வரவு card-ஐ tap செய்தால் edit/filter ஆகக்கூடாது.
+                    // '👆 தொட்டு செலவுகளைப் பார்' என்பதை மட்டும் tap செய்தால் அந்த வரவின் செலவுகள் காட்டப்படும்.
+                    if (link) link.style.cursor = 'pointer';
                 }
                 container.appendChild(div);
             });
