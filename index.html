@@ -1815,11 +1815,13 @@
         window.filterExpensesByIncome = function(source, incomeTimestamp, incomeTitle, incomeId) {
             activeIncomeFilter = {
                 incomeId: incomeId || null,
-                source: source,
+                source: source || '',
                 timestamp: Number(incomeTimestamp || 0),
-                title: incomeTitle
+                title: incomeTitle || ''
             };
-            document.getElementById("list-title").innerText = `📌 ${incomeTitle} (${source}) வரவிலிருந்து செய்யப்பட்ட செலவுகள்`;
+            const mf = document.getElementById('month-filter');
+            if (mf) mf.value = 'ALL';
+            document.getElementById("list-title").innerText = `📌 ${incomeTitle || 'வரவு'} (${source || '-'}) வரவிலிருந்து செய்யப்பட்ட செலவுகள்`;
             renderStandardView();
         };
 
@@ -2009,10 +2011,19 @@
         }
 
         function renderStandardView() {
-            renderIncomeCards();
-            renderActiveTripCards();
-            renderPendingPurchases();
             const container = document.getElementById("tx-list-container");
+            if (!activeIncomeFilter) {
+                renderIncomeCards();
+                renderActiveTripCards();
+                renderPendingPurchases();
+            } else {
+                const incomeBox = document.getElementById('income-cards-container');
+                const activeTripBox = document.getElementById('active-trips-container');
+                const pendingBox = document.getElementById('pending-purchases-container');
+                if (incomeBox) incomeBox.innerHTML = '';
+                if (activeTripBox) activeTripBox.innerHTML = '';
+                if (pendingBox) pendingBox.innerHTML = '';
+            }
             const searchInput = document.getElementById('search-input') ? document.getElementById('search-input').value.trim() : "";
             const monthFilter = document.getElementById('month-filter') ? document.getElementById('month-filter').value : "CURRENT_WEEK";
 
@@ -2035,7 +2046,7 @@
                         else incomeAllocationMap.set(a.txId, { ...a, amount: Number(a.amount || 0) });
                     });
                     const txIds = new Set(incomeAllocationMap.keys());
-                    filtered = allTransactions.filter(tx => tx.type === 'expense' && txIds.has(tx.id));
+                    filtered = filterTransactions(allTransactions.filter(tx => tx.type === 'expense' && txIds.has(tx.id)));
                 } else filtered = [];
             } else if (activeTripFilter) {
                 filtered = allTransactions.filter(tx => tx.type === "expense" && tx.category === activeTripFilter);
@@ -2073,7 +2084,7 @@
             // ordinary records. Their timestamp is the REAL last expense entry, so a
             // Trip closed on 30/09 with its last expense on 29/09 stays at the 29/09
             // position. Trip expense rows themselves remain hidden here.
-            const completedTripNames = getCompletedTripNamesForCurrentView();
+            const completedTripNames = activeIncomeFilter ? [] : getCompletedTripNamesForCurrentView();
             const completedTripItems = completedTripNames.map(name => ({
                 kind: "trip",
                 name,
