@@ -1936,10 +1936,10 @@
                 }
 
                 if (tx.type === 'expense') {
-                    // கைமாத்து கொடுத்தது = பணம் தற்காலிகமாக வெளியே சென்ற பதிவு.
-                    // இதை சம்பளம்/வீடு/இதர வரவின் சாதாரண செலவாக மீண்டும் ஒதுக்கக்கூடாது.
-                    // கைமாத்து திரும்ப வந்த income மட்டும் அந்த source-ன் புதிய வரவாக கணக்கில் சேரும்.
-                    if (tx.kaiMaathuEntry === true) return;
+                    // கைமாத்து கொடுத்த செலவும் ஒரு உண்மையான செலவுதான்.
+                    // அது நடந்த நேரத்தில் கிடைத்த source income-க்கு FIFO முறையில்
+                    // ஒதுக்கப்பட வேண்டும். கைமாத்து என்று இருப்பதால் allocation-ல்
+                    // இருந்து நீக்கக்கூடாது.
                     getExpenseSourceEntries(tx).forEach(entry => {
                         if (!expenseBySource.has(entry.source)) expenseBySource.set(entry.source, []);
                         expenseBySource.get(entry.source).push(entry);
@@ -1948,6 +1948,11 @@
             });
 
             const allocationsByIncomeId = new Map();
+
+            // கைமாத்து return income ஒரு புதிய income boundary.
+            // அதன் பிறகு source-ல் நடக்கும் செலவுகள் FIFO மூலம் அந்த புதிய
+            // income-க்கு ஒதுக்கப்படும். Return-க்கு முன் நடந்த original
+            // கைமாத்து செலவை return income-க்கு மீண்டும் இணைக்கக் கூடாது.
 
             for (const [source, incomes] of incomeBySource.entries()) {
                 incomes.sort((a, b) => (a.timestamp - b.timestamp) || String(a.id || '').localeCompare(String(b.id || '')));
