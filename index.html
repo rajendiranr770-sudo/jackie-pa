@@ -2005,6 +2005,58 @@
             return map.get(incomeId) || [];
         }
 
+        // ஒரு வரவைத் திறந்த பிறகு filter-கள் அந்த வரவிலிருந்து ஒதுக்கப்பட்ட
+        // செலவுகளை மட்டும் filter செய்ய வேண்டும். குறிப்பாக split/purchase payment
+        // இருந்தால் parent transaction timestamp-க்கு பதிலாக உண்மையான payment/part
+        // timestamp பயன்படுத்தப்படுகிறது.
+        function filterIncomeAllocatedExpenses(txList, allocationMap) {
+            const searchInput = document.getElementById('search-input');
+            const monthFilterInput = document.getElementById('month-filter');
+            const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const monthFilter = monthFilterInput ? monthFilterInput.value : 'ALL';
+            const fromDateVal = document.getElementById('from-date') ? document.getElementById('from-date').value : '';
+            const toDateVal = document.getElementById('to-date') ? document.getElementById('to-date').value : '';
+            const { start: last7Start, end: last7End } = getLast7DaysRange();
+
+            return txList.filter(tx => {
+                const allocation = allocationMap.get(tx.id);
+                if (!allocation || Number(allocation.amount || 0) <= 0) return false;
+
+                const itemTime = Number(allocation.expenseTimestamp || tx.timestamp || 0);
+                const itemDate = new Date(itemTime);
+
+                let matchesSearch = true;
+                if (searchVal !== '') {
+                    const hay = [
+                        tx.title, tx.amount, tx.category, tx.source, tx.incomeCard,
+                        tx.personName, tx.note,
+                        ...(Array.isArray(tx.splitSources) ? tx.splitSources.map(x => x.source) : []),
+                        ...(Array.isArray(tx.purchasePayments) ? tx.purchasePayments.map(x => x.source) : [])
+                    ].filter(v => v !== undefined && v !== null).map(v => String(v).toLowerCase());
+                    matchesSearch = hay.some(v => v.includes(searchVal)) ||
+                        Number(allocation.amount || 0).toString().includes(searchVal);
+                }
+
+                let matchesDate = true;
+                if (monthFilter === 'CURRENT_WEEK') {
+                    matchesDate = itemDate >= last7Start && itemDate <= last7End;
+                } else if (monthFilter === 'ALL' || !monthFilter) {
+                    matchesDate = true;
+                } else if (monthFilter === 'CUSTOM_DATE') {
+                    let start = fromDateVal ? parseLocalDate(fromDateVal) : new Date(0);
+                    let end = toDateVal ? parseLocalDate(toDateVal) : new Date(8640000000000000);
+                    if (fromDateVal) start.setHours(0,0,0,0);
+                    if (toDateVal) end.setHours(23,59,59,999);
+                    matchesDate = itemDate >= start && itemDate <= end;
+                } else if (monthFilter.includes('-')) {
+                    const key = `${itemDate.getFullYear()}-${String(itemDate.getMonth()+1).padStart(2,'0')}`;
+                    matchesDate = key === monthFilter;
+                }
+
+                return matchesSearch && matchesDate;
+            });
+        }
+
         function purchaseHasDateInRange(tx, start, end) {
             if (!Array.isArray(tx.purchasePayments)) return false;
             return tx.purchasePayments.some(p => { const t=Number(p.timestamp||0); return t>=start.getTime() && t<=end.getTime(); });
@@ -2051,7 +2103,11 @@
                         else incomeAllocationMap.set(a.txId, { ...a, amount: Number(a.amount || 0) });
                     });
                     const txIds = new Set(incomeAllocationMap.keys());
-                    filtered = filterTransactions(allTransactions.filter(tx => tx.type === 'expense' && txIds.has(tx.id)));
+                    const allocatedExpenses = allTransactions.filter(tx => tx.type === 'expense' && txIds.has(tx.id));
+                    // Income detail-ல் allocation amount/timestamp தான் source of truth.
+                    // பொதுவான filter-ஐ நேரடியாகப் பயன்படுத்தினால் split expense அல்லது
+                    // payment timestamp காரணமாக சரியான செலவு மறைந்து போகலாம்.
+                    filtered = filterIncomeAllocatedExpenses(allocatedExpenses, incomeAllocationMap);
                 } else filtered = [];
             } else if (activeTripFilter) {
                 filtered = allTransactions.filter(tx => tx.type === "expense" && tx.category === activeTripFilter);
