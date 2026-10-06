@@ -1821,6 +1821,14 @@
             };
             const mf = document.getElementById('month-filter');
             if (mf) mf.value = 'ALL';
+            const si = document.getElementById('search-input');
+            if (si) si.value = '';
+            const fd = document.getElementById('from-date');
+            const td = document.getElementById('to-date');
+            if (fd) fd.value = '';
+            if (td) td.value = '';
+            const cd = document.getElementById('custom-date-container');
+            if (cd) cd.style.display = 'none';
             document.getElementById("list-title").innerText = `📌 ${incomeTitle || 'வரவு'} (${source || '-'}) வரவிலிருந்து செய்யப்பட்ட செலவுகள்`;
             renderStandardView();
         };
@@ -1836,21 +1844,40 @@
             return Array.isArray(tx.purchasePayments) ? tx.purchasePayments : [];
         }
 
+        // எல்லா source பெயர்களையும் ஒரே கணக்காக normalize செய்கிறோம்.
+        // பழைய/புதிய பதிவுகளில் "சம்பளம்", "சம்பளம் வரவு" போன்ற பெயர் வேறுபாடு
+        // இருந்தாலும் Income -> Expense filter தவறாமல் வேலை செய்யும்.
+        function normalizeSourceName(source) {
+            const s = String(source || '').trim();
+            if (!s) return '';
+            if (s === 'சம்பளம்' || s === 'சம்பளம் வரவு' || s === 'சம்பள வரவு') return 'சம்பளம்';
+            if (s === 'வீடு' || s === 'வீட்டு வரவு' || s === 'வீட்டு பணம்') return 'வீடு';
+            if (s === 'இதர வரவு' || s === 'இதர வரவு பணம்' || s === 'மற்ற வரவு') return 'இதர வரவு';
+            return s;
+        }
+
         function transactionUsesSource(tx, source) {
-            if (tx.source === source) return true;
-            if (Array.isArray(tx.splitSources) && tx.splitSources.some(s => s.source === source && Number(s.amount) > 0)) return true;
-            if (Array.isArray(tx.purchasePayments) && tx.purchasePayments.some(p => p.source === source && Number(p.amount) > 0)) return true;
+            const wanted = normalizeSourceName(source);
+            if (normalizeSourceName(tx.source) === wanted) return true;
+            if (Array.isArray(tx.splitSources) && tx.splitSources.some(s => normalizeSourceName(s.source) === wanted && Number(s.amount) > 0)) return true;
+            if (Array.isArray(tx.purchasePayments) && tx.purchasePayments.some(p => normalizeSourceName(p.source) === wanted && Number(p.amount) > 0)) return true;
             return false;
         }
 
         function getTransactionExpenseForSource(tx, source) {
-            if (tx.type !== "expense") return 0;
-            if (Array.isArray(tx.purchasePayments)) return tx.purchasePayments.filter(p => p.source === source).reduce((a,p)=>a+Number(p.amount||0),0);
-            if (Array.isArray(tx.splitSources)) {
-                const row = tx.splitSources.find(s => s.source === source);
-                return row ? Number(row.amount || 0) : 0;
+            if (tx.type !== 'expense') return 0;
+            const wanted = normalizeSourceName(source);
+            if (Array.isArray(tx.purchasePayments)) {
+                return tx.purchasePayments
+                    .filter(p => normalizeSourceName(p.source) === wanted)
+                    .reduce((a,p) => a + Number(p.amount || 0), 0);
             }
-            return tx.source === source ? Number(tx.amount || 0) : 0;
+            if (Array.isArray(tx.splitSources)) {
+                return tx.splitSources
+                    .filter(s => normalizeSourceName(s.source) === wanted)
+                    .reduce((a,s) => a + Number(s.amount || 0), 0);
+            }
+            return normalizeSourceName(tx.source) === wanted ? Number(tx.amount || 0) : 0;
         }
 
         function getTransactionDisplayAmount(tx, source) {
@@ -1859,7 +1886,6 @@
         }
 
         // ஒரு செலவு எந்த source-லிருந்து எவ்வளவு எடுத்தது என்பதை தனித்தனி rows-ஆக தருகிறது.
-        // purchasePayments இருந்தால் parent expense amount-ஐ பயன்படுத்தாமல் actual payments-ஐயே பயன்படுத்துகிறோம்.
         function getExpenseSourceEntries(tx) {
             if (!tx || tx.type !== 'expense') return [];
             const entries = [];
@@ -1867,14 +1893,9 @@
             if (Array.isArray(tx.purchasePayments) && tx.purchasePayments.length) {
                 tx.purchasePayments.forEach((p, index) => {
                     const amount = Number(p.amount || 0);
-                    if (p.source && amount > 0) {
-                        entries.push({
-                            source: p.source,
-                            amount,
-                            timestamp: Number(p.timestamp || tx.timestamp || 0),
-                            txId: tx.id,
-                            partIndex: index
-                        });
+                    const source = normalizeSourceName(p.source);
+                    if (source && amount > 0) {
+                        entries.push({ source, amount, timestamp: Number(p.timestamp || tx.timestamp || 0), txId: tx.id, partIndex: index });
                     }
                 });
                 return entries;
@@ -1883,63 +1904,45 @@
             if (Array.isArray(tx.splitSources) && tx.splitSources.length) {
                 tx.splitSources.forEach((part, index) => {
                     const amount = Number(part.amount || 0);
-                    if (part.source && amount > 0) {
-                        entries.push({
-                            source: part.source,
-                            amount,
-                            timestamp: Number(tx.timestamp || 0),
-                            txId: tx.id,
-                            partIndex: index
-                        });
+                    const source = normalizeSourceName(part.source);
+                    if (source && amount > 0) {
+                        entries.push({ source, amount, timestamp: Number(tx.timestamp || 0), txId: tx.id, partIndex: index });
                     }
                 });
                 return entries;
             }
 
             const amount = Number(tx.amount || 0);
-            if (tx.source && amount > 0) {
-                entries.push({
-                    source: tx.source,
-                    amount,
-                    timestamp: Number(tx.timestamp || 0),
-                    txId: tx.id,
-                    partIndex: 0
-                });
+            const source = normalizeSourceName(tx.source);
+            if (source && amount > 0) {
+                entries.push({ source, amount, timestamp: Number(tx.timestamp || 0), txId: tx.id, partIndex: 0 });
             }
             return entries;
         }
 
-        // ஒவ்வொரு source-க்கும்: பழைய வரவு -> முதலில் வரும் செலவு என்ற FIFO முறையில்
-        // செலவுகளை வரவுகளுடன் இணைக்கிறது. ஒரு செலவு ஒரு வரவின் மீதியைத் தாண்டினால்
-        // மீதித் தொகை அடுத்த வரவுக்கு தானாகப் பிரிக்கப்படும்.
+        // ஒவ்வொரு source-க்கும் FIFO. ஒவ்வொரு expense-ஐ அந்த நேரத்துக்கு முன்/அதே நேரத்தில்
+        // வந்த மிகப் பழைய balance-இல் இருந்து கழிக்கிறது. அதனால்:
+        // சம்பளம் 10,000 -> செலவு 2,000 -> கைமாத்து 1,000 -> கைமாத்து திரும்ப 1,000 (புது வரவு)
+        // -> அடுத்த செலவு 1,000 என்றால் அந்த கடைசி செலவு புது கைமாத்து வரவின் கீழ் மட்டும் வரும்.
         function buildIncomeExpenseAllocations() {
             const incomeBySource = new Map();
             const expenseBySource = new Map();
 
             allTransactions.forEach(tx => {
+                const source = normalizeSourceName(tx.source);
+                const amount = Number(tx.amount || 0);
+
                 if (tx.type === 'income') {
-                    // கைமாத்து திரும்ப வந்தது (kaiMaathuReturn) என்பது உண்மையான வரவு.
-                    // அது தேர்ந்தெடுக்கப்பட்ட source-ல் புதிய income ஆக FIFO-வில் சேர வேண்டும்.
-                    const source = tx.source;
-                    const amount = Number(tx.amount || 0);
                     if (!source || amount <= 0) return;
                     if (!incomeBySource.has(source)) incomeBySource.set(source, []);
                     incomeBySource.get(source).push({
-                        id: tx.id,
-                        source,
-                        timestamp: Number(tx.timestamp || 0),
-                        title: tx.title || '',
-                        amount,
-                        remaining: amount
+                        id: tx.id, source, timestamp: Number(tx.timestamp || 0),
+                        title: tx.title || '', amount, remaining: amount
                     });
                     return;
                 }
 
                 if (tx.type === 'expense') {
-                    // கைமாத்து கொடுத்த செலவும் ஒரு உண்மையான செலவுதான்.
-                    // அது நடந்த நேரத்தில் கிடைத்த source income-க்கு FIFO முறையில்
-                    // ஒதுக்கப்பட வேண்டும். கைமாத்து என்று இருப்பதால் allocation-ல்
-                    // இருந்து நீக்கக்கூடாது.
                     getExpenseSourceEntries(tx).forEach(entry => {
                         if (!expenseBySource.has(entry.source)) expenseBySource.set(entry.source, []);
                         expenseBySource.get(entry.source).push(entry);
@@ -1949,50 +1952,36 @@
 
             const allocationsByIncomeId = new Map();
 
-            // கைமாத்து return income ஒரு புதிய income boundary.
-            // அதன் பிறகு source-ல் நடக்கும் செலவுகள் FIFO மூலம் அந்த புதிய
-            // income-க்கு ஒதுக்கப்படும். Return-க்கு முன் நடந்த original
-            // கைமாத்து செலவை return income-க்கு மீண்டும் இணைக்கக் கூடாது.
-
             for (const [source, incomes] of incomeBySource.entries()) {
-                incomes.sort((a, b) => (a.timestamp - b.timestamp) || String(a.id || '').localeCompare(String(b.id || '')));
-                const expenses = (expenseBySource.get(source) || []).sort((a, b) =>
-                    (a.timestamp - b.timestamp) ||
-                    String(a.txId || '').localeCompare(String(b.txId || '')) ||
-                    (a.partIndex - b.partIndex)
+                incomes.sort((a,b) => (a.timestamp-b.timestamp) || String(a.id||'').localeCompare(String(b.id||'')));
+                const expenses = (expenseBySource.get(source) || []).sort((a,b) =>
+                    (a.timestamp-b.timestamp) || String(a.txId||'').localeCompare(String(b.txId||'')) || (a.partIndex-b.partIndex)
                 );
 
-                let incomeIndex = 0;
                 for (const expense of expenses) {
                     let remainingExpense = Number(expense.amount || 0);
                     if (remainingExpense <= 0) continue;
 
-                    // எதிர்காலத்தில் இன்னும் வராத வரவை இன்றைய/முந்தைய செலவுக்கு பயன்படுத்தக் கூடாது.
-                    while (incomeIndex < incomes.length && (incomes[incomeIndex].remaining <= 0.009 || incomes[incomeIndex].timestamp > expense.timestamp)) {
-                        if (incomes[incomeIndex].remaining > 0.009 && incomes[incomeIndex].timestamp > expense.timestamp) break;
-                        incomeIndex++;
-                    }
-
-                    while (remainingExpense > 0.009 && incomeIndex < incomes.length) {
-                        const income = incomes[incomeIndex];
-                        if (income.timestamp > expense.timestamp) break;
-                        if (income.remaining <= 0.009) { incomeIndex++; continue; }
+                    // ஒவ்வொரு expense-க்கும் fresh scan. இது source-ல் income order/date மாறினாலும்
+                    // pointer தவறி செலவை மறைக்கும் பிரச்சினையை தவிர்க்கிறது.
+                    for (const income of incomes) {
+                        if (remainingExpense <= 0.009) break;
+                        if (income.remaining <= 0.009) continue;
+                        if (income.timestamp > expense.timestamp) continue;
 
                         const used = Math.min(remainingExpense, income.remaining);
-                        if (used > 0.009) {
-                            if (!allocationsByIncomeId.has(income.id)) allocationsByIncomeId.set(income.id, []);
-                            allocationsByIncomeId.get(income.id).push({
-                                txId: expense.txId,
-                                source,
-                                amount: used,
-                                expenseTimestamp: expense.timestamp,
-                                partIndex: expense.partIndex
-                            });
-                            income.remaining -= used;
-                            remainingExpense -= used;
-                        }
+                        if (used <= 0.009) continue;
 
-                        if (income.remaining <= 0.009) incomeIndex++;
+                        if (!allocationsByIncomeId.has(income.id)) allocationsByIncomeId.set(income.id, []);
+                        allocationsByIncomeId.get(income.id).push({
+                            txId: expense.txId,
+                            source,
+                            amount: used,
+                            expenseTimestamp: expense.timestamp,
+                            partIndex: expense.partIndex
+                        });
+                        income.remaining -= used;
+                        remainingExpense -= used;
                     }
                 }
             }
@@ -2089,9 +2078,11 @@
 
             if (activeIncomeFilter) {
                 const selectedIncome = allTransactions.find(tx =>
+                    tx.type === 'income' && activeIncomeFilter.incomeId && tx.id === activeIncomeFilter.incomeId
+                ) || allTransactions.find(tx =>
                     tx.type === 'income' &&
-                    ((activeIncomeFilter.incomeId && tx.id === activeIncomeFilter.incomeId) ||
-                     (!activeIncomeFilter.incomeId && tx.source === activeIncomeFilter.source && Number(tx.timestamp || 0) === Number(activeIncomeFilter.timestamp || 0)))
+                    normalizeSourceName(tx.source) === normalizeSourceName(activeIncomeFilter.source) &&
+                    Number(tx.timestamp || 0) === Number(activeIncomeFilter.timestamp || 0)
                 );
 
                 if (selectedIncome) {
