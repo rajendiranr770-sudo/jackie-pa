@@ -49,8 +49,6 @@
         
         .tx-card { background: white; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .tx-card.income { border-left-color: #10b981; cursor: pointer; }
-        .tx-card.income-clickable { transition: transform .12s ease, box-shadow .12s ease; }
-        .tx-card.income-clickable:active { transform: scale(0.99); box-shadow: 0 2px 8px rgba(16,185,129,.18); }
         .tx-card.expense { border-left-color: #ef4444; }
         .tx-title { font-weight: bold; font-size: 14px; color: #1e293b; }
         .tx-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
@@ -1996,49 +1994,6 @@
             return map.get(incomeId) || [];
         }
 
-        // Legacy helper: chronological window view. தற்போதைய income-card view
-        // buildIncomeExpenseAllocations() என்ற amount-based FIFO allocation-ஐ பயன்படுத்துகிறது.
-        // இதனால் சம்பளம் வந்த பிறகு செய்த ₹110 + ₹550 + ₹110 போன்ற பல செலவுகளும்
-        // ஒரே வரவு விவரத்தில் சரியாகத் தெரியும். Split / Payment செலவுகளிலும் source-க்கு
-        // சேர்ந்த பகுதி மட்டும் எடுத்துக் காட்டப்படும்.
-        function getIncomeWindowExpenseAllocations(selectedIncome) {
-            const result = new Map();
-            if (!selectedIncome) return result;
-
-            const source = normalizeSourceName(selectedIncome.source);
-            const incomeTime = Number(selectedIncome.timestamp || 0);
-            if (!source || !incomeTime) return result;
-
-            const nextIncomeTime = allTransactions
-                .filter(tx => tx.type === 'income' && tx.id !== selectedIncome.id &&
-                    normalizeSourceName(tx.source) === source &&
-                    Number(tx.timestamp || 0) > incomeTime)
-                .reduce((min, tx) => Math.min(min, Number(tx.timestamp || 0)), Infinity);
-
-            allTransactions.forEach(tx => {
-                if (tx.type !== 'expense') return;
-                const entries = getExpenseSourceEntries(tx).filter(e => {
-                    if (normalizeSourceName(e.source) !== source) return false;
-                    const t = Number(e.timestamp || tx.timestamp || 0);
-                    if (t < incomeTime) return false;
-                    if (Number.isFinite(nextIncomeTime) && t >= nextIncomeTime) return false;
-                    return Number(e.amount || 0) > 0;
-                });
-                if (!entries.length) return;
-
-                const amount = entries.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-                const timestamp = Math.min(...entries.map(e => Number(e.timestamp || tx.timestamp || 0)));
-                result.set(tx.id, {
-                    txId: tx.id,
-                    source,
-                    amount,
-                    expenseTimestamp: timestamp
-                });
-            });
-
-            return result;
-        }
-
         // ஒரு வரவைத் திறந்த பிறகு filter-கள் அந்த வரவிலிருந்து ஒதுக்கப்பட்ட
         // செலவுகளை மட்டும் filter செய்ய வேண்டும். குறிப்பாக split/purchase payment
         // இருந்தால் parent transaction timestamp-க்கு பதிலாக உண்மையான payment/part
@@ -2131,22 +2086,18 @@
                 );
 
                 if (selectedIncome) {
-                    // முக்கிய விதி: ஒவ்வொரு செலவும் அந்த நேரத்துக்கு முன் வந்த
-                    // மிகப் பழைய வரவிலிருந்து முதலில் கழிக்கப்படும் (FIFO).
-                    // முதல் வரவின் balance முடிந்தால், மீதமுள்ள செலவு அடுத்த
-                    // வரவுக்கு செல்லும். அடுத்த வரவு வருவதற்கு முன் நடந்த செலவு
-                    // எதிர்கால வரவுடன் இணைக்கப்படாது. ஒரு expense இரண்டு வரவுகளுக்கு
-                    // இடையில் பிளந்தால், selected income-க்கு ஒதுக்கப்பட்ட பகுதி மட்டும் காட்டப்படும்.
-                    const allAllocationMap = buildIncomeExpenseAllocations();
+                    const allocations = getAllocationsForIncome(selectedIncome.id);
                     incomeAllocationMap = new Map();
-                    const selectedAllocations = allAllocationMap.get(selectedIncome.id) || [];
-                    selectedAllocations.forEach(a => {
-                        const previous = incomeAllocationMap.get(a.txId);
-                        if (previous) previous.amount += Number(a.amount || 0);
-                        else incomeAllocationMap.set(a.txId, { ...a });
+                    allocations.forEach(a => {
+                        const prev = incomeAllocationMap.get(a.txId);
+                        if (prev) prev.amount += Number(a.amount || 0);
+                        else incomeAllocationMap.set(a.txId, { ...a, amount: Number(a.amount || 0) });
                     });
                     const txIds = new Set(incomeAllocationMap.keys());
                     const allocatedExpenses = allTransactions.filter(tx => tx.type === 'expense' && txIds.has(tx.id));
+                    // Income detail-ல் allocation amount/timestamp தான் source of truth.
+                    // பொதுவான filter-ஐ நேரடியாகப் பயன்படுத்தினால் split expense அல்லது
+                    // payment timestamp காரணமாக சரியான செலவு மறைந்து போகலாம்.
                     filtered = filterIncomeAllocatedExpenses(allocatedExpenses, incomeAllocationMap);
                 } else filtered = [];
             } else if (activeTripFilter) {
@@ -2196,20 +2147,7 @@
             const timelineItems = [...recordItems, ...completedTripItems];
             timelineItems.sort((a,b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
 
-            if(!timelineItems.length){
-                if (activeIncomeFilter) {
-                    const selected = allTransactions.find(tx => tx.type === 'income' && tx.id === activeIncomeFilter.incomeId);
-                    const incomeAmt = selected ? Number(selected.amount || 0) : 0;
-                    container.innerHTML = `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;text-align:center;color:#1e3a8a;margin-top:8px;">
-                        <div style="font-size:18px;font-weight:bold;">💼 ${activeIncomeFilter.title || 'வரவு'}</div>
-                        <div style="margin-top:5px;">வரவு: <b>+₹${incomeAmt.toLocaleString('en-IN')}</b></div>
-                        <div style="margin-top:10px;color:#64748b;">இந்த வரவு வந்த பிறகு இதே கணக்கில் பதிவு செய்யப்பட்ட செலவு இல்லை.</div>
-                    </div>`;
-                } else {
-                    container.innerHTML=`<div style="text-align:center; padding:20px; color:gray;">பதிவுகள் எதுவும் இல்லை.</div>`;
-                }
-                return;
-            }
+            if(!timelineItems.length){ container.innerHTML=`<div style="text-align:center; padding:20px; color:gray;">பதிவுகள் எதுவும் இல்லை.</div>`; return; }
 
             timelineItems.forEach(item=>{
                 if (item.kind === "trip") {
@@ -2220,9 +2158,9 @@
                 const tx = item.tx;
                 const isPurchase = tx.type==='expense' && Array.isArray(tx.purchasePayments) && tx.purchasePayments.length>0;
                 const dateTimeStr=formatDateTime(tx.timestamp);
-                const div=document.createElement("div"); div.className=`tx-card ${tx.type}${clickAttr}`;
+                const div=document.createElement("div"); div.className=`tx-card ${tx.type}`;
                 const safeTx=JSON.stringify(tx).replace(/'/g,"&#39;");
-                const clickAttr = tx.type==='income' ? ' income-clickable' : '';
+                const clickAttr = '';
                 let amount = Number(tx.amount||0);
                 if(activeIncomeFilter && tx.type==='expense') {
                     amount = Number(incomeAllocationMap.get(tx.id)?.amount || 0);
@@ -2259,10 +2197,8 @@
                     };
                     const link = div.querySelector('.income-expense-link');
                     if (link) link.addEventListener('click', openIncomeExpenses);
-                    // வரவு card முழுவதையும் தொட்டாலும் அந்த வரவின் செலவுகள் திறக்கும்.
-                    // Edit/Delete/Payment போன்ற action buttons event.stopPropagation() மூலம் தனியாகவே வேலை செய்யும்.
-                    div.addEventListener('click', openIncomeExpenses);
-                    div.style.cursor = 'pointer';
+                    // முழு வரவு card-ஐ tap செய்தால் edit/filter ஆகக்கூடாது.
+                    // '👆 தொட்டு செலவுகளைப் பார்' என்பதை மட்டும் tap செய்தால் அந்த வரவின் செலவுகள் காட்டப்படும்.
                     if (link) link.style.cursor = 'pointer';
                 }
                 container.appendChild(div);
