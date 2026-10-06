@@ -336,11 +336,12 @@
                 <input type="text" id="m-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="m-amount" class="form-input" placeholder="தொகை (₹)">
                 <div class="form-row">
-                    <select id="m-source" class="form-input">
+                    <select id="m-source" class="form-input" onchange="updateManualIncomeChoices()">
                         <option value="சம்பளம்">💼 சம்பளம்</option>
                         <option value="வீடு">🏠 வீடு</option>
                         <option value="இதர வரவு">💵 இதர வரவு (நகை கடன்/PF/இதர)</option>
                     </select>
+                    <select id="m-income-record" class="form-input" style="display:none;"><option value="">📌 எந்த வரவிலிருந்து?</option></select>
                     <select id="m-income-card" class="form-input" style="display:none;">
                         <option value="">💵 வரவு Card இல்லை</option>
                     </select>
@@ -442,9 +443,14 @@
             <div id="source-section" style="display: none;">
                 <p class="section-label" id="source-section-label">எந்தப் பணம்?</p>
                 <div class="source-grid">
-                    <button type="button" class="src-btn btn-salary" onclick="confirmSource('சம்பளம்')">💼 சம்பளம்</button>
-                    <button type="button" class="src-btn btn-home" onclick="confirmSource('வீடு')">🏠 வீடு</button>
-                    <button type="button" class="src-btn btn-other" style="grid-column: span 2;" onclick="confirmSource('இதர வரவு')">💵 இதர வரவு (நகை கடன்/PF/கடன்)</button>
+                    <button type="button" class="src-btn btn-salary" onclick="choosePendingSource('சம்பளம்')">💼 சம்பளம்</button>
+                    <button type="button" class="src-btn btn-home" onclick="choosePendingSource('வீடு')">🏠 வீடு</button>
+                    <button type="button" class="src-btn btn-other" style="grid-column: span 2;" onclick="choosePendingSource('இதர வரவு')">💵 இதர வரவு (நகை கடன்/PF/கடன்)</button>
+                </div>
+                <div id="source-income-pick" style="display:none;margin-top:12px;">
+                    <label class="modal-label">📌 எந்த குறிப்பிட்ட வரவிலிருந்து செலவு?</label>
+                    <select id="source-income-record" class="form-input"></select>
+                    <button type="button" class="save-btn" style="width:100%;margin-top:4px;" onclick="confirmSelectedPendingSource()">இந்த வரவைத் தேர்வு செய்</button>
                 </div>
             </div>
 
@@ -476,11 +482,10 @@
             <input type="time" id="edit-time" class="form-input">
 
             <label class="modal-label" for="edit-source">எந்தக் கணக்கு (Source)?</label>
-            <select id="edit-source" class="form-input">
-                <option value="சம்பளம்">💼 சம்பளம்</option>
-                <option value="வீடு">🏠 வீடு</option>
-                <option value="இதர வரவு">💵 இதர வரவு</option>
+            <select id="edit-source" class="form-input" onchange="updateEditIncomeChoice()">
+                <option value="சம்பளம்">💼 சம்பளம்</option><option value="வீடு">🏠 வீடு</option><option value="இதர வரவு">💵 இதர வரவு</option>
             </select>
+            <select id="edit-income-record" class="form-input" style="display:none;"></select>
             <div id="edit-split-group" style="display:none;" class="multi-source-box">
                 <div style="font-weight:bold;color:#334155;margin-bottom:7px;">பல கணக்குகளில் இருந்து பயன்படுத்தியது:</div>
                 <div id="edit-split-rows"></div>
@@ -551,11 +556,8 @@
                 <label class="modal-label">அட்வான்ஸ் தொகை (₹):</label>
                 <input type="number" id="ip-advance" class="form-input" min="0" step="0.01" placeholder="20000">
                 <label class="modal-label">எந்தக் கணக்கிலிருந்து?</label>
-                <select id="ip-advance-source" class="form-input">
-                    <option value="சம்பளம்">💼 சம்பளம்</option>
-                    <option value="வீடு">🏠 வீடு</option>
-                    <option value="இதர வரவு">💵 இதர வரவு</option>
-                </select>
+                <select id="ip-advance-source" class="form-input" onchange="populateIncomeRecordSelect(document.getElementById('ip-advance-income'),this.value)"><option value="சம்பளம்">💼 சம்பளம்</option><option value="வீடு">🏠 வீடு</option><option value="இதர வரவு">💵 இதர வரவு</option></select>
+                <select id="ip-advance-income" class="form-input"></select>
                 <label class="modal-label">அட்வான்ஸ் தேதி:</label>
                 <input type="date" id="ip-advance-date" class="form-input">
             </div>
@@ -577,11 +579,8 @@
             <label class="modal-label">மீதி செலுத்தும் தொகை (₹):</label>
             <input type="number" id="pp-amount" class="form-input" min="0" step="0.01">
             <label class="modal-label">எந்தக் கணக்கிலிருந்து?</label>
-            <select id="pp-source" class="form-input">
-                <option value="சம்பளம்">💼 சம்பளம்</option>
-                <option value="வீடு">🏠 வீடு</option>
-                <option value="இதர வரவு">💵 இதர வரவு</option>
-            </select>
+            <select id="pp-source" class="form-input" onchange="populateIncomeRecordSelect(document.getElementById('pp-income'),this.value)"><option value="சம்பளம்">💼 சம்பளம்</option><option value="வீடு">🏠 வீடு</option><option value="இதர வரவு">💵 இதர வரவு</option></select>
+            <select id="pp-income" class="form-input"></select>
             <label class="modal-label">மீதி கொடுத்த தேதி:</label>
             <input type="date" id="pp-date" class="form-input">
             <label class="modal-label">நேரம்:</label>
@@ -602,11 +601,8 @@
             <div class="form-row">
                 <div style="flex:1;">
                     <label class="modal-label">எந்தக் கணக்கு?</label>
-                    <select id="sc-source" class="form-input">
-                        <option value="சம்பளம்">💼 சம்பளம்</option>
-                        <option value="வீடு">🏠 வீடு</option>
-                        <option value="இதர வரவு">💵 இதர வரவு</option>
-                    </select>
+                    <select id="sc-source" class="form-input" onchange="populateIncomeRecordSelect(document.getElementById('sc-income'),this.value)"><option value="சம்பளம்">💼 சம்பளம்</option><option value="வீடு">🏠 வீடு</option><option value="இதர வரவு">💵 இதர வரவு</option></select>
+                    <select id="sc-income" class="form-input"></select>
                 </div>
                 <div style="flex:1;">
                     <label class="modal-label">தேதி:</label>
@@ -1397,13 +1393,7 @@
         window.toggleCategoryOption = function() {
             let type = document.getElementById("m-type").value;
             let catSelect = document.getElementById("m-category");
-            if(type === "income") {
-                catSelect.style.display = "none";
-                document.getElementById("m-income-card").style.display = "block";
-            } else {
-                catSelect.style.display = "block";
-                document.getElementById("m-income-card").style.display = "none";
-            }
+            if(type === "income") { catSelect.style.display="none"; document.getElementById("m-income-card").style.display="block"; document.getElementById("m-income-record").style.display="none"; } else { catSelect.style.display="block"; document.getElementById("m-income-card").style.display="none"; updateManualIncomeChoices(); }
         };
 
         window.addManualTransaction = function() {
@@ -1425,19 +1415,23 @@
             selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
             let timestamp = selectedDate.getTime();
 
-            saveTransaction({
-                title: title,
-                amount: amount,
-                source: source,
-                category: category,
-                type: type,
-                incomeCard: type === "income" ? (document.getElementById("m-income-card").value || null) : null,
-                timestamp: timestamp
-            });
+            const incomeId = type === "expense" ? (document.getElementById("m-income-record").value || null) : null;
+            if (type === "expense" && !incomeId) { alert("இந்த செலவு எந்த குறிப்பிட்ட வரவிலிருந்து என்பதை தேர்வு செய்யவும்."); updateManualIncomeChoices(); return; }
+            saveTransaction({ title, amount, source, category, type, incomeCard: type === "income" ? (document.getElementById("m-income-card").value || null) : null, incomeId: type === "expense" ? incomeId : null, timestamp });
 
             document.getElementById("m-title").value = "";
             document.getElementById("m-amount").value = "";
         };
+
+        function getIncomeRecordsForSource(source){const wanted=normalizeSourceName(source);return allTransactions.filter(tx=>tx.type==='income'&&normalizeSourceName(tx.source)===wanted&&Number(tx.amount||0)>0).sort((a,b)=>(Number(b.timestamp||0)-Number(a.timestamp||0))||String(b.id||'').localeCompare(String(a.id||'')));}
+        function formatIncomeChoice(tx){return `${tx.title||'வரவு'} — ₹${Number(tx.amount||0).toLocaleString('en-IN')} — ${formatDateTime(tx.timestamp)}`;}
+        function populateIncomeRecordSelect(selectEl,source,selectedId=''){if(!selectEl)return;const rows=getIncomeRecordsForSource(source);selectEl.innerHTML='<option value="">📌 எந்த வரவிலிருந்து?</option>'+rows.map(tx=>`<option value="${tx.id}" ${tx.id===selectedId?'selected':''}>${escapeHtml(formatIncomeChoice(tx))}</option>`).join('');}
+        window.updateManualIncomeChoices=function(){const type=document.getElementById('m-type')?.value||'expense',box=document.getElementById('m-income-record');if(!box)return;if(type!=='expense'){box.style.display='none';return;}box.style.display='block';populateIncomeRecordSelect(box,document.getElementById('m-source')?.value||'சம்பளம்');};
+        function validateIncomeIdForExpense(source,incomeId,amount,timestamp){const income=allTransactions.find(tx=>tx.id===incomeId&&tx.type==='income');if(!income){alert('தேர்வு செய்த வரவு கிடைக்கவில்லை.');return false;}if(normalizeSourceName(income.source)!==normalizeSourceName(source)){alert('தேர்வு செய்த வரவும் செலவு கணக்கும் பொருந்தவில்லை.');return false;}if(Number(income.timestamp||0)>Number(timestamp||0)){alert('இந்த செலவு, நீங்கள் தேர்வு செய்த வரவு வந்த பிறகு இருக்க வேண்டும்.');return false;}const used=getAllocationsForIncome(income.id).reduce((a,x)=>a+Number(x.amount||0),0);const rem=Math.max(0,Number(income.amount||0)-used);if(Number(amount||0)>rem+0.009){alert(`இந்த வரவில் மீதம் ₹${rem.toFixed(2)} மட்டுமே உள்ளது.\nதேவையான செலவு: ₹${Number(amount||0).toFixed(2)}`);return false;}return true;}
+        window.choosePendingSource=function(sourceName){if(!pendingAction||!pendingAction.data)return;pendingAction.data.source=sourceName;const d=pendingAction.data;const exp=d.type==='expense'||(pendingAction.type==='KM'&&d.kmType==='given')||(pendingAction.type==='KM_RETURN'&&d.kmType==='taken');if(!exp){confirmSource(sourceName);return;}document.getElementById('source-income-pick').style.display='block';populateIncomeRecordSelect(document.getElementById('source-income-record'),sourceName);};
+        window.confirmSelectedPendingSource=function(){if(!pendingAction||!pendingAction.data)return;const incomeId=document.getElementById('source-income-record').value;if(!incomeId){alert('முதலில் குறிப்பிட்ட வரவைத் தேர்வு செய்யவும்.');return;}pendingAction.data.incomeId=incomeId;const a=pendingAction;pendingAction=null;document.getElementById('source-modal').style.display='none';if(a.type==='TX')saveTransaction(a.data);else if(a.type==='KM')addKaiMaathuTransactionAfterSource(a.data);else if(a.type==='KM_RETURN')saveKaiMaathuReturnAfterSource(a.data);};
+        async function addKaiMaathuTransactionAfterSource(km){const given=km.kmType==='given';const vRef=await addDoc(collection(db,'users',auth.currentUser.uid,'vatti'),{...km,updatedAt:Date.now(),schemaVersion:3});const txId=await saveTransaction({title:given?('கைமாத்து கொடுத்தது: '+km.personName):('கைமாத்து வாங்கியது: '+km.personName),amount:km.principal,type:given?'expense':'income',category:'கைமாத்து',source:km.source,incomeId:given?km.incomeId:null,timestamp:km.timestamp,linkedKaiMaathuId:vRef.id,kaiMaathuEntry:true});if(txId)await updateDoc(vRef,{originalTxId:txId,updatedAt:Date.now()});}
+        async function saveKaiMaathuReturnAfterSource(km){const given=km.kmType==='given',now=Date.now();const tx={title:given?(km.personName+' கைமாத்து பணத்தை திரும்பக் கொடுத்தார்'):(km.personName+' கைமாத்தாக வாங்கிய பணத்தை திரும்பக் கொடுத்துவிட்டேன்'),amount:Number(km.principal),type:given?'income':'expense',category:'கைமாத்து',source:km.source,incomeId:given?null:km.incomeId,timestamp:now,linkedKaiMaathuId:km.id,kaiMaathuReturn:true};const id=await saveTransaction(tx);await updateDoc(doc(db,'users',auth.currentUser.uid,'vatti',km.id),{isReturned:true,returnTxId:id||null,returnSource:km.source,returnTimestamp:now,updatedAt:Date.now()});}
 
         window.triggerKaiMaathuAdd = function() {
             let name = document.getElementById("km-name").value.trim();
@@ -1470,72 +1464,7 @@
             document.getElementById("source-modal").style.display = "flex";
         };
 
-        window.confirmSource = async function(sourceName) {
-            if (!pendingAction || !pendingAction.data) return;
-
-            // Close the popup immediately after the user taps the account.
-            // Keep a local copy because closeModal() clears pendingAction.
-            const action = pendingAction;
-            pendingAction = null;
-            document.getElementById("source-modal").style.display = "none";
-
-            try {
-                if (action.type === "TX") {
-                    action.data.source = sourceName;
-                    if (action.data.type === "income") {
-                        action.data.category = (sourceName === "சம்பளம்") ? "சம்பளம் வரவு" : (sourceName === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
-                    } else {
-                        action.data.category = selectedCategoryChoice || "பொது";
-                    }
-                    await saveTransaction(action.data);
-                }
-                else if (action.type === "KM") {
-                    let kmData = action.data;
-                    kmData.source = sourceName;
-                    let vRef = await addDoc(collection(db, "users", auth.currentUser.uid, "vatti"), {
-                        ...kmData, updatedAt: Date.now(), schemaVersion: 2
-                    });
-
-                    let isGiven = kmData.kmType === "given";
-                    const txId = await saveTransaction({
-                        title: isGiven ? ("கைமாத்து கொடுத்தது: " + kmData.personName) : ("கைமாத்து வாங்கியது: " + kmData.personName),
-                        amount: kmData.principal,
-                        type: isGiven ? "expense" : "income",
-                        category: "கைமாத்து",
-                        source: sourceName,
-                        timestamp: kmData.timestamp,
-                        linkedKaiMaathuId: vRef.id,
-                        kaiMaathuEntry: true
-                    });
-                    if (txId) await updateDoc(vRef, { originalTxId: txId, updatedAt: Date.now() });
-                }
-                else if (action.type === "KM_RETURN") {
-                    const km = action.data;
-                    const isGiven = km.kmType === "given";
-                    const returnNow = Date.now();
-                    const returnTxId = await saveTransaction({
-                        title: isGiven ? (km.personName + " கைமாத்து பணத்தை திரும்பக் கொடுத்தார்") : (km.personName + " கைமாத்தாக வாங்கிய பணத்தை திரும்பக் கொடுத்துவிட்டேன்"),
-                        amount: Number(km.principal),
-                        type: isGiven ? "income" : "expense",
-                        category: "கைமாத்து",
-                        source: sourceName,
-                        timestamp: returnNow,
-                        linkedKaiMaathuId: km.id,
-                        kaiMaathuReturn: true
-                    });
-                    await updateDoc(doc(db, "users", auth.currentUser.uid, "vatti", km.id), {
-                        isReturned: true,
-                        returnTxId: returnTxId || null,
-                        returnSource: sourceName,
-                        returnTimestamp: returnNow,
-                        updatedAt: Date.now()
-                    });
-                }
-            } catch (error) {
-                console.error("Source/Return save error:", error);
-                alert("பதிவு சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
-            }
-        };
+        window.confirmSource=async function(sourceName){if(!pendingAction||!pendingAction.data)return;pendingAction.data.source=sourceName;const d=pendingAction.data;const exp=d.type==='expense'||(pendingAction.type==='KM'&&d.kmType==='given')||(pendingAction.type==='KM_RETURN'&&d.kmType==='taken');if(exp){document.getElementById('source-income-pick').style.display='block';populateIncomeRecordSelect(document.getElementById('source-income-record'),sourceName);return;}const a=pendingAction;pendingAction=null;document.getElementById('source-modal').style.display='none';if(a.type==='TX'){a.data.category=sourceName==='சம்பளம்'?'சம்பளம் வரவு':(sourceName==='வீடு'?'வீட்டு வரவு':'இதர வரவு');await saveTransaction(a.data);}else if(a.type==='KM')await addKaiMaathuTransactionAfterSource(a.data);else if(a.type==='KM_RETURN')await saveKaiMaathuReturnAfterSource(a.data);};
 
         function getSourceBalance(source, extraTransactions=[]) {
             let balance=0;
@@ -1570,7 +1499,7 @@
                 if (!user) { alert("உள்நுழையப்படவில்லை!"); return null; }
 
                 if (!validateExpenseBalance(data)) return null;
-
+                if(data.type==='expense'){const entries=getExpenseSourceEntries({...data,id:'__new__'}),grouped=new Map();for(const e of entries){if(e.incomeId)grouped.set(e.incomeId,(grouped.get(e.incomeId)||0)+Number(e.amount||0));}for(const [incomeId,amt] of grouped){const src=entries.find(e=>e.incomeId===incomeId)?.source||data.source;if(!validateIncomeIdForExpense(src,incomeId,amt,data.timestamp||Date.now()))return null;}}
                 const ref = await addDoc(collection(db, "users", user.uid, "transactions"), {
                     ...data,
                     timestamp: data.timestamp || Date.now(),
@@ -1895,7 +1824,7 @@
                     const amount = Number(p.amount || 0);
                     const source = normalizeSourceName(p.source);
                     if (source && amount > 0) {
-                        entries.push({ source, amount, timestamp: Number(p.timestamp || tx.timestamp || 0), txId: tx.id, partIndex: index });
+                        entries.push({ source, amount, incomeId: p.incomeId || null, timestamp: Number(p.timestamp || tx.timestamp || 0), txId: tx.id, partIndex: index });
                     }
                 });
                 return entries;
@@ -1906,7 +1835,7 @@
                     const amount = Number(part.amount || 0);
                     const source = normalizeSourceName(part.source);
                     if (source && amount > 0) {
-                        entries.push({ source, amount, timestamp: Number(tx.timestamp || 0), txId: tx.id, partIndex: index });
+                        entries.push({ source, amount, incomeId: part.incomeId || null, timestamp: Number(tx.timestamp || 0), txId: tx.id, partIndex: index });
                     }
                 });
                 return entries;
@@ -1915,7 +1844,7 @@
             const amount = Number(tx.amount || 0);
             const source = normalizeSourceName(tx.source);
             if (source && amount > 0) {
-                entries.push({ source, amount, timestamp: Number(tx.timestamp || 0), txId: tx.id, partIndex: 0 });
+                entries.push({ source, amount, incomeId: tx.incomeId || null, timestamp: Number(tx.timestamp || 0), txId: tx.id, partIndex: 0 });
             }
             return entries;
         }
@@ -1959,33 +1888,10 @@
                 );
 
                 for (const expense of expenses) {
-                    let remainingExpense = Number(expense.amount || 0);
-                    if (remainingExpense <= 0) continue;
-
-                    // ஒவ்வொரு expense-க்கும் fresh scan. இது source-ல் income order/date மாறினாலும்
-                    // pointer தவறி செலவை மறைக்கும் பிரச்சினையை தவிர்க்கிறது.
-                    for (const income of incomes) {
-                        if (remainingExpense <= 0.009) break;
-                        if (income.remaining <= 0.009) continue;
-                        if (income.timestamp > expense.timestamp) continue;
-
-                        const used = Math.min(remainingExpense, income.remaining);
-                        if (used <= 0.009) continue;
-
-                        if (!allocationsByIncomeId.has(income.id)) allocationsByIncomeId.set(income.id, []);
-                        allocationsByIncomeId.get(income.id).push({
-                            txId: expense.txId,
-                            source,
-                            amount: used,
-                            expenseTimestamp: expense.timestamp,
-                            partIndex: expense.partIndex
-                        });
-                        income.remaining -= used;
-                        remainingExpense -= used;
-                    }
+                    let remainingExpense=Number(expense.amount||0); if(remainingExpense<=0.009)continue;
+                    if(expense.incomeId){const chosen=incomes.find(i=>i.id===expense.incomeId);if(chosen&&chosen.timestamp<=expense.timestamp&&chosen.remaining>0.009){const used=Math.min(remainingExpense,chosen.remaining);if(used>0.009){if(!allocationsByIncomeId.has(chosen.id))allocationsByIncomeId.set(chosen.id,[]);allocationsByIncomeId.get(chosen.id).push({txId:expense.txId,source,amount:used,expenseTimestamp:expense.timestamp,partIndex:expense.partIndex});chosen.remaining-=used;}}continue;}
+                    for(const income of incomes){if(remainingExpense<=0.009)break;if(income.remaining<=0.009||income.timestamp>expense.timestamp)continue;const used=Math.min(remainingExpense,income.remaining);if(used<=0.009)continue;if(!allocationsByIncomeId.has(income.id))allocationsByIncomeId.set(income.id,[]);allocationsByIncomeId.get(income.id).push({txId:expense.txId,source,amount:used,expenseTimestamp:expense.timestamp,partIndex:expense.partIndex});income.remaining-=used;remainingExpense-=used;}
                 }
-            }
-
             return allocationsByIncomeId;
         }
 
@@ -2211,6 +2117,7 @@
             document.getElementById('ip-total').value='';
             document.getElementById('ip-advance').value='';
             document.getElementById('ip-category').innerHTML=categoryOptionsHtml('பொது');
+            populateIncomeRecordSelect(document.getElementById('ip-advance-income'),'சம்பளம்');
             document.getElementById('ip-advance-date').value=getLocalDateString();
             document.getElementById('ip-remaining').innerText='₹0.00';
             document.getElementById('installment-purchase-modal').style.display='flex';
@@ -2223,12 +2130,14 @@
             const total=Number(document.getElementById('ip-total').value||0);
             const advance=Number(document.getElementById('ip-advance').value||0);
             const source=document.getElementById('ip-advance-source').value;
+            const incomeId=document.getElementById('ip-advance-income').value;
             const dateVal=document.getElementById('ip-advance-date').value;
             const category=document.getElementById('ip-category').value||'பொது';
             if(!title||total<=0){ alert('பொருள் மற்றும் மொத்த விலையை சரியாக உள்ளிடவும்.'); return; }
             if(advance<=0||advance>total){ alert('அட்வான்ஸ் தொகை மொத்த விலையை விட அதிகமாக இருக்கக்கூடாது.'); return; }
             let d=dateVal?parseLocalDate(dateVal):new Date(); const now=new Date(); d.setHours(now.getHours(),now.getMinutes(),now.getSeconds(),now.getMilliseconds());
-            const payment={amount:advance,source,label:'அட்வான்ஸ்',timestamp:d.getTime()};
+            if(!incomeId){alert('அட்வான்ஸ் எந்த வரவிலிருந்து என்பதை தேர்வு செய்யவும்.');return;}
+            const payment={amount:advance,source,incomeId,label:'அட்வான்ஸ்',timestamp:d.getTime()};
             closeInstallmentPurchaseModal();
             await saveTransaction({title,amount:total,type:'expense',category,source:'அட்வான்ஸ் + மீதி',purchasePayments:[payment],installmentPurchase:true,timestamp:d.getTime()});
         };
@@ -2237,7 +2146,7 @@
             const tx=allTransactions.find(t=>t.id===id); if(!tx) return;
             const paid=getPurchasePayments(tx).reduce((a,p)=>a+Number(p.amount||0),0); const remaining=Math.max(0,Number(tx.amount||0)-paid); if(remaining<=0) return;
             document.getElementById('pp-id').value=id; document.getElementById('pp-amount').value=remaining; document.getElementById('pp-date').value=getLocalDateString();
-            const now=new Date(); document.getElementById('pp-time').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            const now=new Date(); document.getElementById('pp-time').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`; document.getElementById('pp-source').value='சம்பளம்'; populateIncomeRecordSelect(document.getElementById('pp-income'),'சம்பளம்');
             document.getElementById('pp-summary').innerHTML=`<b>${tx.title||'Purchase'}</b><br>மொத்தம்: ₹${Number(tx.amount||0).toLocaleString('en-IN')}<br>ஏற்கனவே செலுத்தியது: ₹${paid.toLocaleString('en-IN')}<br><b>மீதி: ₹${remaining.toLocaleString('en-IN')}</b>`;
             document.getElementById('purchase-payment-modal').style.display='flex';
         };
@@ -2248,7 +2157,10 @@
             if(amount<=0||amount>remaining){ alert(`மீதி தொகை ₹${remaining.toFixed(2)}. அதற்குள் தொகை உள்ளிடவும்.`); return; }
             const dateVal=document.getElementById('pp-date').value; const timeVal=document.getElementById('pp-time').value; let d=dateVal?parseLocalDate(dateVal):new Date(); if(timeVal){const [h,m]=timeVal.split(':').map(Number);d.setHours(h,m,0,0);} else {const n=new Date();d.setHours(n.getHours(),n.getMinutes(),n.getSeconds(),n.getMilliseconds());}
             const source=document.getElementById('pp-source').value;
-            const payment={amount,source,label:amount===remaining?'மீதி தொகை':'பகுதி மீதி',timestamp:d.getTime()};
+            const incomeId=document.getElementById('pp-income').value;
+            if(!incomeId){alert('இந்த payment எந்த வரவிலிருந்து என்பதை தேர்வு செய்யவும்.');return;}
+            const payment={amount,source,incomeId,label:amount===remaining?'மீதி தொகை':'பகுதி மீதி',timestamp:d.getTime()};
+            if(!validateIncomeIdForExpense(source,incomeId,amount,d.getTime())) return;
             if(!validateExpenseBalance({type:'expense',source,amount})) return;
             const payments=[...getPurchasePayments(tx),payment];
             const latest=Math.max(...payments.map(p=>Number(p.timestamp||0)));
@@ -2293,11 +2205,13 @@
             row.className = "multi-source-row";
             row.innerHTML = `
                 <select class="ms-source">${sourceOptionsHtml(source)}</select>
+                <select class="ms-income form-input"><option value="">📌 வரவு தேர்வு</option></select>
                 <input type="number" class="ms-amount" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை">
                 <button type="button" class="multi-source-remove" title="நீக்கு">✕</button>
             `;
+            populateIncomeRecordSelect(row.querySelector('.ms-income'),source);
             row.querySelector(".ms-amount").addEventListener("input", updateMultiSourceTotal);
-            row.querySelector(".ms-source").addEventListener("change", updateMultiSourceTotal);
+            row.querySelector(".ms-source").addEventListener("change",()=>{populateIncomeRecordSelect(row.querySelector('.ms-income'),row.querySelector('.ms-source').value);updateMultiSourceTotal();});
             row.querySelector(".multi-source-remove").onclick = () => {
                 row.remove();
                 updateMultiSourceTotal();
@@ -2309,6 +2223,7 @@
         function readMultiSourceRows(containerId, rowClass, sourceClass, amountClass) {
             return Array.from(document.querySelectorAll(`#${containerId} .${rowClass}`)).map(row => ({
                 source: row.querySelector(`.${sourceClass}`).value,
+                incomeId: row.querySelector('.ms-income')?.value || null,
                 amount: Number(row.querySelector(`.${amountClass}`).value || 0)
             })).filter(x => x.amount > 0);
         }
@@ -2328,6 +2243,7 @@
 
             if (!title) { alert("செலவு விவரத்தை உள்ளிடவும்."); return; }
             if (!splitSources.length || total <= 0) { alert("குறைந்தது ஒரு கணக்கில் தொகை உள்ளிடவும்."); return; }
+            if(splitSources.some(x=>!x.incomeId)){alert('ஒவ்வொரு கணக்கிற்கும் எந்த வரவிலிருந்து செலவு என்பதை தேர்வு செய்யவும்.');return;}
 
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
             const now = new Date();
@@ -2360,6 +2276,7 @@
         function renderIncomeCards(){ const c=document.getElementById("income-cards-container"); if(!c)return; incomeCards=loadIncomeCards(); c.innerHTML=""; incomeCards.forEach(name=>{ const total=allTransactions.filter(t=>t.type==='income'&&t.incomeCard===name).reduce((a,t)=>a+Number(t.amount||0),0); const d=document.createElement('div'); d.className='income-card-box'; const safe=String(name).replace(/'/g,"\'"); d.innerHTML=`<div class="income-card-header"><span style="font-weight:bold;color:#1d4ed8;">💵 ${name}</span><button class="btn-close-trip" onclick="deleteIncomeCard('${safe}')">🗑️ Card-ஐ நீக்கு</button></div><div style="font-size:13px;">மொத்த வரவு: <b style="color:#059669;">₹${total.toLocaleString('en-IN')}</b></div><button class="btn-view-trip" style="background:#2563eb;" onclick="filterByIncomeCard('${safe}')">👆 இந்த Card வரவுகளைப் பார்</button>`; c.appendChild(d); }); }
         window.filterByIncomeCard=function(name){ document.getElementById('search-input').value=name; activeTab='All'; document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab==='All')); renderStandardView(); };
         updateIncomeCardDropdown();
+        setTimeout(()=>updateManualIncomeChoices(),0);
 
         // ------------------ Split Category Expense ------------------ //
         function splitCategoryOptions(selected='பொது'){
@@ -2370,6 +2287,7 @@
             const now=new Date();
             document.getElementById('sc-title').value='';
             document.getElementById('sc-source').value='சம்பளம்';
+            populateIncomeRecordSelect(document.getElementById('sc-income'),'சம்பளம்');
             document.getElementById('sc-date').value=getLocalDateString(now);
             document.getElementById('sc-time').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
             const rows=document.getElementById('sc-rows'); rows.innerHTML='';
@@ -2399,8 +2317,11 @@
             if(total<=0){ alert('தொகையை சரியாக உள்ளிடவும்.'); return; }
             let d=dateVal?parseLocalDate(dateVal):new Date();
             if(timeVal){ const [h,m]=timeVal.split(':').map(Number); d.setHours(h,m,0,0); }
+            const incomeId=document.getElementById('sc-income').value;
+            if(!incomeId){alert('இந்த செலவு எந்த வரவிலிருந்து என்பதை தேர்வு செய்யவும்.');return;}
             const groupId='SC_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
-            const staged=rows.map(x=>({title,amount:x.amount,type:'expense',source,category:x.category,timestamp:d.getTime(),splitCategoryGroupId:groupId,splitCategoryTotal:total}));
+            const staged=rows.map(x=>({title,amount:x.amount,type:'expense',source,category:x.category,incomeId,timestamp:d.getTime(),splitCategoryGroupId:groupId,splitCategoryTotal:total}));
+            if(!validateIncomeIdForExpense(source,incomeId,total,d.getTime())) return;
             if(!validateExpenseBalance({type:'expense',source,amount:total},[])){ return; }
             closeSplitCategoryExpenseModal();
             let saved=0;
@@ -2418,7 +2339,10 @@
             const now=new Date();
             const date=getLocalDateString(now);
             const time=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            r.innerHTML=`<input class="be-title" placeholder="விவரம்"><input class="be-amount" type="number" min="0" step="0.01" placeholder="₹"><select class="be-type"><option value="expense">செலவு (-)</option><option value="income">வரவு (+)</option></select><select class="be-source"><option>சம்பளம்</option><option>வீடு</option><option>இதர வரவு</option></select><input class="be-date" type="date" value="${date}"><input class="be-time" type="time" value="${time}">`;
+            r.innerHTML=`<input class="be-title" placeholder="விவரம்"><input class="be-amount" type="number" min="0" step="0.01" placeholder="₹"><select class="be-type"><option value="expense">செலவு (-)</option><option value="income">வரவு (+)</option></select><select class="be-source"><option>சம்பளம்</option><option>வீடு</option><option>இதர வரவு</option></select><select class="be-income form-input"><option value="">📌 வரவு தேர்வு</option></select><input class="be-date" type="date" value="${date}"><input class="be-time" type="time" value="${time}">`;
+            populateIncomeRecordSelect(r.querySelector('.be-income'),r.querySelector('.be-source').value);
+            r.querySelector('.be-source').addEventListener('change',()=>populateIncomeRecordSelect(r.querySelector('.be-income'),r.querySelector('.be-source').value));
+            r.querySelector('.be-type').addEventListener('change',()=>{r.querySelector('.be-income').style.display=r.querySelector('.be-type').value==='expense'?'block':'none';updateBatchTotal();});
             r.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',updateBatchTotal));
             box.appendChild(r);
         };
@@ -2428,11 +2352,11 @@
                 const dateVal=r.querySelector('.be-date').value; const timeVal=r.querySelector('.be-time').value;
                 let d=dateVal?parseLocalDate(dateVal):new Date();
                 if(timeVal){const [h,m]=timeVal.split(':').map(Number); d.setHours(h,m,0,0);}
-                return {title:r.querySelector('.be-title').value.trim(),amount:Number(r.querySelector('.be-amount').value||0),type:r.querySelector('.be-type').value,source:r.querySelector('.be-source').value,timestamp:d.getTime()};
+                return {title:r.querySelector('.be-title').value.trim(),amount:Number(r.querySelector('.be-amount').value||0),type:r.querySelector('.be-type').value,source:r.querySelector('.be-source').value,incomeId:r.querySelector('.be-income')?.value||null,timestamp:d.getTime()};
             }).filter(x=>x.title&&x.amount>0);
             if(!rows.length){alert('குறைந்தது ஒரு பதிவாவது உள்ளிடவும்.');return;}
             const staged=[]; let ok=0;
-            for(const x of rows){ const data={...x,category:x.type==='income'?(x.source==='சம்பளம்'?'சம்பளம் வரவு':x.source==='வீடு'?'வீட்டு வரவு':'இதர வரவு'):'பொது'}; if(!validateExpenseBalance(data,staged)) continue; staged.push(data); }
+            for(const x of rows){ const data={...x,category:x.type==='income'?(x.source==='சம்பளம்'?'சம்பளம் வரவு':x.source==='வீடு'?'வீட்டு வரவு':'இதர வரவு'):'பொது'}; if(data.type==='expense'&&!data.incomeId){alert('ஒவ்வொரு செலவுக்கும் எந்த வரவிலிருந்து என்பதை தேர்வு செய்யவும்.');continue;} if(data.type==='expense'&&!validateIncomeIdForExpense(data.source,data.incomeId,data.amount,data.timestamp))continue; if(!validateExpenseBalance(data,staged)) continue; staged.push(data); }
             closeBatchEntryModal();
             for(const data of staged){ if(await saveTransaction(data)) ok++; }
             if(ok<rows.length) alert(`${ok} பதிவுகள் மட்டும் சேமிக்கப்பட்டன. போதுமான பேலன்ஸ் இல்லாத செலவுகள் சேமிக்கப்படவில்லை.`);
@@ -2677,6 +2601,8 @@
             deleteDoc(doc(db, "users", auth.currentUser.uid, collectionType, id)).catch((error) => console.error("Delete Error: ", error));
         };
 
+        window.updateEditIncomeChoice=function(){const type=document.getElementById('edit-type')?.value||'expense',box=document.getElementById('edit-income-record');if(!box)return;if(type!=='expense'){box.style.display='none';return;}box.style.display='block';populateIncomeRecordSelect(box,document.getElementById('edit-source').value,box.dataset.selectedId||'');};
+
         window.openEditModal = function(item, collectionType = 'transactions') {
             const isVatti = collectionType === 'vatti' && !item.isKaiMaathu;
             const isKaiMaathu = collectionType === 'vatti' && item.isKaiMaathu;
@@ -2688,6 +2614,7 @@
             document.getElementById("edit-amount").value = item.amount ?? item.principal ?? 0;
             document.getElementById("edit-rate").value = item.rate ?? 0;
             document.getElementById("edit-source").value = item.source || "சம்பளம்";
+            const editIncomeBox=document.getElementById('edit-income-record'); editIncomeBox.dataset.selectedId=item.incomeId||'';
 
             const sourceLabel = document.querySelector('label[for="edit-source"]');
             const sourceSelect = document.getElementById("edit-source");
@@ -2732,7 +2659,7 @@
                     splitGroup.style.display = "block";
                     const rows = document.getElementById("edit-split-rows");
                     rows.innerHTML = "";
-                    (item.splitSources || []).forEach(s => addEditSplitRow(s.source, s.amount));
+                    (item.splitSources || []).forEach(s => addEditSplitRow(s.source, s.amount, s.incomeId || ''));
                     updateEditSplitTotal();
                 }
             } else {
@@ -2747,6 +2674,7 @@
                 updateCategoryDropdowns();
                 document.getElementById("edit-category").value = item.category || "பொது";
                 document.getElementById("edit-type").value = item.type || "expense";
+                updateEditIncomeChoice();
             }
 
             if (item.timestamp) {
@@ -2762,15 +2690,18 @@
         };
 
 
-        window.addEditSplitRow = function(source="சம்பளம்", amount="") {
+        window.addEditSplitRow = function(source="சம்பளம்", amount="", incomeId="") {
             const rows = document.getElementById("edit-split-rows");
             const row = document.createElement("div");
             row.className = "multi-source-row";
             row.innerHTML = `
                 <select class="edit-split-source">${sourceOptionsHtml(source)}</select>
+                <select class="edit-split-income form-input"><option value="">📌 வரவு தேர்வு</option></select>
                 <input type="number" class="edit-split-amount" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை">
                 <button type="button" class="multi-source-remove">✕</button>
             `;
+            populateIncomeRecordSelect(row.querySelector('.edit-split-income'),source,incomeId);
+            row.querySelector('.edit-split-source').addEventListener('change',()=>populateIncomeRecordSelect(row.querySelector('.edit-split-income'),row.querySelector('.edit-split-source').value));
             row.querySelector(".edit-split-amount").addEventListener("input", updateEditSplitTotal);
             row.querySelector(".edit-split-source").addEventListener("change", updateEditSplitTotal);
             row.querySelector(".multi-source-remove").onclick = () => { row.remove(); updateEditSplitTotal(); };
@@ -2787,6 +2718,7 @@
         function readEditSplitSources() {
             return Array.from(document.querySelectorAll("#edit-split-rows .multi-source-row")).map(row => ({
                 source: row.querySelector(".edit-split-source").value,
+                incomeId: row.querySelector(".edit-split-income")?.value || null,
                 amount: Number(row.querySelector(".edit-split-amount").value || 0)
             })).filter(x => x.amount > 0);
         }
@@ -2816,10 +2748,13 @@
                 const splitSources = readEditSplitSources();
                 const splitTotal = splitSources.reduce((sum,x) => sum + Number(x.amount || 0), 0);
                 if (!splitSources.length) { alert("குறைந்தது ஒரு கணக்கில் தொகை உள்ளிடவும்."); return; }
+                if(splitSources.some(x=>!x.incomeId)){alert('ஒவ்வொரு கணக்கிற்கும் எந்த வரவிலிருந்து செலவு என்பதை தேர்வு செய்யவும்.');return;}
                 if (Math.abs(splitTotal - amount) > 0.009) {
                     alert(`மொத்த செலவு ₹${amount.toFixed(2)}. கணக்குகளின் தொகை ₹${splitTotal.toFixed(2)}. இரண்டும் சமமாக இருக்க வேண்டும்.`);
                     return;
                 }
+                const editIncomeGroups=new Map(); splitSources.forEach(x=>editIncomeGroups.set(x.incomeId,(editIncomeGroups.get(x.incomeId)||0)+Number(x.amount||0)));
+                for(const [iid,amt] of editIncomeGroups){const src=splitSources.find(x=>x.incomeId===iid).source;if(!validateIncomeIdForExpense(src,iid,amt,timestamp))return;}
                 closeEditModal();
                 try {
                     await updateDoc(doc(db, "users", auth.currentUser.uid, "transactions", id), {
@@ -2875,7 +2810,10 @@
                     if (type === "income" && category !== "கைமாத்து") {
                         category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
                     }
-                    await updateDoc(userRef, { title, amount, source, category, type, timestamp, updatedAt: Date.now() });
+                    const incomeId = type === 'expense' ? (document.getElementById('edit-income-record').value || null) : null;
+                    if(type==='expense' && !incomeId){alert('இந்த செலவு எந்த வரவிலிருந்து என்பதை தேர்வு செய்யவும்.');return;}
+                    if(type==='expense' && !validateIncomeIdForExpense(source,incomeId,amount,timestamp)) return;
+                    await updateDoc(userRef, { title, amount, source, category, type, incomeId, timestamp, updatedAt: Date.now() });
                 }
             } catch (error) {
                 console.error("Edit Error: ", error);
@@ -2907,6 +2845,7 @@
 
             catSec.style.display = "none";
             srcSec.style.display = "none";
+            document.getElementById('source-income-pick').style.display='none';
             selectedCategoryChoice = txData.category || "பொது";
             
             const modalCatGrid = document.getElementById("modal-category-grid");
@@ -2939,17 +2878,13 @@
             btnElement.classList.add('selected');
 
             if (document.getElementById("source-section").style.display === "none" && pendingAction && pendingAction.data) {
-                const actionData = pendingAction.data;
-                actionData.category = catName;
-                closeModal();
-                saveTransaction(actionData);
+                const actionData = pendingAction.data; actionData.category = catName;
+                if(actionData.type==='expense'){document.getElementById('source-section').style.display='block';document.getElementById('source-section-label').innerText='எந்தக் கணக்கிலிருந்து செலவு?';document.getElementById('modal-title').innerText='எந்தப் பணம் / எந்த வரவு?';return;}
+                closeModal(); saveTransaction(actionData);
             }
         }
 
-        window.closeModal = function() {
-            document.getElementById("source-modal").style.display = "none";
-            pendingAction = null;
-        };
+        window.closeModal = function() { document.getElementById("source-modal").style.display="none"; const p=document.getElementById('source-income-pick'); if(p)p.style.display='none'; pendingAction=null; };
 
         window.openModalByScenario = openModalByScenario;
         window.setCategory = setCategory;
