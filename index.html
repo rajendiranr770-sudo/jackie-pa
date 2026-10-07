@@ -705,7 +705,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { 
-            getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, getDocs, 
+            getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, setDoc, deleteDoc, getDocs, 
             initializeFirestore, persistentLocalCache, persistentMultipleTabManager 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -744,6 +744,9 @@
         let activeTripFilter = null;
         let currentUid = null;
         let tripsListener = null;
+        let incomeCardsListener = null;
+        let unsubscribeTransactions = null;
+        let unsubscribeVatti = null;
 
         function getLocalDateString(date = new Date()) {
             const y = date.getFullYear();
@@ -805,7 +808,13 @@
                     listenToData(user.uid);
                 }
             } else {
+                if (unsubscribeTransactions) { unsubscribeTransactions(); unsubscribeTransactions = null; }
+                if (unsubscribeVatti) { unsubscribeVatti(); unsubscribeVatti = null; }
+                if (tripsListener) { tripsListener(); tripsListener = null; }
+                if (incomeCardsListener) { incomeCardsListener(); incomeCardsListener = null; }
                 currentUid = null;
+                allTransactions = [];
+                allVattiLoans = [];
                 localStorage.removeItem("finance_logged_in_uid");
                 isInitialAuthDone = false;
                 document.getElementById("auth-container").style.display = "block";
@@ -874,25 +883,21 @@
         }
         function saveTripMetaLocalAndCloud() {
             if (!currentUid) return;
+            normalizeTripMeta();
             localStorage.setItem(tripMetaStorageKey(currentUid), JSON.stringify(tripMeta));
-            const ref = doc(db, "users", currentUid, "settings", "trips");
-            updateDoc(ref, { names: customTrips, meta: tripMeta, updatedAt: Date.now() }).catch(async () => {
-                try {
-                    await addDoc(collection(db, "users", currentUid, "settings"), { key:"trips", names: customTrips, meta: tripMeta, updatedAt: Date.now() });
-                } catch(e) { console.warn("Trip meta cloud save:", e); }
-            });
+            setDoc(doc(db, "users", currentUid, "settings", "trips"), {
+                names: customTrips, meta: tripMeta, updatedAt: Date.now(), schemaVersion: 3
+            }, { merge: true }).catch(e => console.warn("Trip meta cloud save:", e));
         }
 
         function saveTripsLocalAndCloud() {
             if (!currentUid) return;
-            localStorage.setItem(tripsStorageKey(currentUid), JSON.stringify(customTrips));
             normalizeTripMeta();
+            localStorage.setItem(tripsStorageKey(currentUid), JSON.stringify(customTrips));
             localStorage.setItem(tripMetaStorageKey(currentUid), JSON.stringify(tripMeta));
-            // Cloud copy is intentionally best-effort; existing transactions are never touched.
-            const ref = doc(db, "users", currentUid, "settings", "trips");
-            updateDoc(ref, { names: customTrips, meta: tripMeta, updatedAt: Date.now() }).catch(async () => {
-                try { await addDoc(collection(db, "users", currentUid, "settings"), { key:"trips", names: customTrips, updatedAt: Date.now() }); } catch(e) { console.warn("Trip cloud save:", e); }
-            });
+            setDoc(doc(db, "users", currentUid, "settings", "trips"), {
+                names: customTrips, meta: tripMeta, updatedAt: Date.now(), schemaVersion: 3
+            }, { merge: true }).catch(e => console.warn("Trip cloud save:", e));
         }
         function safeFilename(name) { return String(name).replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0,60) || "finance_backup"; }
         function downloadText(filename, text, mime) {
@@ -902,7 +907,7 @@
         }
         function makeBackup() {
             const backup = { version:2, app:"Finance & Loan Master", exportedAt:Date.now(), userUid:currentUid || null,
-                transactions: allTransactions.map(x=>({...x})), vatti: allVattiLoans.map(x=>({...x})), customTrips:[...customTrips], tripMeta:{...tripMeta} };
+                transactions: allTransactions.map(x=>({...x})), vatti: allVattiLoans.map(x=>({...x})), customTrips:[...customTrips], tripMeta:{...tripMeta}, incomeCards:[...loadIncomeCards()] };
             downloadText("finance-master-backup-" + getLocalDateString() + ".json", JSON.stringify(backup,null,2), "application/json");
         }
         function exportCSV() {
@@ -1550,36 +1555,23 @@
             return balance;
         }
 
-        function validateExpenseBalance(data, extraTransactions=[]) {
-            if(data.type!=='expense') return true;
-            const required=Array.isArray(data.splitSources)&&data.splitSources.length ? data.splitSources.map(x=>({source:x.source,amount:Number(x.amount||0)})) : Array.isArray(data.purchasePayments)&&data.purchasePayments.length ? data.purchasePayments.map(x=>({source:x.source,amount:Number(x.amount||0)})) : [{source:data.source,amount:Number(data.amount||0)}];
-            for(const item of required){
-                if(!item.source || item.amount<=0) continue;
-                const available=getSourceBalance(item.source,extraTransactions);
-                if(item.amount>available+0.009){
-                    alert(`⚠️ போதுமான பேலன்ஸ் இல்லை\n\nகணக்கு: ${item.source}\nஇருப்பு: ₹${available.toFixed(2)}\nதேவையானது: ₹${item.amount.toFixed(2)}`);
-                    return false;
-                }
-            }
-            return true;
-        }
+        // Expenses are never rejected because of the current balance. FIFO allocation
+        // can consume a later income, so a ₹600 expense may use ₹100 from one income
+        // and ₹500 from the next income. The transaction itself is always preserved.
+        function validateExpenseBalance(data, extraTransactions=[]) { return true; }
 
         async function saveTransaction(data) {
             try {
-                let user = auth.currentUser;
+                const user = auth.currentUser;
                 if (!user) { alert("உள்நுழையப்படவில்லை!"); return null; }
-
-                if (!validateExpenseBalance(data)) return null;
-
                 const ref = await addDoc(collection(db, "users", user.uid, "transactions"), {
-                    ...data,
-                    timestamp: data.timestamp || Date.now(),
-                    updatedAt: Date.now(),
-                    schemaVersion: 2
+                    ...data, timestamp: Number(data.timestamp || Date.now()), updatedAt: Date.now(), schemaVersion: 3
                 });
                 return ref.id;
             } catch (error) {
                 console.error("Error saving transaction:", error);
+                alert("பதிவு சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.");
+                return null;
             }
         }
 
@@ -1705,16 +1697,40 @@
         window.executeSearch = function() { renderApp(); };
 
         function listenToData(uid) {
-            onSnapshot(query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")), (snap) => {
-                allTransactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                populateMonthDropdown();
-                updateCalculations();
-            });
+            if (unsubscribeTransactions) { unsubscribeTransactions(); unsubscribeTransactions = null; }
+            if (unsubscribeVatti) { unsubscribeVatti(); unsubscribeVatti = null; }
+            if (tripsListener) { tripsListener(); tripsListener = null; }
+            if (incomeCardsListener) { incomeCardsListener(); incomeCardsListener = null; }
 
-            onSnapshot(query(collection(db, "users", uid, "vatti"), orderBy("timestamp", "desc")), (snap) => {
-                allVattiLoans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                updateCalculations();
-            });
+            unsubscribeTransactions = onSnapshot(
+                query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")),
+                snap => { allTransactions = snap.docs.map(d => ({ id:d.id, ...d.data() })); populateMonthDropdown(); updateCalculations(); },
+                err => console.error("Transactions listener:", err)
+            );
+            unsubscribeVatti = onSnapshot(
+                query(collection(db, "users", uid, "vatti"), orderBy("timestamp", "desc")),
+                snap => { allVattiLoans = snap.docs.map(d => ({ id:d.id, ...d.data() })); updateCalculations(); },
+                err => console.error("Vatti listener:", err)
+            );
+            tripsListener = onSnapshot(doc(db, "users", uid, "settings", "trips"), snap => {
+                if (!snap.exists()) return;
+                const data=snap.data()||{};
+                if(Array.isArray(data.names)) customTrips=[...new Set(data.names.filter(x=>typeof x==='string'))];
+                if(data.meta && typeof data.meta==='object') tripMeta=data.meta;
+                normalizeTripMeta();
+                localStorage.setItem(tripsStorageKey(uid),JSON.stringify(customTrips));
+                localStorage.setItem(tripMetaStorageKey(uid),JSON.stringify(tripMeta));
+                updateCategoryDropdowns(); renderApp();
+            }, err => console.warn("Trips listener:", err));
+            incomeCardsListener = onSnapshot(doc(db, "users", uid, "settings", "incomeCards"), snap => {
+                if (!snap.exists()) return;
+                const data=snap.data()||{};
+                if(Array.isArray(data.names)){
+                    incomeCards=[...new Set(data.names.filter(x=>typeof x==='string'&&x.trim()))];
+                    localStorage.setItem("incomeCards_"+uid,JSON.stringify(incomeCards));
+                    updateIncomeCardDropdown(); renderIncomeCards();
+                }
+            }, err => console.warn("Income cards listener:", err));
         }
 
         function getCurrentMonthKey() {
@@ -2350,7 +2366,13 @@
 
         // ------------------ Income Cards + Batch Entry ------------------ //
         function loadIncomeCards(){ try{return JSON.parse(localStorage.getItem("incomeCards_"+(currentUid||""))||"[]")}catch(e){return [];} }
-        function saveIncomeCards(cards){ if(currentUid) localStorage.setItem("incomeCards_"+currentUid,JSON.stringify(cards)); }
+        function saveIncomeCards(cards){
+            if(!currentUid) return;
+            const clean=[...new Set((Array.isArray(cards)?cards:[]).filter(x=>typeof x==='string'&&x.trim()))];
+            localStorage.setItem("incomeCards_"+currentUid,JSON.stringify(clean));
+            setDoc(doc(db,"users",currentUid,"settings","incomeCards"),{names:clean,updatedAt:Date.now(),schemaVersion:1},{merge:true})
+                .catch(e=>console.warn("Income cards cloud save:",e));
+        }
         let incomeCards = loadIncomeCards();
         window.addNewIncomeCard=function(){ document.getElementById("income-card-name").value=""; document.getElementById("income-card-modal").style.display="flex"; };
         window.closeIncomeCardModal=function(){ document.getElementById("income-card-modal").style.display="none"; };
