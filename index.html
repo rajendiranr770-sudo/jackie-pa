@@ -1542,30 +1542,97 @@
             }
         };
 
-        function getSourceBalance(source, extraTransactions=[]) {
-            let balance=0;
-            [...allTransactions,...extraTransactions].forEach(tx=>{
-                if(tx.type==='income' && tx.source===source) balance+=Number(tx.amount||0);
-                if(tx.type==='expense'){
-                    if(Array.isArray(tx.splitSources)) tx.splitSources.forEach(x=>{if(x.source===source) balance-=Number(x.amount||0);});
-                    else if(Array.isArray(tx.purchasePayments)) tx.purchasePayments.forEach(x=>{if(x.source===source) balance-=Number(x.amount||0);});
-                    else if(tx.source===source) balance-=Number(tx.amount||0);
+        // ------------------ Unified Money Source / Balance Engine ------------------
+        // Salary/Home/Other Income are real money sources. Farm/Trip/etc. are NOT
+        // money sources. All expense paths must use this same balance calculation.
+        function normalizeMoneySource(source) {
+            return String(source || '').trim();
+        }
+
+        function getSourceBalance(source, extraTransactions=[], excludedTransactionIds=[]) {
+            const wanted = normalizeMoneySource(source);
+            const excluded = new Set((excludedTransactionIds || []).map(String));
+            let balance = 0;
+
+            const rows = [...allTransactions, ...(Array.isArray(extraTransactions) ? extraTransactions : [])];
+            rows.forEach(tx => {
+                if (!tx || excluded.has(String(tx.id || ''))) return;
+
+                if (tx.type === 'income') {
+                    if (normalizeMoneySource(tx.source) === wanted) {
+                        balance += Number(tx.amount || 0);
+                    }
+                    return;
+                }
+
+                if (tx.type !== 'expense') return;
+
+                if (Array.isArray(tx.splitSources) && tx.splitSources.length) {
+                    tx.splitSources.forEach(x => {
+                        if (normalizeMoneySource(x.source) === wanted) {
+                            balance -= Number(x.amount || 0);
+                        }
+                    });
+                } else if (Array.isArray(tx.purchasePayments) && tx.purchasePayments.length) {
+                    tx.purchasePayments.forEach(x => {
+                        if (normalizeMoneySource(x.source) === wanted) {
+                            balance -= Number(x.amount || 0);
+                        }
+                    });
+                } else if (normalizeMoneySource(tx.source) === wanted) {
+                    balance -= Number(tx.amount || 0);
                 }
             });
+
             return balance;
         }
 
-        // Expenses are never rejected because of the current balance. FIFO allocation
-        // can consume a later income, so a ₹600 expense may use ₹100 from one income
-        // and ₹500 from the next income. The transaction itself is always preserved.
-        function validateExpenseBalance(data, extraTransactions=[]) { return true; }
+        // Validate the FULL amount required from each money source. Multiple rows
+        // using the same source are combined before checking, so a source cannot be
+        // overspent by splitting one expense into several rows.
+        function validateExpenseBalance(data, extraTransactions=[], excludedTransactionIds=[]) {
+            if (!data || data.type !== 'expense') return true;
+
+            const requiredBySource = new Map();
+            const addRequirement = (source, amount) => {
+                const normalized = normalizeMoneySource(source);
+                const value = Number(amount || 0);
+                if (!normalized || value <= 0) return;
+                requiredBySource.set(normalized, (requiredBySource.get(normalized) || 0) + value);
+            };
+
+            if (Array.isArray(data.splitSources) && data.splitSources.length) {
+                data.splitSources.forEach(x => addRequirement(x.source, x.amount));
+            } else if (Array.isArray(data.purchasePayments) && data.purchasePayments.length) {
+                data.purchasePayments.forEach(x => addRequirement(x.source, x.amount));
+            } else {
+                addRequirement(data.source, data.amount);
+            }
+
+            for (const [source, required] of requiredBySource.entries()) {
+                const available = getSourceBalance(source, extraTransactions, excludedTransactionIds);
+                if (required > available + 0.009) {
+                    alert(`⚠️ போதுமான பேலன்ஸ் இல்லை\n\nகணக்கு: ${source}\nஇருப்பு: ₹${available.toFixed(2)}\nதேவையானது: ₹${required.toFixed(2)}\n\nஇந்த செலவு பதிவு செய்யப்படவில்லை.`);
+                    return false;
+                }
+            }
+            return true;
+        }
 
         async function saveTransaction(data) {
             try {
                 const user = auth.currentUser;
                 if (!user) { alert("உள்நுழையப்படவில்லை!"); return null; }
+
+                // Final safety gate: every expense write, including special flows,
+                // must have enough money in its selected source(s).
+                if (!validateExpenseBalance(data)) return null;
+
                 const ref = await addDoc(collection(db, "users", user.uid, "transactions"), {
-                    ...data, timestamp: Number(data.timestamp || Date.now()), updatedAt: Date.now(), schemaVersion: 3
+                    ...data,
+                    timestamp: Number(data.timestamp || Date.now()),
+                    updatedAt: Date.now(),
+                    schemaVersion: 4
                 });
                 return ref.id;
             } catch (error) {
@@ -2245,6 +2312,7 @@
             if(advance<=0||advance>total){ alert('அட்வான்ஸ் தொகை மொத்த விலையை விட அதிகமாக இருக்கக்கூடாது.'); return; }
             let d=dateVal?parseLocalDate(dateVal):new Date(); const now=new Date(); d.setHours(now.getHours(),now.getMinutes(),now.getSeconds(),now.getMilliseconds());
             const payment={amount:advance,source,label:'அட்வான்ஸ்',timestamp:d.getTime()};
+            if(!validateExpenseBalance({type:'expense',source,amount:advance})) return;
             closeInstallmentPurchaseModal();
             await saveTransaction({title,amount:total,type:'expense',category,source:'அட்வான்ஸ் + மீதி',purchasePayments:[payment],installmentPurchase:true,timestamp:d.getTime()});
         };
@@ -2842,6 +2910,9 @@
                     alert(`மொத்த செலவு ₹${amount.toFixed(2)}. கணக்குகளின் தொகை ₹${splitTotal.toFixed(2)}. இரண்டும் சமமாக இருக்க வேண்டும்.`);
                     return;
                 }
+                // Remove the old transaction from the balance calculation while editing;
+                // otherwise an unchanged expense would incorrectly consume its own money.
+                if (!validateExpenseBalance({type:'expense', amount, splitSources}, [], [id])) return;
                 closeEditModal();
                 try {
                     await updateDoc(doc(db, "users", auth.currentUser.uid, "transactions", id), {
@@ -2894,6 +2965,22 @@
                     const source = document.getElementById("edit-source").value;
                     let category = document.getElementById("edit-category").value;
                     const type = document.getElementById("edit-type").value;
+
+                    // Editing an expense must obey exactly the same balance rule as a new expense.
+                    // The original transaction is excluded so only the net increase is tested.
+                    if (type === "expense") {
+                        if (original && Array.isArray(original.purchasePayments) && original.purchasePayments.length) {
+                            const paid = original.purchasePayments.reduce((sum,p) => sum + Number(p.amount || 0), 0);
+                            if (paid > amount + 0.009) {
+                                alert(`ஏற்கனவே செலுத்தியது ₹${paid.toFixed(2)}. மொத்த செலவு அதைவிட குறைவாக இருக்க முடியாது.`);
+                                return;
+                            }
+                            if (!validateExpenseBalance({type:'expense', amount, purchasePayments: original.purchasePayments}, [], [id])) return;
+                        } else if (!validateExpenseBalance({type:'expense', source, amount}, [], [id])) {
+                            return;
+                        }
+                    }
+
                     if (type === "income" && category !== "கைமாத்து") {
                         category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
                     }
