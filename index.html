@@ -371,7 +371,7 @@
             <div id="completed-trips-container"></div>
             <div id="linked-trip-container"></div>
 
-            <div class="section-title" id="list-title">அனைத்துப் பதிவுகள்</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><div class="section-title" id="list-title">அனைத்துப் பதிவுகள்</div><button id="home-back-btn" type="button" style="display:none;border:0;border-radius:8px;padding:7px 10px;background:#2563eb;color:#fff;font-weight:bold;">← முகப்பு / Filter நீக்கு</button></div>
             <div id="tx-list-container"></div>
         </div>
 
@@ -912,8 +912,11 @@
             downloadText("finance-master-backup-" + getLocalDateString() + ".json", JSON.stringify(backup,null,2), "application/json");
         }
         function exportCSV() {
-            const rows = [["ID","Date","Title","Amount","Type","Source","Category"]];
-            allTransactions.forEach(t=>rows.push([t.id||"", new Date(t.timestamp||0).toLocaleString("ta-IN"), t.title||"", t.amount||0, t.type||"", t.source||"", t.category||""]));
+            const rows = [["ID","Date","Title","Amount","Type","Source","Category","பணம் வந்த வரவு"]];
+            allTransactions.forEach(t=>{
+                const funding = t.type === 'expense' ? getFundingIncomeText(t) : '';
+                rows.push([t.id||"", new Date(t.timestamp||0).toLocaleString("ta-IN"), t.title||"", t.amount||0, t.type||"", t.source||"", t.category||"", funding]);
+            });
             const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
             downloadText("finance-master-transactions-"+getLocalDateString()+".csv", "\uFEFF"+csv, "text/csv;charset=utf-8");
         }
@@ -1674,6 +1677,28 @@
             return buildIncomeExpenseAllocations().get(String(incomeId)) || [];
         }
 
+        // Return the exact income records that funded an expense (or a specific payment part).
+        // Used in transaction cards, printed/PDF statements and CSV exports; does not alter stored data.
+        function getFundingRowsForTransaction(tx, partIndex=null) {
+            if (!tx || tx.type !== 'expense') return [];
+            const result=[];
+            const allocationMap=buildIncomeExpenseAllocations();
+            for (const [incomeId, allocations] of allocationMap.entries()) {
+                for (const a of allocations) {
+                    if (String(a.txId)!==String(tx.id)) continue;
+                    if (partIndex!==null && Number(a.partIndex)!==Number(partIndex)) continue;
+                    const income=allTransactions.find(x=>String(x.id)===String(incomeId));
+                    if (!income) continue;
+                    result.push({title:income.title||'வரவு', card:income.incomeCard||'', amount:Number(a.amount||0), timestamp:income.timestamp||0});
+                }
+            }
+            return result.sort((a,b)=>Number(a.timestamp)-Number(b.timestamp));
+        }
+        function getFundingIncomeText(tx) {
+            const rows=getFundingRowsForTransaction(tx);
+            return rows.length ? rows.map(x=>`${x.title}${x.card?` [${x.card}]`:''} ₹${x.amount.toLocaleString('en-IN',{maximumFractionDigits:2})}`).join(' + ') : 'வரவு ஒதுக்கீடு இல்லை';
+        }
+
         // Validate by running the same exact FIFO ledger with the candidate expense included.
         // This prevents future income from funding an earlier expense and also respects a
         // selected custom Income Card.
@@ -2290,7 +2315,7 @@
                     const payments=getPurchasePayments(tx);
                     const paid=payments.reduce((a,p)=>a+Number(p.amount||0),0);
                     const remaining=Math.max(0,Number(tx.amount||0)-paid);
-                    details=`<div class="purchase-payment-history"><b>💳 Payment History</b>${payments.map((p,i)=>`<div class="purchase-payment-row"><span>📅 ${formatDateTime(p.timestamp)}<br>　${p.label||'Payment'} — ${p.source||'-'}</span><b>₹${Number(p.amount||0).toLocaleString('en-IN')}</b></div>`).join('')}<div style="padding-top:6px;font-weight:bold;">செலுத்தியது: ₹${paid.toLocaleString('en-IN')} / ₹${Number(tx.amount||0).toLocaleString('en-IN')}</div></div>`;
+                    details=`<div class="purchase-payment-history"><b>💳 Payment History</b>${payments.map((p,i)=>{ const funding=getFundingRowsForTransaction(tx,i); const fundingText=funding.length?`<div style="color:#2563eb;font-size:12px;font-weight:bold;margin:3px 0 6px;">📌 பணம் வந்த வரவு: ${funding.map(a=>`${a.title}${a.card?` [${a.card}]`:''} ₹${a.amount.toLocaleString('en-IN',{maximumFractionDigits:2})}`).join(' + ')}</div>`:`<div style="color:#64748b;font-size:12px;margin:3px 0 6px;">📌 பணம் வந்த வரவு: ${p.source?`கணக்கு ${p.source}${p.incomeCard?` · Card ${p.incomeCard}`:''} — வரவு பதிவுடன் பொருத்தம் கிடைக்கவில்லை`: 'வரவு விவரம் இல்லை'}</div>`; return `<div class="purchase-payment-row"><span>📅 ${formatDateTime(p.timestamp)}<br>　${p.label||'Payment'} — ${p.source||'-'}${fundingText}</span><b>₹${Number(p.amount||0).toLocaleString('en-IN')}</b></div>`;}).join('')}<div style="padding-top:6px;font-weight:bold;">செலுத்தியது: ₹${paid.toLocaleString('en-IN')} / ₹${Number(tx.amount||0).toLocaleString('en-IN')}</div></div>`;
                     details += remaining>0 ? `<div class="purchase-status pending">🟠 அட்வான்ஸ் கொடுக்கப்பட்டது — மீதி ₹${remaining.toLocaleString('en-IN')}</div><button class="purchase-pay-btn" onclick="event.stopPropagation(); openPurchasePaymentModal('${tx.id}')">💰 மீதி செலுத்து ₹${remaining.toLocaleString('en-IN')}</button>` : `<div class="purchase-status done">✅ முழுமையாக செலுத்தப்பட்டது — ₹${Number(tx.amount||0).toLocaleString('en-IN')}</div>`;
                 } else if(Array.isArray(tx.splitSources)&&tx.splitSources.length){
                     details=`<div class="split-detail">💳 ${tx.splitSources.map(s=>`${s.source} ₹${Number(s.amount||0).toLocaleString('en-IN')}`).join(' + ')}</div>`;
@@ -2341,8 +2366,9 @@
             if(!title||total<=0){ alert('பொருள் மற்றும் மொத்த விலையை சரியாக உள்ளிடவும்.'); return; }
             if(advance<=0||advance>total){ alert('அட்வான்ஸ் தொகை மொத்த விலையை விட அதிகமாக இருக்கக்கூடாது.'); return; }
             let d=dateVal?parseLocalDate(dateVal):new Date(); const now=new Date(); d.setHours(now.getHours(),now.getMinutes(),now.getSeconds(),now.getMilliseconds());
-            const payment={amount:advance,source,label:'அட்வான்ஸ்',timestamp:d.getTime()};
-            if(!validateExpenseBalance({type:'expense',source,amount:advance})) return;
+            const selectedCard=(document.getElementById('m-income-card')?.value||'').trim() || null;
+            const payment={amount:advance,source,label:'அட்வான்ஸ்',timestamp:d.getTime(),incomeCard:selectedCard};
+            if(!validateExpenseBalance({type:'expense',source,amount:advance,incomeCard:selectedCard})) return;
             closeInstallmentPurchaseModal();
             await saveTransaction({title,amount:total,type:'expense',category,source:'அட்வான்ஸ் + மீதி',purchasePayments:[payment],installmentPurchase:true,timestamp:d.getTime()});
         };
@@ -3114,6 +3140,31 @@
                 saveTransaction(actionData);
             }
         }
+
+
+        // Mobile/browser Back navigation: clear an active filter first instead of closing the app.
+        (function installSafeBackNavigation(){
+            const backBtn=document.getElementById('home-back-btn');
+            const hasActiveView=()=>!!(activeIncomeFilter || activeTripFilter ||
+                (document.getElementById('search-input')?.value||'').trim() ||
+                (document.getElementById('month-filter')?.value && document.getElementById('month-filter').value!=='CURRENT_WEEK') ||
+                (document.getElementById('from-date')?.value||'') || (document.getElementById('to-date')?.value||''));
+            const syncBackButton=()=>{ if(backBtn) backBtn.style.display=hasActiveView()?'inline-block':'none'; };
+            if(backBtn) backBtn.addEventListener('click',()=>{ window.resetSearch(); syncBackButton(); });
+            ['input','change'].forEach(evt=>document.addEventListener(evt,e=>{
+                if(e.target && ['search-input','month-filter','from-date','to-date'].includes(e.target.id)) syncBackButton();
+            }));
+            const clearCurrentView=()=>{ window.resetSearch(); if(backBtn) backBtn.style.display='none'; };
+            try { history.pushState({financeAppGuard:true},'',location.href); } catch(_) {}
+            window.addEventListener('popstate',()=>{
+                if(hasActiveView()){ clearCurrentView(); }
+                // Keep a history entry so Android's system Back does not immediately close the app.
+                try { history.pushState({financeAppGuard:true},'',location.href); } catch(_) {}
+            });
+            const oldRenderApp=window.renderApp;
+            if(typeof oldRenderApp==='function') window.renderApp=function(){ const r=oldRenderApp.apply(this,arguments); syncBackButton(); return r; };
+            setTimeout(syncBackButton,0);
+        })();
 
         window.closeModal = function() {
             document.getElementById("source-modal").style.display = "none";
