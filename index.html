@@ -1415,7 +1415,7 @@
             }
         };
 
-        window.addManualTransaction = function() {
+        window.addManualTransaction = async function() {
             let title = document.getElementById("m-title").value.trim();
             let amount = parseFloat(document.getElementById("m-amount").value);
             let source = document.getElementById("m-source").value;
@@ -1427,14 +1427,17 @@
                 category = (source === "சம்பளம்") ? "சம்பளம் வரவு" : (source === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
             }
 
-            if (!title || !amount) { alert("விவரங்களை நிரப்பவும்!"); return; }
+            if (!title || !Number.isFinite(amount) || amount <= 0) {
+                alert("விவரம் மற்றும் சரியான தொகையை (₹0-க்கு மேல்) உள்ளிடவும்!");
+                return;
+            }
             
             let now = new Date();
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
             selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
             let timestamp = selectedDate.getTime();
 
-            saveTransaction({
+            const savedId = await saveTransaction({
                 title: title,
                 amount: amount,
                 source: source,
@@ -1444,8 +1447,13 @@
                 timestamp: timestamp
             });
 
-            document.getElementById("m-title").value = "";
-            document.getElementById("m-amount").value = "";
+            // Clear the form ONLY after Firestore accepted the record.
+            // If balance validation or saving fails, keep the entered amount visible
+            // so the user can correct/retry instead of losing the entry.
+            if (savedId) {
+                document.getElementById("m-title").value = "";
+                document.getElementById("m-amount").value = "";
+            }
         };
 
         window.triggerKaiMaathuAdd = function() {
@@ -1558,7 +1566,15 @@
             if (Array.isArray(tx.splitSources) && tx.splitSources.length) {
                 tx.splitSources.forEach((x,i) => {
                     const amount = Number(x.amount || 0), source = normalizeMoneySource(x.source);
-                    if (source && amount > 0) parts.push({ source, amount, incomeCard: x.incomeCard || null, partIndex:i });
+                    // Split-source rows are parts of the SAME expense transaction.
+                    // They must use the parent transaction time; otherwise FIFO sees
+                    // their timestamp as 0 and incorrectly treats them as expenses
+                    // that happened before every real income.
+                    const timestamp = Number(x.timestamp || tx.timestamp || 0);
+                    if (source && amount > 0) parts.push({
+                        source, amount, incomeCard: x.incomeCard || null,
+                        timestamp, partIndex:i
+                    });
                 });
                 return parts;
             }
