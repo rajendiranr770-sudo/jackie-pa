@@ -64,15 +64,21 @@
             width: 100%;
         }
         .manual-type-row #m-type {
+            /* Match the height/overall size of the Salary and Category fields,
+               while keeping the Income/Expense label slightly bolder. */
+            box-sizing: border-box;
             width: 100%;
-            max-width: 420px;
-            min-height: 54px;
-            flex: 0 1 420px;
+            max-width: none;
+            min-width: 0;
+            min-height: 44px;
+            height: 54px;
+            flex: 1 1 100%;
             text-align: center;
             text-align-last: center;
-            font-size: 20px;
+            font-size: 18px;
+            line-height: 1.2;
             font-weight: 700;
-            padding: 12px 16px;
+            padding: 8px 12px;
             border-radius: 12px;
             border: 2px solid #cbd5e1;
             margin-bottom: 0;
