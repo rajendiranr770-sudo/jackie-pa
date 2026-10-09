@@ -379,6 +379,7 @@
                         <option value="income">வரவு (+)</option>
                     </select>
                     <input type="date" id="m-date" class="form-input">
+                    <input type="time" id="m-time" class="form-input" aria-label="நேரம்">
                 </div>
                 <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
                 <button class="btn-blue" style="margin-top:8px; background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
@@ -786,7 +787,9 @@
         }
 
         const todayStr = getLocalDateString();
+        const getLocalTimeString = (date = new Date()) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         document.getElementById("m-date").value = todayStr;
+        document.getElementById("m-time").value = getLocalTimeString();
         document.getElementById("v-date").value = todayStr;
         document.getElementById("km-date").value = todayStr;
 
@@ -1487,8 +1490,10 @@
             }
             
             let now = new Date();
+            const timeVal = document.getElementById("m-time").value || getLocalTimeString(now);
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+            const [hours, minutes] = timeVal.split(':').map(Number);
+            selectedDate.setHours(hours, minutes, 0, 0);
             let timestamp = selectedDate.getTime();
 
             const savedId = await saveTransaction({
@@ -1507,6 +1512,9 @@
             if (savedId) {
                 document.getElementById("m-title").value = "";
                 document.getElementById("m-amount").value = "";
+                // Keep the selected date, but refresh the time for the next entry.
+                document.getElementById("m-time").value = getLocalTimeString();
+                clearDraftTransaction();
             }
         };
 
@@ -2993,7 +3001,10 @@
             if (item.timestamp) {
                 const d = new Date(item.timestamp);
                 document.getElementById("edit-date").value = getLocalDateString(d);
-                document.getElementById("edit-time").value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                document.getElementById("edit-time").value = getLocalTimeString(d);
+            } else {
+                document.getElementById("edit-date").value = getLocalDateString();
+                document.getElementById("edit-time").value = getLocalTimeString();
             }
             document.getElementById("edit-modal").style.display = "flex";
         };
@@ -3047,10 +3058,9 @@
             if (!title || !amount || amount <= 0) { alert("பெர் மற்றும் தொகையை சரியாக உள்ளிடவும்!"); return; }
 
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            if (timeVal) {
-                const [hours, minutes] = timeVal.split(':').map(Number);
-                selectedDate.setHours(hours, minutes, 0, 0);
-            }
+            const effectiveTime = timeVal || getLocalTimeString();
+            const [hours, minutes] = effectiveTime.split(':').map(Number);
+            selectedDate.setHours(hours, minutes, 0, 0);
             const timestamp = selectedDate.getTime();
 
             if (isMultiSource) {
@@ -3243,6 +3253,10 @@
     <!-- Combined enhancement scripts: original contents preserved -->
     <script>
 /* ===== form-enhancement-with-navigation.js ===== */
+// Local clock helper for the enhancement script's classic-script scope.
+function getLocalTimeString(date = new Date()) {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
 /**
  * ========================================
  * Finance & Loan Master App - Enhanced Features
@@ -3328,7 +3342,7 @@ function restoreDraftTransaction() {
             
             // Time field restore
             if (document.getElementById("m-time")) {
-                document.getElementById("m-time").value = draft.time || "";
+                document.getElementById("m-time").value = draft.time || getLocalTimeString();
             }
             
             document.getElementById("m-income-card").value = draft.incomeCard || "";
@@ -3506,7 +3520,7 @@ function clearManualTransactionFormWithSearchUpdate() {
     
     // Time field clear
     if (document.getElementById("m-time")) {
-        document.getElementById("m-time").value = "";
+        document.getElementById("m-time").value = getLocalTimeString();
     }
     
     document.getElementById("m-income-card").value = "";
