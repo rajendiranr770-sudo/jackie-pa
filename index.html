@@ -292,6 +292,13 @@
             </div>
 
             <div class="search-input-group" style="margin-bottom: 8px;">
+                <select id="transaction-type-filter" class="month-select" aria-label="பதிவு வகை" onchange="executeSearch()">
+                    <option value="ALL">📋 அனைத்து பதிவுகள்</option>
+                    <option value="income">🟢 வரவு மட்டும்</option>
+                    <option value="expense">🔴 செலவு மட்டும்</option>
+                </select>
+            </div>
+            <div class="search-input-group" style="margin-bottom: 8px;">
                 <select id="month-filter" class="month-select" onchange="onFilterChange()">
                     <option value="CURRENT_WEEK">📅கடந்த 7 நாட்கள் (Last 7 Days)</option>
                     <option value="ALL">🌐 அனைத்து கணக்குகள் (All Statements)</option>
@@ -795,6 +802,19 @@
             if (user) {
                 currentUid = user.uid;
                 localStorage.setItem("finance_logged_in_uid", user.uid);
+                // Fast offline-first paint: show this user's last cached records immediately.
+                try {
+                    const cached = localStorage.getItem(`finance_transactions_cache_${user.uid}`);
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        if (Array.isArray(parsed)) {
+                            allTransactions = parsed;
+                            populateMonthDropdown();
+                            updateCalculations();
+                            renderApp();
+                        }
+                    }
+                } catch (cacheErr) { console.warn("Local transaction cache could not be read:", cacheErr); }
                 customTrips = loadTripsLocal(user.uid);
                 tripMeta = loadTripMeta(user.uid);
                 normalizeTripMeta();
@@ -1817,6 +1837,9 @@
             const monthFilterInput = document.getElementById('month-filter');
             
             const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const typeFilter = document.getElementById('transaction-type-filter')?.value || 'ALL';
+            const keywordType = /வரவு|income/.test(searchVal) ? 'income' : (/செலவு|expense/.test(searchVal) ? 'expense' : 'ALL');
+            const effectiveTypeFilter = typeFilter !== 'ALL' ? typeFilter : keywordType;
             const monthFilter = monthFilterInput ? monthFilterInput.value : 'CURRENT_WEEK';
             
             const fromDateVal = document.getElementById('from-date') ? document.getElementById('from-date').value : '';
@@ -1824,6 +1847,7 @@
             const { start: last7Start, end: last7End } = getLast7DaysRange();
 
             return txList.filter(item => {
+                if (effectiveTypeFilter !== 'ALL' && item.type !== effectiveTypeFilter) return false;
                 const itemTime = item.timestamp ? item.timestamp : (item.date ? new Date(item.date).getTime() : 0);
                 const itemDate = new Date(itemTime); 
 
@@ -1867,6 +1891,7 @@
 
         window.resetSearch = function() {
             if (document.getElementById('search-input')) document.getElementById('search-input').value = '';
+            if (document.getElementById('transaction-type-filter')) document.getElementById('transaction-type-filter').value = 'ALL';
             if (document.getElementById('month-filter')) document.getElementById('month-filter').value = 'CURRENT_WEEK';
             if (document.getElementById('custom-date-container')) document.getElementById('custom-date-container').style.display = 'none';
             if (document.getElementById('from-date')) document.getElementById('from-date').value = '';
@@ -1887,7 +1912,12 @@
 
             unsubscribeTransactions = onSnapshot(
                 query(collection(db, "users", uid, "transactions"), orderBy("timestamp", "desc")),
-                snap => { allTransactions = snap.docs.map(d => ({ id:d.id, ...d.data() })); populateMonthDropdown(); updateCalculations(); },
+                snap => {
+                    allTransactions = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+                    try { localStorage.setItem(`finance_transactions_cache_${uid}`, JSON.stringify(allTransactions)); }
+                    catch (cacheErr) { console.warn("Local transaction cache is full; cloud data remains safe:", cacheErr); }
+                    populateMonthDropdown(); updateCalculations(); renderApp();
+                },
                 err => console.error("Transactions listener:", err)
             );
             unsubscribeVatti = onSnapshot(
@@ -2249,9 +2279,14 @@
                 } else totalExpense += Number(tx.amount||0);
             });
             const totalBox=document.getElementById("search-total-box"), incomeElem=document.getElementById("search-total-income"), expenseElem=document.getElementById("search-total-expense"), balanceElem=document.getElementById("search-net-balance");
-            if (searchInput !== "" || monthFilter !== "ALL" || activeIncomeFilter !== null || activeTab !== "All") {
-                if(totalBox&&incomeElem&&expenseElem&&balanceElem){ totalBox.style.display="block"; incomeElem.innerText=`+₹${totalIncome.toFixed(2)}`; expenseElem.innerText=`-₹${totalExpense.toFixed(2)}`; const net=totalIncome-totalExpense; balanceElem.style.color=net>=0?"#16a34a":"#dc2626"; balanceElem.innerText=net>=0?`+₹${net.toFixed(2)}`:`-₹${Math.abs(net).toFixed(2)}`; }
-            } else if(totalBox) totalBox.style.display="none";
+            if (totalBox && incomeElem && expenseElem && balanceElem) {
+                totalBox.style.display = "block";
+                incomeElem.innerText = `+₹${totalIncome.toFixed(2)}`;
+                expenseElem.innerText = `-₹${totalExpense.toFixed(2)}`;
+                const net = totalIncome - totalExpense;
+                balanceElem.style.color = net >= 0 ? "#16a34a" : "#dc2626";
+                balanceElem.innerText = net >= 0 ? `+₹${net.toFixed(2)}` : `-₹${Math.abs(net).toFixed(2)}`;
+            }
 
             container.innerHTML="";
 
