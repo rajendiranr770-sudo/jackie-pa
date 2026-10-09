@@ -237,6 +237,21 @@
             .modal-content, .modal-box, .modal-card { max-height: calc(100dvh - 16px); }
         }
     </style>
+
+<style id="finance-print-fix">
+@media print {
+  @page { size: A4; margin: 10mm; }
+  body { background:#fff !important; color:#111 !important; font-size:10pt !important; }
+  body * { visibility:hidden !important; }
+  #print-statement-summary, #print-statement-summary *, #list-title, #list-title *, #tx-list-container, #tx-list-container * { visibility:visible !important; }
+  #print-statement-summary { display:block !important; position:relative !important; margin:0 0 10px 0 !important; padding:0 0 8px 0 !important; border-bottom:1px solid #999 !important; }
+  #list-title { position:relative !important; margin:8px 0 !important; font-size:15pt !important; }
+  #tx-list-container { position:relative !important; width:100% !important; }
+  #tx-list-container .tx-card { break-inside:avoid !important; page-break-inside:avoid !important; box-shadow:none !important; border:1px solid #ccc !important; margin:0 0 7px 0 !important; padding:8px !important; }
+  #tx-list-container .action-btns, .bottom-bar, #search-box-area, #manual-entry-form, #main-tab-bar, #active-trips-container, #completed-trips-container, #linked-trip-container, #pending-view, #vatti-view, #v2-backup-btn, #v2-pdf-btn, #v2-csv-btn, #logout-btn, #home-back-btn, #standard-view > :not(#search-box-area):not(#manual-entry-form):not(#list-title):not(#tx-list-container):not(#print-statement-summary) { display:none !important; }
+}
+#print-statement-summary { display:none; }
+</style>
 </head>
 <body>
 
@@ -941,8 +956,23 @@
             downloadText("finance-master-transactions-"+getLocalDateString()+".csv", "\uFEFF"+csv, "text/csv;charset=utf-8");
         }
         function printPDF() {
-            const oldTitle=document.title; document.title="Finance & Loan Master - Statement";
-            window.print(); setTimeout(()=>document.title=oldTitle,500);
+            // Print only the currently filtered statement; never include entry forms/buttons.
+            const oldTitle=document.title;
+            let summary=document.getElementById('print-statement-summary');
+            if(!summary){ summary=document.createElement('section'); summary.id='print-statement-summary'; const host=document.getElementById('standard-view')||document.getElementById('main-app'); host.insertBefore(summary,host.firstChild); }
+            const list=Array.isArray(allTransactions)?filterTransactions(allTransactions):[];
+            const income=list.filter(t=>t.type==='income').reduce((n,t)=>n+Number(t.amount||0),0);
+            const expense=list.filter(t=>t.type==='expense').reduce((n,t)=>n+Number(t.amount||0),0);
+            const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+            const type=document.getElementById('transaction-type-filter')?.selectedOptions?.[0]?.textContent||'அனைத்து பதிவுகள்';
+            const date=document.getElementById('month-filter')?.selectedOptions?.[0]?.textContent||'தேர்ந்தெடுத்த காலம்';
+            const search=(document.getElementById('search-input')?.value||'').trim();
+            summary.innerHTML=`<h2 style="margin:0 0 5px">Finance & Loan Master — Statement</h2><div>வகை: ${escapeHtml(type)} | காலம்: ${escapeHtml(date)}${search?' | தேடல்: '+escapeHtml(search):''}</div><div style="display:flex;gap:8px;margin-top:8px"><div style="border:1px solid #999;padding:8px;flex:1"><b>மொத்த வரவு</b><br>${money(income)}</div><div style="border:1px solid #999;padding:8px;flex:1"><b>மொத்த செலவு</b><br>${money(expense)}</div><div style="border:1px solid #999;padding:8px;flex:1"><b>நிகர இருப்பு</b><br>${money(income-expense)}</div><div style="border:1px solid #999;padding:8px;flex:1"><b>பதிவுகள்</b><br>${list.length}</div></div>`;
+            const oldListTitle=document.getElementById('list-title')?.textContent;
+            if(document.getElementById('list-title')) document.getElementById('list-title').textContent='பதிவுகள் ('+list.length+')';
+            document.body.classList.add('finance-printing'); document.title='Finance & Loan Master - Statement';
+            const cleanup=()=>{ document.body.classList.remove('finance-printing'); summary.style.display='none'; document.title=oldTitle; if(oldListTitle&&document.getElementById('list-title')) document.getElementById('list-title').textContent=oldListTitle; window.removeEventListener('afterprint',cleanup); };
+            summary.style.display='block'; window.addEventListener('afterprint',cleanup); window.print(); setTimeout(cleanup,1500);
         }
         function restoreBackupFile(file) {
             const reader=new FileReader();
