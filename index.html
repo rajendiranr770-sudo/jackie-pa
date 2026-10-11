@@ -770,7 +770,42 @@
         let tripMeta = {};
         let activeTripFilter = null;
         let currentUid = null;
+        // Back navigation remembers the previous list view without changing saved transactions.
+        const financeViewHistory = [];
+        function captureFinanceView() {
+            return {
+                activeTab,
+                activeIncomeFilter: activeIncomeFilter ? {...activeIncomeFilter} : null,
+                activeTripFilter,
+                search: document.getElementById('search-input')?.value || '',
+                type: document.getElementById('transaction-type-filter')?.value || 'ALL',
+                month: document.getElementById('month-filter')?.value || 'CURRENT_WEEK',
+                from: document.getElementById('from-date')?.value || '',
+                to: document.getElementById('to-date')?.value || '',
+                title: document.getElementById('list-title')?.innerText || 'அனைத்துப் பதிவுகள்'
+            };
+        }
+        function restoreFinanceView(view) {
+            if (!view) return;
+            activeTab = view.activeTab || 'All';
+            activeIncomeFilter = view.activeIncomeFilter ? {...view.activeIncomeFilter} : null;
+            activeTripFilter = view.activeTripFilter || null;
+            const set = (id, value) => { const el=document.getElementById(id); if(el) el.value=value; };
+            set('search-input', view.search); set('transaction-type-filter', view.type);
+            set('month-filter', view.month); set('from-date', view.from); set('to-date', view.to);
+            const title=document.getElementById('list-title'); if(title) title.innerText=view.title;
+            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===activeTab));
+            renderApp();
+        }
         let tripsListener = null;
+        (function resetTransientFiltersOnLaunch(){
+            activeTab = 'All'; activeIncomeFilter = null; activeTripFilter = null;
+            const set=(id,value)=>{const el=document.getElementById(id); if(el) el.value=value;};
+            set('search-input',''); set('transaction-type-filter','ALL'); set('month-filter','CURRENT_WEEK');
+            set('from-date',''); set('to-date','');
+            const custom=document.getElementById('custom-date-container'); if(custom) custom.style.display='none';
+            const title=document.getElementById('list-title'); if(title) title.innerText='அனைத்துப் பதிவுகள்';
+        })();
         let incomeCardsListener = null;
         let unsubscribeTransactions = null;
         let unsubscribeVatti = null;
@@ -981,54 +1016,19 @@
                     let addedTx=0, addedV=0;
                     const existingTx=new Set(allTransactions.map(x=>x.id).filter(Boolean));
                     const existingV=new Set(allVattiLoans.map(x=>x.id).filter(Boolean));
-                    // Preserve backup document IDs so linked records remain linked and
-                    // repeated restores can detect records already restored.
-                    for (const t of data.transactions) {
-                        const c={...t}; const id=typeof c.id==='string' ? c.id.trim() : '';
-                        delete c.id;
-                        if (id && existingTx.has(id)) continue;
-                        if (id && !id.includes('/')) {
-                            await setDoc(doc(db,"users",uid,"transactions",id),c,{merge:false});
-                            existingTx.add(id);
-                        } else {
-                            const ref=await addDoc(collection(db,"users",uid,"transactions"),c);
-                            existingTx.add(ref.id);
-                        }
-                        addedTx++;
-                    }
-                    for (const v of data.vatti) {
-                        const c={...v}; const id=typeof c.id==='string' ? c.id.trim() : '';
-                        delete c.id;
-                        if (id && existingV.has(id)) continue;
-                        if (id && !id.includes('/')) {
-                            await setDoc(doc(db,"users",uid,"vatti",id),c,{merge:false});
-                            existingV.add(id);
-                        } else {
-                            const ref=await addDoc(collection(db,"users",uid,"vatti"),c);
-                            existingV.add(ref.id);
-                        }
-                        addedV++;
-                    }
+                    for (const t of data.transactions) { if (t.id && existingTx.has(t.id)) continue; const c={...t}; delete c.id; await addDoc(collection(db,"users",uid,"transactions"),c); addedTx++; }
+                    for (const v of data.vatti) { if (v.id && existingV.has(v.id)) continue; const c={...v}; delete c.id; await addDoc(collection(db,"users",uid,"vatti"),c); addedV++; }
                     if (Array.isArray(data.customTrips)) {
                         customTrips=[...new Set([...customTrips,...data.customTrips.filter(x=>typeof x==='string')])];
-                    }
-                    if (data.tripMeta && typeof data.tripMeta === 'object' && !Array.isArray(data.tripMeta)) {
-                        tripMeta = { ...tripMeta, ...data.tripMeta };
-                    }
-                    if (Array.isArray(data.customTrips) || (data.tripMeta && typeof data.tripMeta === 'object' && !Array.isArray(data.tripMeta))) {
+                        if (data.tripMeta && typeof data.tripMeta === 'object') {
+                            tripMeta = { ...tripMeta, ...data.tripMeta };
+                        }
                         normalizeTripMeta();
                         saveTripsLocalAndCloud();
                         updateCategoryDropdowns();
                         renderApp();
                     }
-                    if (Array.isArray(data.incomeCards)) {
-                        const mergedCards=[...new Set([...loadIncomeCards(),...data.incomeCards.filter(x=>typeof x==='string'&&x.trim())])];
-                        saveIncomeCards(mergedCards);
-                        incomeCards=mergedCards;
-                        updateIncomeCardDropdown();
-                        renderIncomeCards();
-                    }
-                    alert(`Backup restore முடிந்தது!\nபுதிய transactions: ${addedTx}\nபுதிய loan records: ${addedV}\nவரவு Cards இணைக்கப்பட்டன.\n\nஏற்கனவே உள்ள பதிவுகள் மாற்றப்படவில்லை.`);
+                    alert(`Backup restore முடிந்தது!\\nபுதிய transactions: ${addedTx}\\nபுதிய loan records: ${addedV}\\n\\nஏற்கனவே உள்ள data மாற்றப்படவில்லை.`);
                 } catch(e) { console.error(e); alert("Backup restore செய்ய முடியவில்லை. சரியான JSON backup file தேர்வு செய்யவும்."); }
             }; reader.readAsText(file);
         }
@@ -1331,16 +1331,22 @@
         }
 
         function getCompletedTripNamesForCurrentView() {
-            const names = Object.keys(tripMeta).filter(name => {
+            // Completed Trip summary cards are history items, not transactions.
+            // Keep them out of filtered views (PF, income/source, date, and keyword
+            // filters) so they cannot appear as unrelated rows in every filter.
+            const searchVal = (document.getElementById('search-input')?.value || '').trim();
+            const typeFilter = document.getElementById('transaction-type-filter')?.value || 'ALL';
+            const monthFilter = document.getElementById('month-filter')?.value || 'CURRENT_WEEK';
+            const fromDate = document.getElementById('from-date')?.value || '';
+            const toDate = document.getElementById('to-date')?.value || '';
+            if (searchVal || typeFilter !== 'ALL' || fromDate || toDate || monthFilter !== 'ALL') return [];
+            if (activeIncomeFilter || activeTripFilter) return [];
+            return Object.keys(tripMeta).filter(name => {
                 const meta = getTripMeta(name);
                 if (!meta || !meta.archived || meta.deletedFromHistory) return false;
-                if (activeTab === "MK செலவு" || activeTab === "SK செலவு") {
-                    return (meta.linkedLists || []).includes(activeTab);
-                }
-                // In the general list, show every completed Trip once.
+                // Only the unfiltered All view shows completed Trip summary cards.
                 return activeTab === "All";
             });
-            return names;
         }
 
         function createCompletedTripSummaryElement(tripName) {
@@ -1375,6 +1381,7 @@
         }
 
         window.filterByTripCategory = function(tripName) {
+            financeViewHistory.push(captureFinanceView());
             activeTripFilter = tripName;
             activeIncomeFilter = null;
             const search = document.getElementById("search-input");
@@ -2085,6 +2092,7 @@
         // செலவுகளை மட்டும் காட்ட வேண்டும். பழைய "next income timestamp" logic-க்கு பதிலாக
         // FIFO allocation பயன்படுத்தப்படுகிறது.
         window.filterExpensesByIncome = function(source, incomeTimestamp, incomeTitle, incomeId) {
+            financeViewHistory.push(captureFinanceView());
             activeIncomeFilter = {
                 incomeId: incomeId || null,
                 source: source || '',
@@ -3253,7 +3261,11 @@
             const clearCurrentView=()=>{ window.resetSearch(); if(backBtn) backBtn.style.display='none'; };
             try { history.pushState({financeAppGuard:true},'',location.href); } catch(_) {}
             window.addEventListener('popstate',()=>{
-                if(hasActiveView()){ clearCurrentView(); }
+                if(financeViewHistory.length){
+                    restoreFinanceView(financeViewHistory.pop());
+                } else if(hasActiveView()) {
+                    clearCurrentView();
+                }
                 // Keep a history entry so Android's system Back does not immediately close the app.
                 try { history.pushState({financeAppGuard:true},'',location.href); } catch(_) {}
             });
