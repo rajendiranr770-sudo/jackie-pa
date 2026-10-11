@@ -151,6 +151,12 @@
             transition: 0.2s;
         }
         .btn-add-more:hover { background-color: #c7d2fe; }
+        .manual-entry-heading .btn-add-more { max-width: 100%; white-space: normal; line-height: 1.25; }
+        @media (max-width:430px) {
+            .manual-entry-heading { grid-template-columns: 1fr auto 1fr !important; gap: 4px !important; }
+            .manual-entry-heading .btn-add-more { font-size: 10px !important; padding: 6px 5px !important; }
+            .manual-entry-heading .section-title { font-size: 13px !important; }
+        }
         .target-notice {
             background-color: #fffbeb;
             color: #92400e;
@@ -297,6 +303,8 @@
             <button class="tab-btn" data-tab="MK செலவு" onclick="filterTab('MK செலவு', this)">🛒 MK</button>
             <button class="tab-btn" data-tab="SK செலவு" onclick="filterTab('SK செலவு', this)">📦 SK</button>
             <button class="tab-btn" data-tab="Trip / நிகழ்வு" onclick="filterTab('Trip / நிகழ்வு', this); this.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})">🧳 Trip / நிகழ்வு</button>
+            <button class="tab-btn" data-tab="புதிய வரவு" onclick="filterTab('புதிய வரவு', this); this.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})">💵 புதிய வரவு</button>
+            <button class="tab-btn" data-tab="புதிய செலவு" onclick="filterTab('புதிய செலவு', this); this.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})">➕ புதிய செலவு</button>
             <button class="tab-btn" data-tab="வட்டி பிசினஸ்" onclick="filterTab('வட்டி பிசினஸ்', this)">💰 வட்டி</button>
             <button class="tab-btn" data-tab="கைமாத்து" onclick="filterTab('கைமாத்து', this)">🤝 கைமாத்து</button>
             <button class="tab-btn" data-tab="நிலுவை" onclick="filterTab('நிலுவை', this)">🟠 நிலுவை / Advance</button>
@@ -356,9 +364,10 @@
 
         <div id="standard-view">
             <div class="vatti-form" id="manual-entry-form">
-                <div style="display:flex; justify-content:space-between; align-items:center;" class="section-title">
-                    <span>📝 மேனுவல் பதிவு</span>
-                    <button type="button" class="btn-add-more" onclick="addNewTripCategory()">+ புதிய Trip சேர்</button>
+                <div class="manual-entry-heading" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;margin-bottom:10px;">
+                    <button type="button" class="btn-add-more" style="justify-self:start;padding:7px 8px;" onclick="addNewIncomeCard()">💵 புதிய வரவு கார்டு சேர்</button>
+                    <div class="section-title" style="margin:0;text-align:center;white-space:nowrap;">📝 மேனுவல் பதிவு</div>
+                    <button type="button" class="btn-add-more" style="justify-self:end;padding:7px 8px;" onclick="addNewTripCategory()">➕ புதிய செலவு கார்டு சேர்</button>
                 </div>
                 <input type="text" id="m-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="m-amount" class="form-input" placeholder="தொகை (₹)">
@@ -389,7 +398,6 @@
                 <button class="btn-blue" style="margin-top:8px; background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
                 <button class="btn-blue" style="margin-top:8px; background:#0891b2;" onclick="openInstallmentPurchaseModal()">🧾 அட்வான்ஸ் + மீதி செலவு</button>
                 <button class="btn-blue" style="margin-top:8px; background:#9333ea;" onclick="openSplitCategoryExpenseModal()">🧾 ஒரே செலவை பிரித்து பதிவு</button>
-                <button class="btn-blue" style="margin-top:8px; background:#0f766e;" onclick="addNewIncomeCard()">💵 புதிய வரவு Card சேர்</button>
             </div>
 
             <div id="income-cards-container"></div>
@@ -677,10 +685,10 @@
 
     <div id="trip-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
-            <h3 class="modal-title" id="trip-modal-title">🧳 புதிய Trip / நிகழ்வு</h3>
+            <h3 class="modal-title" id="trip-modal-title">➕ புதிய செலவு Card</h3>
             <input type="hidden" id="trip-edit-name">
-            <label class="modal-label">Trip / நிகழ்வு பெயர்:</label>
-            <input id="trip-name-input" class="form-input" placeholder="எ.கா: அரியலூர் Trip / கல்யாணம்">
+            <label class="modal-label">புதிய செலவு Card பெயர்:</label>
+            <input id="trip-name-input" class="form-input" placeholder="எ.கா: வீட்டு செலவு / பயண செலவு">
 
             <div style="font-size:12px;color:#64748b;margin:4px 0 10px;">
                 யாருடைய List-ல் இந்த Trip வர வேண்டும் என்பதை மட்டும் Tick செய்யுங்கள்.
@@ -1083,7 +1091,7 @@
 
             nameInput.value = tripName || "";
             editName.value = mode === "edit" ? tripName : "";
-            title.innerText = mode === "edit" ? `✏️ ${tripName} — List அமைப்பு` : "🧳 புதிய Trip / நிகழ்வு";
+            title.innerText = mode === "edit" ? `✏️ ${tripName} — List அமைப்பு` : "➕ புதிய செலவு Card";
             const meta = tripName ? getTripMeta(tripName) : { linkedLists: [] };
             const links = Array.isArray(meta.linkedLists) ? meta.linkedLists : [];
 
@@ -2062,7 +2070,7 @@
             activeTab = tabName;
             activeIncomeFilter = null;
             activeTripFilter = null;
-            document.getElementById("list-title").innerText = (tabName === "All") ? "அனைத்துப் பதிவுகள்" : (tabName === "Trip / நிகழ்வு" ? "🧳 Trip / நிகழ்வு பட்டியல்" : `${tabName} பதிவுகள்`);
+            document.getElementById("list-title").innerText = (tabName === "All") ? "அனைத்துப் பதிவுகள்" : (tabName === "Trip / நிகழ்வு" ? "🧳 Trip / நிகழ்வு பட்டியல்" : (tabName === "புதிய வரவு" ? "💵 புதிய வரவு கார்டுகள்" : (tabName === "புதிய செலவு" ? "➕ புதிய செலவு கார்டுகள்" : `${tabName} பதிவுகள்`)));
             
             document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
             if (btnElem) btnElem.classList.add("active");
@@ -2104,10 +2112,35 @@
         };
 
         window.renderApp = function() {
+            const manualForm = document.getElementById("manual-entry-form");
+            const incomeBox = document.getElementById("income-cards-container");
+            const activeTripsBox = document.getElementById("active-trips-container");
+            const completedTripsBox = document.getElementById("completed-trips-container");
+            const linkedTripBox = document.getElementById("linked-trip-container");
+            const txList = document.getElementById("tx-list-container");
+            // Reset section visibility before each render.
+            [manualForm, incomeBox, activeTripsBox, completedTripsBox, linkedTripBox, txList].forEach(el => {
+                if (el) el.style.display = "";
+            });
             if (activeTab === "வட்டி பிசினஸ்") renderVattiView();
             else if (activeTab === "கைமாத்து") renderKaiMaathuView();
             else if (activeTab === "நிலுவை") renderPendingPurchases();
-            else renderStandardView();
+            else {
+                renderStandardView();
+                if (activeTab === "புதிய வரவு") {
+                    if (manualForm) manualForm.style.display = "none";
+                    if (activeTripsBox) activeTripsBox.style.display = "none";
+                    if (completedTripsBox) completedTripsBox.style.display = "none";
+                    if (linkedTripBox) linkedTripBox.style.display = "none";
+                    if (txList) txList.style.display = "none";
+                    if (incomeBox) incomeBox.style.display = "block";
+                } else if (activeTab === "புதிய செலவு") {
+                    if (manualForm) manualForm.style.display = "none";
+                    if (incomeBox) incomeBox.style.display = "none";
+                    if (txList) txList.style.display = "none";
+                    if (linkedTripBox) linkedTripBox.style.display = "none";
+                }
+            }
         };
 
         function getPurchasePayments(tx) {
