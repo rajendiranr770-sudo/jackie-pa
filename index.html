@@ -56,34 +56,6 @@
 
         .vatti-form { background: white; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #e2e8f0; }
         .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
-        /* Manual entry: make Income/Expense selector prominent and centered */
-        .manual-type-row {
-            display: flex;
-            justify-content: center;
-            margin: 2px 0 10px;
-            width: 100%;
-        }
-        .manual-type-row #m-type {
-            /* Match the height/overall size of the Salary and Category fields,
-               while keeping the Income/Expense label slightly bolder. */
-            box-sizing: border-box;
-            width: 100%;
-            max-width: none;
-            min-width: 0;
-            min-height: 44px;
-            height: 54px;
-            flex: 1 1 100%;
-            text-align: center;
-            text-align-last: center;
-            font-size: 18px;
-            line-height: 1.2;
-            font-weight: 700;
-            padding: 8px 12px;
-            border-radius: 12px;
-            border: 2px solid #cbd5e1;
-            margin-bottom: 0;
-        }
-
         .form-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; width: 100%; margin-bottom: 8px; }
         .btn-green { background: #16a34a; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
         .btn-blue { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
@@ -264,22 +236,26 @@
             .modal-overlay { align-items: flex-start; padding-top: 8px; padding-bottom: 8px; }
             .modal-content, .modal-box, .modal-card { max-height: calc(100dvh - 16px); }
         }
+    
+        /* Print/PDF: print the currently filtered statement and its totals, not the entry form. */
+        @media print {
+            @page { size: A4; margin: 12mm; }
+            html, body { background:#fff !important; color:#111 !important; padding:0 !important; margin:0 !important; font-size:10pt !important; }
+            #auth-container, .header, .cards-grid, .tab-bar, #search-input, .search-input-group button,
+            #manual-entry-form, .bottom-bar, .modal-overlay, #home-back-btn, #v2-backup-btn,
+            #v2-pdf-btn, #v2-csv-btn, #logout-btn, .edit-btn, .delete-btn,
+            button, input, select, textarea, .btn-view-trip, .btn-close-trip,
+            #active-trips-container .trip-actions, #pending-purchases-container button { display:none !important; }
+            #main-app, #standard-view, #tx-list-container, .search-box { display:block !important; width:100% !important; max-width:100% !important; margin:0 !important; padding:0 !important; box-shadow:none !important; border:0 !important; background:#fff !important; overflow:visible !important; }
+            .search-title { display:block !important; font-size:14pt !important; font-weight:bold !important; margin:0 0 8px !important; color:#111 !important; }
+            #search-total-box { display:block !important; margin:0 0 12px !important; padding:8px !important; border:1px solid #999 !important; background:#fff !important; break-inside:avoid; }
+            .total-grid { display:grid !important; grid-template-columns:1fr 1fr !important; gap:8px !important; }
+            .total-item, .total-balance-box { background:#fff !important; color:#111 !important; border:1px solid #bbb !important; padding:7px !important; }
+            #tx-list-container > * { break-inside:avoid; box-shadow:none !important; }
+            .transaction-card, .tx-card, .income-card, .trip-card { break-inside:avoid; box-shadow:none !important; }
+            a { color:#111 !important; text-decoration:none !important; }
+        }
     </style>
-
-<style id="finance-print-fix">
-@media print {
-  @page { size: A4; margin: 10mm; }
-  body { background:#fff !important; color:#111 !important; font-size:10pt !important; }
-  body * { visibility:hidden !important; }
-  #print-statement-summary, #print-statement-summary *, #list-title, #list-title *, #tx-list-container, #tx-list-container * { visibility:visible !important; }
-  #print-statement-summary { display:block !important; position:relative !important; margin:0 0 10px 0 !important; padding:0 0 8px 0 !important; border-bottom:1px solid #999 !important; }
-  #list-title { position:relative !important; margin:8px 0 !important; font-size:15pt !important; }
-  #tx-list-container { position:relative !important; width:100% !important; }
-  #tx-list-container .tx-card { break-inside:avoid !important; page-break-inside:avoid !important; box-shadow:none !important; border:1px solid #ccc !important; margin:0 0 7px 0 !important; padding:8px !important; }
-  #tx-list-container .action-btns, .bottom-bar, #search-box-area, #manual-entry-form, #main-tab-bar, #active-trips-container, #completed-trips-container, #linked-trip-container, #pending-view, #vatti-view, #v2-backup-btn, #v2-pdf-btn, #v2-csv-btn, #logout-btn, #home-back-btn, #standard-view > :not(#search-box-area):not(#manual-entry-form):not(#list-title):not(#tx-list-container):not(#print-statement-summary) { display:none !important; }
-}
-#print-statement-summary { display:none; }
-</style>
 </head>
 <body>
 
@@ -385,12 +361,6 @@
                 </div>
                 <input type="text" id="m-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="m-amount" class="form-input" placeholder="தொகை (₹)">
-                <div class="manual-type-row">
-                    <select id="m-type" class="form-input" onchange="toggleCategoryOption()">
-                        <option value="expense">செலவு (-)</option>
-                        <option value="income">வரவு (+)</option>
-                    </select>
-                </div>
                 <div class="form-row">
                     <select id="m-source" class="form-input">
                         <option value="சம்பளம்">💼 சம்பளம்</option>
@@ -408,8 +378,11 @@
                     </select>
                 </div>
                 <div class="form-row">
+                    <select id="m-type" class="form-input" onchange="toggleCategoryOption()">
+                        <option value="expense">செலவு (-)</option>
+                        <option value="income">வரவு (+)</option>
+                    </select>
                     <input type="date" id="m-date" class="form-input">
-                    <input type="time" id="m-time" class="form-input" aria-label="நேரம்">
                 </div>
                 <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
                 <button class="btn-blue" style="margin-top:8px; background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
@@ -817,9 +790,7 @@
         }
 
         const todayStr = getLocalDateString();
-        const getLocalTimeString = (date = new Date()) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         document.getElementById("m-date").value = todayStr;
-        document.getElementById("m-time").value = getLocalTimeString();
         document.getElementById("v-date").value = todayStr;
         document.getElementById("km-date").value = todayStr;
 
@@ -900,7 +871,7 @@
         // PWA service worker
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
-                navigator.serviceWorker.register("./sw.js?v=20261009").catch(err => console.warn("SW:", err));
+                navigator.serviceWorker.register("./sw.js?v=20261009-pdf1").catch(err => console.warn("SW:", err));
             });
         }
 
@@ -989,23 +960,15 @@
             downloadText("finance-master-transactions-"+getLocalDateString()+".csv", "\uFEFF"+csv, "text/csv;charset=utf-8");
         }
         function printPDF() {
-            // Print only the currently filtered statement; never include entry forms/buttons.
             const oldTitle=document.title;
-            let summary=document.getElementById('print-statement-summary');
-            if(!summary){ summary=document.createElement('section'); summary.id='print-statement-summary'; const host=document.getElementById('standard-view')||document.getElementById('main-app'); host.insertBefore(summary,host.firstChild); }
-            const list=Array.isArray(allTransactions)?filterTransactions(allTransactions):[];
-            const income=list.filter(t=>t.type==='income').reduce((n,t)=>n+Number(t.amount||0),0);
-            const expense=list.filter(t=>t.type==='expense').reduce((n,t)=>n+Number(t.amount||0),0);
-            const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-            const type=document.getElementById('transaction-type-filter')?.selectedOptions?.[0]?.textContent||'அனைத்து பதிவுகள்';
-            const date=document.getElementById('month-filter')?.selectedOptions?.[0]?.textContent||'தேர்ந்தெடுத்த காலம்';
-            const search=(document.getElementById('search-input')?.value||'').trim();
-            summary.innerHTML=`<h2 style="margin:0 0 5px">Finance & Loan Master — Statement</h2><div>வகை: ${escapeHtml(type)} | காலம்: ${escapeHtml(date)}${search?' | தேடல்: '+escapeHtml(search):''}</div><div style="display:flex;gap:8px;margin-top:8px"><div style="border:1px solid #999;padding:8px;flex:1"><b>மொத்த வரவு</b><br>${money(income)}</div><div style="border:1px solid #999;padding:8px;flex:1"><b>மொத்த செலவு</b><br>${money(expense)}</div><div style="border:1px solid #999;padding:8px;flex:1"><b>நிகர இருப்பு</b><br>${money(income-expense)}</div><div style="border:1px solid #999;padding:8px;flex:1"><b>பதிவுகள்</b><br>${list.length}</div></div>`;
-            const oldListTitle=document.getElementById('list-title')?.textContent;
-            if(document.getElementById('list-title')) document.getElementById('list-title').textContent='பதிவுகள் ('+list.length+')';
-            document.body.classList.add('finance-printing'); document.title='Finance & Loan Master - Statement';
-            const cleanup=()=>{ document.body.classList.remove('finance-printing'); summary.style.display='none'; document.title=oldTitle; if(oldListTitle&&document.getElementById('list-title')) document.getElementById('list-title').textContent=oldListTitle; window.removeEventListener('afterprint',cleanup); };
-            summary.style.display='block'; window.addEventListener('afterprint',cleanup); window.print(); setTimeout(cleanup,1500);
+            const tab = (typeof activeTab !== 'undefined' && activeTab) ? activeTab : 'All';
+            const typeEl=document.getElementById('transaction-type-filter');
+            const typeLabel=typeEl && typeEl.value==='income' ? 'வரவு மட்டும்' : (typeEl && typeEl.value==='expense' ? 'செலவு மட்டும்' : 'அனைத்து பதிவுகள்');
+            const dateEl=document.getElementById('month-filter');
+            const dateLabel=dateEl ? (dateEl.options[dateEl.selectedIndex]?.text || '') : '';
+            document.title=`Finance Statement - ${tab} - ${typeLabel} - ${dateLabel}`;
+            window.print();
+            setTimeout(()=>document.title=oldTitle,1200);
         }
         function restoreBackupFile(file) {
             const reader=new FileReader();
@@ -1018,19 +981,54 @@
                     let addedTx=0, addedV=0;
                     const existingTx=new Set(allTransactions.map(x=>x.id).filter(Boolean));
                     const existingV=new Set(allVattiLoans.map(x=>x.id).filter(Boolean));
-                    for (const t of data.transactions) { if (t.id && existingTx.has(t.id)) continue; const c={...t}; delete c.id; await addDoc(collection(db,"users",uid,"transactions"),c); addedTx++; }
-                    for (const v of data.vatti) { if (v.id && existingV.has(v.id)) continue; const c={...v}; delete c.id; await addDoc(collection(db,"users",uid,"vatti"),c); addedV++; }
+                    // Preserve backup document IDs so linked records remain linked and
+                    // repeated restores can detect records already restored.
+                    for (const t of data.transactions) {
+                        const c={...t}; const id=typeof c.id==='string' ? c.id.trim() : '';
+                        delete c.id;
+                        if (id && existingTx.has(id)) continue;
+                        if (id && !id.includes('/')) {
+                            await setDoc(doc(db,"users",uid,"transactions",id),c,{merge:false});
+                            existingTx.add(id);
+                        } else {
+                            const ref=await addDoc(collection(db,"users",uid,"transactions"),c);
+                            existingTx.add(ref.id);
+                        }
+                        addedTx++;
+                    }
+                    for (const v of data.vatti) {
+                        const c={...v}; const id=typeof c.id==='string' ? c.id.trim() : '';
+                        delete c.id;
+                        if (id && existingV.has(id)) continue;
+                        if (id && !id.includes('/')) {
+                            await setDoc(doc(db,"users",uid,"vatti",id),c,{merge:false});
+                            existingV.add(id);
+                        } else {
+                            const ref=await addDoc(collection(db,"users",uid,"vatti"),c);
+                            existingV.add(ref.id);
+                        }
+                        addedV++;
+                    }
                     if (Array.isArray(data.customTrips)) {
                         customTrips=[...new Set([...customTrips,...data.customTrips.filter(x=>typeof x==='string')])];
-                        if (data.tripMeta && typeof data.tripMeta === 'object') {
-                            tripMeta = { ...tripMeta, ...data.tripMeta };
-                        }
+                    }
+                    if (data.tripMeta && typeof data.tripMeta === 'object' && !Array.isArray(data.tripMeta)) {
+                        tripMeta = { ...tripMeta, ...data.tripMeta };
+                    }
+                    if (Array.isArray(data.customTrips) || (data.tripMeta && typeof data.tripMeta === 'object' && !Array.isArray(data.tripMeta))) {
                         normalizeTripMeta();
                         saveTripsLocalAndCloud();
                         updateCategoryDropdowns();
                         renderApp();
                     }
-                    alert(`Backup restore முடிந்தது!\\nபுதிய transactions: ${addedTx}\\nபுதிய loan records: ${addedV}\\n\\nஏற்கனவே உள்ள data மாற்றப்படவில்லை.`);
+                    if (Array.isArray(data.incomeCards)) {
+                        const mergedCards=[...new Set([...loadIncomeCards(),...data.incomeCards.filter(x=>typeof x==='string'&&x.trim())])];
+                        saveIncomeCards(mergedCards);
+                        incomeCards=mergedCards;
+                        updateIncomeCardDropdown();
+                        renderIncomeCards();
+                    }
+                    alert(`Backup restore முடிந்தது!\nபுதிய transactions: ${addedTx}\nபுதிய loan records: ${addedV}\nவரவு Cards இணைக்கப்பட்டன.\n\nஏற்கனவே உள்ள பதிவுகள் மாற்றப்படவில்லை.`);
                 } catch(e) { console.error(e); alert("Backup restore செய்ய முடியவில்லை. சரியான JSON backup file தேர்வு செய்யவும்."); }
             }; reader.readAsText(file);
         }
@@ -1520,10 +1518,8 @@
             }
             
             let now = new Date();
-            const timeVal = document.getElementById("m-time").value || getLocalTimeString(now);
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            const [hours, minutes] = timeVal.split(':').map(Number);
-            selectedDate.setHours(hours, minutes, 0, 0);
+            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
             let timestamp = selectedDate.getTime();
 
             const savedId = await saveTransaction({
@@ -1542,9 +1538,6 @@
             if (savedId) {
                 document.getElementById("m-title").value = "";
                 document.getElementById("m-amount").value = "";
-                // Keep the selected date, but refresh the time for the next entry.
-                document.getElementById("m-time").value = getLocalTimeString();
-                clearDraftTransaction();
             }
         };
 
@@ -3031,10 +3024,7 @@
             if (item.timestamp) {
                 const d = new Date(item.timestamp);
                 document.getElementById("edit-date").value = getLocalDateString(d);
-                document.getElementById("edit-time").value = getLocalTimeString(d);
-            } else {
-                document.getElementById("edit-date").value = getLocalDateString();
-                document.getElementById("edit-time").value = getLocalTimeString();
+                document.getElementById("edit-time").value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
             }
             document.getElementById("edit-modal").style.display = "flex";
         };
@@ -3088,9 +3078,10 @@
             if (!title || !amount || amount <= 0) { alert("பெர் மற்றும் தொகையை சரியாக உள்ளிடவும்!"); return; }
 
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            const effectiveTime = timeVal || getLocalTimeString();
-            const [hours, minutes] = effectiveTime.split(':').map(Number);
-            selectedDate.setHours(hours, minutes, 0, 0);
+            if (timeVal) {
+                const [hours, minutes] = timeVal.split(':').map(Number);
+                selectedDate.setHours(hours, minutes, 0, 0);
+            }
             const timestamp = selectedDate.getTime();
 
             if (isMultiSource) {
@@ -3279,576 +3270,5 @@
         window.openModalByScenario = openModalByScenario;
         window.setCategory = setCategory;
     </script>
-
-    <!-- Combined enhancement scripts: original contents preserved -->
-    <script>
-/* ===== form-enhancement-with-navigation.js ===== */
-// Local clock helper for the enhancement script's classic-script scope.
-function getLocalTimeString(date = new Date()) {
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-/**
- * ========================================
- * Finance & Loan Master App - Enhanced Features
- * ========================================
- * 
- * Features:
- * 1. Time field support in all entry forms
- * 2. Auto-update search box after entry
- * 3. Income card navigation persistence (back button returns to same card)
- * 4. Draft/incomplete entry preservation across app reloads
- * 
- * Tamil User Experience Optimized
- */
-
-// ============================================
-// STORAGE KEYS FOR NAVIGATION & DRAFT STATE
-// ============================================
-const STORAGE_KEYS = {
-    ACTIVE_INCOME_CARD: "finance_active_income_card",
-    DRAFT_TRANSACTION: "finance_draft_transaction",
-    DRAFT_VATTI: "finance_draft_vatti",
-    DRAFT_KAIMAATHU: "finance_draft_kaimaathu",
-    DRAFT_INCOME_CARD: "finance_draft_income_card",
-    NAVIGATION_STACK: "finance_navigation_stack"
-};
-
-// ============================================
-// 1. INCOME CARD NAVIGATION TRACKING
-// ============================================
-
-function setActiveIncomeCard(cardName) {
-    if (cardName) {
-        localStorage.setItem(STORAGE_KEYS.ACTIVE_INCOME_CARD, cardName);
-    }
-}
-
-function getActiveIncomeCard() {
-    return localStorage.getItem(STORAGE_KEYS.ACTIVE_INCOME_CARD);
-}
-
-function clearActiveIncomeCard() {
-    localStorage.removeItem(STORAGE_KEYS.ACTIVE_INCOME_CARD);
-}
-
-// Income card clicked → store it in navigation
-function onIncomeCardClick(cardName) {
-    setActiveIncomeCard(cardName);
-}
-
-// ============================================
-// 2. DRAFT TRANSACTION SAVE & RESTORE
-// ============================================
-
-function saveDraftTransaction() {
-    const draft = {
-        title: document.getElementById("m-title").value,
-        amount: document.getElementById("m-amount").value,
-        source: document.getElementById("m-source").value,
-        category: document.getElementById("m-category").value,
-        type: document.getElementById("m-type").value,
-        date: document.getElementById("m-date").value,
-        time: document.getElementById("m-time") ? document.getElementById("m-time").value : "",
-        incomeCard: document.getElementById("m-income-card").value,
-        timestamp: Date.now()
-    };
-    
-    if (draft.title || draft.amount) {
-        localStorage.setItem(STORAGE_KEYS.DRAFT_TRANSACTION, JSON.stringify(draft));
-    }
-}
-
-function restoreDraftTransaction() {
-    const saved = localStorage.getItem(STORAGE_KEYS.DRAFT_TRANSACTION);
-    if (saved) {
-        try {
-            const draft = JSON.parse(saved);
-            document.getElementById("m-title").value = draft.title || "";
-            document.getElementById("m-amount").value = draft.amount || "";
-            document.getElementById("m-source").value = draft.source || "சம்பளம்";
-            document.getElementById("m-category").value = draft.category || "பொது";
-            document.getElementById("m-type").value = draft.type || "expense";
-            document.getElementById("m-date").value = draft.date || getLocalDateString();
-            
-            // Time field restore
-            if (document.getElementById("m-time")) {
-                document.getElementById("m-time").value = draft.time || getLocalTimeString();
-            }
-            
-            document.getElementById("m-income-card").value = draft.incomeCard || "";
-            toggleCategoryOption();
-        } catch (e) {
-            console.warn("Draft restore failed:", e);
-        }
-    }
-}
-
-function clearDraftTransaction() {
-    localStorage.removeItem(STORAGE_KEYS.DRAFT_TRANSACTION);
-}
-
-// ============================================
-// 3. DRAFT VATTI LOAN SAVE & RESTORE
-// ============================================
-
-function saveDraftVatti() {
-    const draft = {
-        name: document.getElementById("v-name").value,
-        principal: document.getElementById("v-principal").value,
-        rate: document.getElementById("v-rate").value,
-        date: document.getElementById("v-date").value,
-        timestamp: Date.now()
-    };
-    
-    if (draft.name || draft.principal) {
-        localStorage.setItem(STORAGE_KEYS.DRAFT_VATTI, JSON.stringify(draft));
-    }
-}
-
-function restoreDraftVatti() {
-    const saved = localStorage.getItem(STORAGE_KEYS.DRAFT_VATTI);
-    if (saved) {
-        try {
-            const draft = JSON.parse(saved);
-            document.getElementById("v-name").value = draft.name || "";
-            document.getElementById("v-principal").value = draft.principal || "";
-            document.getElementById("v-rate").value = draft.rate || "";
-            document.getElementById("v-date").value = draft.date || getLocalDateString();
-        } catch (e) {
-            console.warn("Vatti draft restore failed:", e);
-        }
-    }
-}
-
-function clearDraftVatti() {
-    localStorage.removeItem(STORAGE_KEYS.DRAFT_VATTI);
-}
-
-// ============================================
-// 4. DRAFT KAIMAATHU SAVE & RESTORE
-// ============================================
-
-function saveDraftKaiMaathu() {
-    const draft = {
-        name: document.getElementById("km-name").value,
-        amount: document.getElementById("km-amount").value,
-        type: document.getElementById("km-type").value,
-        date: document.getElementById("km-date").value,
-        timestamp: Date.now()
-    };
-    
-    if (draft.name || draft.amount) {
-        localStorage.setItem(STORAGE_KEYS.DRAFT_KAIMAATHU, JSON.stringify(draft));
-    }
-}
-
-function restoreDraftKaiMaathu() {
-    const saved = localStorage.getItem(STORAGE_KEYS.DRAFT_KAIMAATHU);
-    if (saved) {
-        try {
-            const draft = JSON.parse(saved);
-            document.getElementById("km-name").value = draft.name || "";
-            document.getElementById("km-amount").value = draft.amount || "";
-            document.getElementById("km-type").value = draft.type || "given";
-            document.getElementById("km-date").value = draft.date || getLocalDateString();
-        } catch (e) {
-            console.warn("KaiMaathu draft restore failed:", e);
-        }
-    }
-}
-
-function clearDraftKaiMaathu() {
-    localStorage.removeItem(STORAGE_KEYS.DRAFT_KAIMAATHU);
-}
-
-// ============================================
-// 5. DRAFT INCOME CARD SAVE & RESTORE
-// ============================================
-
-function saveDraftIncomeCard() {
-    const draft = {
-        name: document.getElementById("income-card-name").value,
-        timestamp: Date.now()
-    };
-    
-    if (draft.name) {
-        localStorage.setItem(STORAGE_KEYS.DRAFT_INCOME_CARD, JSON.stringify(draft));
-    }
-}
-
-function restoreDraftIncomeCard() {
-    const saved = localStorage.getItem(STORAGE_KEYS.DRAFT_INCOME_CARD);
-    if (saved) {
-        try {
-            const draft = JSON.parse(saved);
-            document.getElementById("income-card-name").value = draft.name || "";
-        } catch (e) {
-            console.warn("Income card draft restore failed:", e);
-        }
-    }
-}
-
-function clearDraftIncomeCard() {
-    localStorage.removeItem(STORAGE_KEYS.DRAFT_INCOME_CARD);
-}
-
-// ============================================
-// 6. AUTO-SAVE DRAFTS ON INPUT CHANGE
-// ============================================
-
-function initializeDraftAutoSave() {
-    // Manual transaction form
-    const manualFormFields = ["m-title", "m-amount", "m-source", "m-category", "m-type", "m-date", "m-time"];
-    manualFormFields.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener("change", saveDraftTransaction);
-            el.addEventListener("blur", saveDraftTransaction);
-        }
-    });
-    
-    // Vatti form
-    const vattiFormFields = ["v-name", "v-principal", "v-rate", "v-date"];
-    vattiFormFields.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener("change", saveDraftVatti);
-            el.addEventListener("blur", saveDraftVatti);
-        }
-    });
-    
-    // KaiMaathu form
-    const kmFormFields = ["km-name", "km-amount", "km-type", "km-date"];
-    kmFormFields.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener("change", saveDraftKaiMaathu);
-            el.addEventListener("blur", saveDraftKaiMaathu);
-        }
-    });
-    
-    // Income card form
-    const incomeCardEl = document.getElementById("income-card-name");
-    if (incomeCardEl) {
-        incomeCardEl.addEventListener("change", saveDraftIncomeCard);
-        incomeCardEl.addEventListener("blur", saveDraftIncomeCard);
-    }
-}
-
-// ============================================
-// 7. CLEAR FORM + AUTO-SEARCH UPDATE
-// ============================================
-
-function clearManualTransactionFormWithSearchUpdate() {
-    // பார்ம் சுத்தம்
-    document.getElementById("m-title").value = "";
-    document.getElementById("m-amount").value = "";
-    document.getElementById("m-source").value = "சம்பளம்";
-    document.getElementById("m-category").value = "பொது";
-    document.getElementById("m-type").value = "expense";
-    document.getElementById("m-date").value = getLocalDateString();
-    
-    // Time field clear
-    if (document.getElementById("m-time")) {
-        document.getElementById("m-time").value = getLocalTimeString();
-    }
-    
-    document.getElementById("m-income-card").value = "";
-    document.getElementById("m-income-card").style.display = "none";
-    toggleCategoryOption();
-    
-    // Draft clear
-    clearDraftTransaction();
-    
-    // Search box update (refresh results)
-    setTimeout(() => {
-        executeSearch();
-    }, 100);
-    
-    // Focus back to title
-    document.getElementById("m-title").focus();
-}
-
-function clearVattiLoanFormWithSearchUpdate() {
-    document.getElementById("v-name").value = "";
-    document.getElementById("v-principal").value = "";
-    document.getElementById("v-rate").value = "";
-    document.getElementById("v-date").value = getLocalDateString();
-    clearDraftVatti();
-    
-    setTimeout(() => {
-        executeSearch();
-    }, 100);
-    
-    document.getElementById("v-name").focus();
-}
-
-function clearKaiMaathuFormWithSearchUpdate() {
-    document.getElementById("km-name").value = "";
-    document.getElementById("km-amount").value = "";
-    document.getElementById("km-type").value = "given";
-    document.getElementById("km-date").value = getLocalDateString();
-    clearDraftKaiMaathu();
-    
-    setTimeout(() => {
-        executeSearch();
-    }, 100);
-    
-    document.getElementById("km-name").focus();
-}
-
-// ============================================
-// 8. HANDLE BACK BUTTON FOR INCOME CARDS
-// ============================================
-
-function handleMobileBackButton() {
-    const activeCard = getActiveIncomeCard();
-    
-    if (activeCard && document.getElementById("income-card-modal").style.display === "block") {
-        // Back button clicked while income card modal is open
-        // Close modal and return to the same income card view
-        closeIncomeCardModal();
-        
-        // Scroll to the active income card
-        setTimeout(() => {
-            const cardElement = document.querySelector(`[data-income-card="${activeCard}"]`);
-            if (cardElement) {
-                cardElement.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-        }, 300);
-    } else if (activeCard) {
-        // Clear the navigation if fully exiting
-        clearActiveIncomeCard();
-    }
-}
-
-// Listen to back button (for PWA/browser)
-window.addEventListener("popstate", handleMobileBackButton);
-
-// ============================================
-// 9. APP INITIALIZATION - RESTORE STATE
-// ============================================
-
-function initializeFormStateOnAppLoad() {
-    console.log("📋 Initializing form state on app load...");
-    
-    // Restore any incomplete drafts
-    restoreDraftTransaction();
-    restoreDraftVatti();
-    restoreDraftKaiMaathu();
-    restoreDraftIncomeCard();
-    
-    // Initialize auto-save listeners
-    initializeDraftAutoSave();
-    
-    // Restore last active income card view (if any)
-    const activeCard = getActiveIncomeCard();
-    if (activeCard) {
-        console.log("🎯 Restoring active income card:", activeCard);
-        // Scroll to it if exists
-        const cardElement = document.querySelector(`[data-income-card="${activeCard}"]`);
-        if (cardElement) {
-            setTimeout(() => {
-                cardElement.scrollIntoView({ behavior: "smooth" });
-            }, 500);
-        }
-    }
-}
-
-// ============================================
-// 10. SUCCESSFUL ENTRY HANDLER
-// ============================================
-
-function onEntrySuccessful(entryType) {
-    console.log("✅ Entry successful:", entryType);
-    
-    switch (entryType) {
-        case "transaction":
-            clearManualTransactionFormWithSearchUpdate();
-            break;
-        case "vatti":
-            clearVattiLoanFormWithSearchUpdate();
-            break;
-        case "kaimaathu":
-            clearKaiMaathuFormWithSearchUpdate();
-            break;
-        case "income_card":
-            clearDraftIncomeCard();
-            document.getElementById("income-card-name").value = "";
-            break;
-    }
-}
-
-// ============================================
-// 11. EXPORT FOR USE IN INDEX.HTML
-// ============================================
-
-// இந்த functions இவை already call செய்ய வேண்டும்:
-// 1. On app load: initializeFormStateOnAppLoad()
-// 2. After successful transaction: onEntrySuccessful("transaction")
-// 3. After successful vatti: onEntrySuccessful("vatti")
-// 4. After successful kaimaathu: onEntrySuccessful("kaimaathu")
-// 5. When income card clicked: onIncomeCardClick(cardName)
-// 6. On back button: handleMobileBackButton()
-
-    </script>
-    <script>
-/* ===== form-auto-clear-enhancement.js ===== */
-/**
- * Finance & Loan Master App - Auto Clear Form Enhancement
- * 
- * இந்த ஸ்கிரிப்ட் பதிவு சேர்த்த பிறகு தானாக பார்ம்(form) காலி செய்கிறது.
- * வெற்றிகரமாக பதிவு சேர்ந்தவுடன், input fields அனைத்தும் empty ஆகிவிடும்
- * மற்றும் மடல் மூடிவிடும்.
- */
-
-// ============================================
-// 1. MANUAL TRANSACTION FORM CLEAR
-// ============================================
-function clearManualTransactionForm() {
-    // பொது பதிவு fields
-    document.getElementById("m-title").value = "";
-    document.getElementById("m-amount").value = "";
-    document.getElementById("m-source").value = "சம்பளம்";
-    document.getElementById("m-category").value = "பொது";
-    document.getElementById("m-type").value = "expense";
-    document.getElementById("m-date").value = getLocalDateString();
-    document.getElementById("m-income-card").value = "";
-    document.getElementById("m-income-card").style.display = "none";
-    
-    // விசிறி reset செய்யுங்கள்
-    toggleCategoryOption();
-}
-
-// ============================================
-// 2. VATTI LOAN FORM CLEAR
-// ============================================
-function clearVattiLoanForm() {
-    document.getElementById("v-name").value = "";
-    document.getElementById("v-principal").value = "";
-    document.getElementById("v-rate").value = "";
-    document.getElementById("v-date").value = getLocalDateString();
-}
-
-// ============================================
-// 3. KAIMAATHU FORM CLEAR
-// ============================================
-function clearKaiMaathuForm() {
-    document.getElementById("km-name").value = "";
-    document.getElementById("km-amount").value = "";
-    document.getElementById("km-type").value = "given";
-    document.getElementById("km-date").value = getLocalDateString();
-}
-
-// ============================================
-// 4. INCOME CARD FORM CLEAR
-// ============================================
-function clearIncomeCardForm() {
-    document.getElementById("income-card-name").value = "";
-}
-
-// ============================================
-// 5. MULTI-SOURCE FORM CLEAR
-// ============================================
-function clearMultiSourceForm() {
-    document.getElementById("ms-title").value = "";
-    document.getElementById("ms-date").value = getLocalDateString();
-    document.getElementById("ms-rows").innerHTML = "";
-    document.getElementById("ms-total").textContent = "₹0.00";
-    // ஒரு வரிசை சேர்க்கவும் (ஸ்டார்ট் வித் ஒன் ரோ)
-    addMultiSourceRow();
-}
-
-// ============================================
-// 6. SPLIT CATEGORY EXPENSE FORM CLEAR
-// ============================================
-function clearSplitCategoryForm() {
-    document.getElementById("sc-title").value = "";
-    document.getElementById("sc-source").value = "சம்பளம்";
-    document.getElementById("sc-date").value = getLocalDateString();
-    document.getElementById("sc-time").value = "";
-    document.getElementById("sc-rows").innerHTML = "";
-    document.getElementById("sc-total").textContent = "₹0.00";
-    // ஒரு வரிசை சேர்க்கவும்
-    addSplitCategoryRow();
-}
-
-// ============================================
-// 7. INSTALLMENT PURCHASE FORM CLEAR
-// ============================================
-function clearInstallmentPurchaseForm() {
-    document.getElementById("ip-title").value = "";
-    document.getElementById("ip-total").value = "";
-    document.getElementById("ip-advance").value = "";
-    document.getElementById("ip-advance-date").value = getLocalDateString();
-    document.getElementById("ip-advance-source").value = "சம்பளம்";
-    document.getElementById("ip-remaining").textContent = "₹0.00";
-}
-
-// ============================================
-// 8. TRIP FORM CLEAR
-// ============================================
-function clearTripForm() {
-    document.getElementById("trip-name-input").value = "";
-    document.getElementById("trip-edit-name").value = "";
-    document.getElementById("trip-link-mk").checked = false;
-    document.getElementById("trip-link-sk").checked = false;
-    document.getElementById("trip-link-other").checked = false;
-    document.getElementById("trip-other-name").value = "";
-    document.getElementById("trip-other-name").style.display = "none";
-}
-
-// ============================================
-// 9. BATCH ENTRY FORM CLEAR
-// ============================================
-function clearBatchEntryForm() {
-    document.getElementById("batch-rows").innerHTML = "";
-    document.getElementById("batch-total").textContent = "வரவு: ₹0.00 | செலவு: ₹0.00";
-    addBatchRow(); // ஒரு வரிசை சேர்க்கவும்
-}
-
-// ============================================
-// 10. MODAL CLOSE WITH FORM CLEAR
-// ============================================
-function closeModalWithFormClear(modalId, formClearFunction) {
-    // பார்ம் சுத்தம் செய்யுங்கள்
-    if (typeof formClearFunction === 'function') {
-        formClearFunction();
-    }
-    
-    // மডல் மூடுங்கள்
-    document.getElementById(modalId).style.display = "none";
-}
-
-// ============================================
-// 11. EDIT MODAL CLOSE (பெரிய பதிவுக்கு)
-// ============================================
-function closeEditModalWithClear() {
-    document.getElementById("edit-id").value = "";
-    document.getElementById("edit-collection-type").value = "";
-    document.getElementById("edit-title").value = "";
-    document.getElementById("edit-amount").value = "";
-    document.getElementById("edit-date").value = getLocalDateString();
-    document.getElementById("edit-time").value = "";
-    document.getElementById("edit-source").value = "சம்பளம்";
-    document.getElementById("edit-category").value = "பொது";
-    document.getElementById("edit-type").value = "expense";
-    document.getElementById("edit-rate").value = "";
-    document.getElementById("edit-split-group").style.display = "none";
-    document.getElementById("edit-split-rows").innerHTML = "";
-    document.getElementById("edit-modal").style.display = "none";
-}
-
-// ============================================
-// 12. DELETE MODAL CLOSE WITH CLEAR
-// ============================================
-function closeDeleteModalWithClear() {
-    document.getElementById("delete-id").value = "";
-    document.getElementById("delete-collection-type").value = "";
-    document.getElementById("delete-modal").style.display = "none";
-}
-
-    </script>
-
 </body>
 </html>
