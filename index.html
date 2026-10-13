@@ -393,6 +393,8 @@
                     </select>
                     <input type="date" id="m-date" class="form-input">
                 </div>
+                <label class="modal-label" for="m-time">நேரம் (Time):</label>
+                <input type="time" id="m-time" class="form-input">
                 <button class="btn-blue" type="button" onclick="toggleManualActionMenu()">➕ பதிவு சேர்　▾</button>
                 <div id="manual-action-menu" style="display:none; margin-top:8px; gap:8px; flex-direction:column;">
                     <button class="btn-blue" onclick="addManualTransaction()">📝 சாதாரண பதிவு சேர்</button>
@@ -556,6 +558,8 @@
 
             <label class="modal-label">தேதி:</label>
             <input type="date" id="ms-date" class="form-input">
+            <label class="modal-label">நேரம் (Time):</label>
+            <input type="time" id="ms-time" class="form-input">
 
             <div class="multi-source-box">
                 <div style="font-weight:bold;color:#334155;margin-bottom:7px;">பணம் எங்கெங்கிருந்து பயன்படுத்தப்பட்டது?</div>
@@ -802,6 +806,9 @@
 
         const todayStr = getLocalDateString();
         document.getElementById("m-date").value = todayStr;
+        const initialNow = new Date();
+        const initialTime = `${String(initialNow.getHours()).padStart(2,'0')}:${String(initialNow.getMinutes()).padStart(2,'0')}`;
+        if (document.getElementById("m-time")) document.getElementById("m-time").value = initialTime;
         document.getElementById("v-date").value = todayStr;
         document.getElementById("km-date").value = todayStr;
 
@@ -1428,25 +1435,34 @@
             return parseInt(matches.join(''), 10);
         }
 
-        // Full-stop separated quick entries are processed one-by-one, preserving each title and amount.
-        let quickEntryQueue = [];
-        let quickEntryBatchActive = false;
-        function splitQuickEntries(text) {
-            // Split only on sentence-ending full stops, not decimal amounts such as 72.50.
-            return String(text || '').split(/\.(?=\s|$)/).map(x => x.trim()).filter(Boolean);
-        }
-        async function processInput() {
+        function processInput() {
             const inputField = document.getElementById("voice-text-input");
             let rawText = inputField.value.trim();
             if (!rawText) return;
 
-            // If multiple full-stop separated entries are entered, queue them individually.
-            const entries = splitQuickEntries(rawText);
-            if (!quickEntryBatchActive && entries.length > 1) {
-                quickEntryQueue = entries.slice();
-                quickEntryBatchActive = true;
-                inputField.value = "";
-                processNextQuickEntry();
+            // முற்றுப்புள்ளிக்குப் பிறகு ஒவ்வொரு விவரத்தையும் தனி batch entry-ஆகத் திறக்கவும்.
+            // தொகை/கணக்கு/வகையை பயனர் சரிபார்த்து தனித்தனியாக மாற்றலாம்.
+            const parts = rawText.split(/\.(?=\s|$)/).map(x => x.trim()).filter(Boolean);
+            if (parts.length > 1) {
+                const parsed = parts.map(part => {
+                    const cleaned = part.replace(/₹/g, '').replace(/,/g, '');
+                    const nums = cleaned.match(/\d+(?:\.\d{1,2})?/g) || [];
+                    const amount = nums.length ? Number(nums[nums.length - 1]) : 0;
+                    const title = part.replace(/₹?\s*\d[\d,]*(?:\.\d{1,2})?/g, '').trim().replace(/^[,;\s]+|[,;\s]+$/g, '');
+                    return { title: title || part, amount };
+                });
+                const box = document.getElementById('batch-rows');
+                box.innerHTML = '';
+                parsed.forEach(item => {
+                    addBatchRow();
+                    const row = box.lastElementChild;
+                    row.querySelector('.be-title').value = item.title;
+                    row.querySelector('.be-amount').value = item.amount || '';
+                    row.querySelector('.be-type').value = 'expense';
+                });
+                document.getElementById('batch-entry-modal').style.display = 'flex';
+                updateBatchTotal();
+                inputField.value = '';
                 return;
             }
 
@@ -1486,16 +1502,14 @@
                 if (detectedSource !== null) {
                     txData.source = detectedSource;
                     txData.category = (detectedSource === "சம்பளம்") ? "சம்பளம் வரவு" : (detectedSource === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
-                    await saveTransaction(txData);
-                    finishQuickEntryIfNeeded();
+                    saveTransaction(txData);
                 } else {
                     openModalByScenario(1, txData);
                 }
             } else {
                 if (detectedSource !== null && category !== "பொது") {
                     txData.source = detectedSource;
-                    await saveTransaction(txData);
-                    finishQuickEntryIfNeeded();
+                    saveTransaction(txData);
                 } 
                 else if (detectedSource === null && category !== "பொது") {
                     openModalByScenario(2, txData);
@@ -1509,20 +1523,6 @@
                 }
             }
             inputField.value = "";
-        }
-
-        function processNextQuickEntry() {
-            if (!quickEntryQueue.length) {
-                quickEntryBatchActive = false;
-                document.getElementById("voice-text-input").value = "";
-                return;
-            }
-            const next = quickEntryQueue.shift();
-            document.getElementById("voice-text-input").value = next;
-            processInput();
-        }
-        function finishQuickEntryIfNeeded() {
-            if (quickEntryBatchActive) setTimeout(processNextQuickEntry, 80);
         }
 
         window.toggleCategoryOption = function() {
@@ -1566,7 +1566,9 @@ window.addManualTransaction = async function() {
             
             let now = new Date();
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+            const timeVal = document.getElementById("m-time")?.value || `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            const [hours, minutes] = timeVal.split(':').map(Number);
+            selectedDate.setHours(hours || 0, minutes || 0, 0, 0);
             let timestamp = selectedDate.getTime();
 
             const savedId = await saveTransaction({
@@ -1637,7 +1639,6 @@ window.addManualTransaction = async function() {
                         action.data.category = selectedCategoryChoice || "பொது";
                     }
                     await saveTransaction(action.data);
-                    finishQuickEntryIfNeeded();
                 }
                 else if (action.type === "KM") {
                     let kmData = action.data;
@@ -2644,8 +2645,9 @@ window.addManualTransaction = async function() {
             if (!splitSources.length || total <= 0) { alert("குறைந்தது ஒரு கணக்கில் தொகை உள்ளிடவும்."); return; }
 
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            const now = new Date();
-            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+            const timeVal = document.getElementById("ms-time")?.value || "12:00";
+            const [hours, minutes] = timeVal.split(':').map(Number);
+            selectedDate.setHours(hours || 0, minutes || 0, 0, 0);
 
             closeMultiSourceModal();
             await saveTransaction({
@@ -2768,7 +2770,7 @@ window.addManualTransaction = async function() {
             const now=new Date();
             const date=getLocalDateString(now);
             const time=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            r.innerHTML=`<input class="be-title" placeholder="விவரம்"><input class="be-amount" type="number" min="0" step="0.01" placeholder="₹"><select class="be-type"><option value="expense">செலவு (-)</option><option value="income">வரவு (+)</option></select><select class="be-source"><option>சம்பளம்</option><option>வீடு</option><option>இதர வரவு</option></select><input class="be-date" type="date" value="${date}"><input class="be-time" type="time" value="${time}">`;
+            r.innerHTML=`<input class="be-title" placeholder="விவரம்"><input class="be-amount" type="number" min="0" step="0.01" placeholder="₹"><select class="be-type"><option value="expense">செலவு (-)</option><option value="income">வரவு (+)</option></select><select class="be-source"><option>சம்பளம்</option><option>வீடு</option><option>இதர வரவு</option></select><select class="be-category"><option>பொது</option><option>MK செலவு</option><option>SK செலவு</option><option>கொல்லை</option></select><input class="be-date" type="date" value="${date}"><input class="be-time" type="time" value="${time}">`;
             r.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',updateBatchTotal));
             box.appendChild(r);
         };
@@ -2778,11 +2780,11 @@ window.addManualTransaction = async function() {
                 const dateVal=r.querySelector('.be-date').value; const timeVal=r.querySelector('.be-time').value;
                 let d=dateVal?parseLocalDate(dateVal):new Date();
                 if(timeVal){const [h,m]=timeVal.split(':').map(Number); d.setHours(h,m,0,0);}
-                return {title:r.querySelector('.be-title').value.trim(),amount:Number(r.querySelector('.be-amount').value||0),type:r.querySelector('.be-type').value,source:r.querySelector('.be-source').value,timestamp:d.getTime()};
+                return {title:r.querySelector('.be-title').value.trim(),amount:Number(r.querySelector('.be-amount').value||0),type:r.querySelector('.be-type').value,source:r.querySelector('.be-source').value,category:r.querySelector('.be-category')?.value||'பொது',timestamp:d.getTime()};
             }).filter(x=>x.title&&x.amount>0);
             if(!rows.length){alert('குறைந்தது ஒரு பதிவாவது உள்ளிடவும்.');return;}
             const staged=[]; let ok=0;
-            for(const x of rows){ const data={...x,category:x.type==='income'?(x.source==='சம்பளம்'?'சம்பளம் வரவு':x.source==='வீடு'?'வீட்டு வரவு':'இதர வரவு'):'பொது'}; if(!validateExpenseBalance(data,staged)) continue; staged.push(data); }
+            for(const x of rows){ const data={...x,category:x.type==='income'?(x.source==='சம்பளம்'?'சம்பளம் வரவு':x.source==='வீடு'?'வீட்டு வரவு':'இதர வரவு'):x.category}; if(!validateExpenseBalance(data,staged)) continue; staged.push(data); }
             closeBatchEntryModal();
             for(const data of staged){ if(await saveTransaction(data)) ok++; }
             if(ok<rows.length) alert(`${ok} பதிவுகள் மட்டும் சேமிக்கப்பட்டன. போதுமான பேலன்ஸ் இல்லாத செலவுகள் சேமிக்கப்படவில்லை.`);
@@ -3312,7 +3314,6 @@ window.addManualTransaction = async function() {
                 actionData.category = catName;
                 closeModal();
                 saveTransaction(actionData);
-                finishQuickEntryIfNeeded();
             }
         }
 
