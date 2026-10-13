@@ -407,9 +407,10 @@
                 </div>
                 <label class="modal-label" for="m-time">நேரம் (Time):</label>
                 <input type="time" id="m-time" class="form-input">
-                <button class="btn-blue" type="button" onclick="toggleManualActionMenu()">➕ பதிவு சேர்　▾</button>
+                <button class="btn-blue" type="button" id="manual-save-btn" onclick="addManualTransaction()">✅ பதிவு செய்</button>
+                <button class="btn-add-more" type="button" style="width:100%;margin-top:7px;" onclick="toggleManualActionMenu()">⚙️ மற்ற பதிவு வகைகள்　▾</button>
                 <div id="manual-action-menu" style="display:none; margin-top:8px; gap:8px; flex-direction:column;">
-                    <button class="btn-blue" onclick="addManualTransaction()">📝 சாதாரண பதிவு சேர்</button>
+                    <button class="btn-blue" type="button" onclick="addManualTransaction()">📝 சாதாரண பதிவு சேர்</button>
                     <button class="btn-blue" style="background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
                     <button class="btn-blue" style="background:#0891b2;" onclick="openInstallmentPurchaseModal()">🧾 அட்வான்ஸ் + மீதி செலவு</button>
                     <button class="btn-blue" style="background:#9333ea;" onclick="openSplitCategoryExpenseModal()">🧾 ஒரே செலவை பிரித்து பதிவு</button>
@@ -1553,6 +1554,10 @@
 };
 
 window.addManualTransaction = async function() {
+            const saveBtn = document.getElementById("manual-save-btn");
+            if (saveBtn?.dataset.saving === "1") return;
+            if (saveBtn) { saveBtn.dataset.saving = "1"; saveBtn.disabled = true; saveBtn.textContent = "சேமிக்கிறது…"; }
+            try {
             let title = document.getElementById("m-title").value.trim();
             let amount = parseFloat(document.getElementById("m-amount").value);
             let source = document.getElementById("m-source").value;
@@ -1592,6 +1597,9 @@ window.addManualTransaction = async function() {
             if (savedId) {
                 document.getElementById("m-title").value = "";
                 document.getElementById("m-amount").value = "";
+            }
+            } finally {
+                if (saveBtn) { saveBtn.dataset.saving = "0"; saveBtn.disabled = false; saveBtn.textContent = "✅ பதிவு செய்"; }
             }
         };
 
@@ -2660,10 +2668,11 @@ window.addManualTransaction = async function() {
             selectedDate.setHours(Number.isFinite(hours) ? hours : 0, Number.isFinite(minutes) ? minutes : 0, 0, 0);
             const timestamp = selectedDate.getTime();
 
-            // Each item is a separate expense transaction so the list shows one card per item.
-            const savedIds = [];
+            // Validate the batch against the current balance before writing anything.
+            // Save each item as its own transaction/card, but send writes concurrently for speed.
+            const staged = [];
             for (const entry of entries) {
-                const id = await saveTransaction({
+                const data = {
                     title: entry.title,
                     amount: entry.amount,
                     type: "expense",
@@ -2672,17 +2681,32 @@ window.addManualTransaction = async function() {
                     timestamp,
                     multiSourceExpense: true,
                     multiSourceBatch: true
-                });
-                if (!id) {
-                    alert(`“${entry.title}” பதிவைச் சேமிக்க முடியவில்லை. இதற்கு முன் சேமிக்கப்பட்ட பதிவுகள் பட்டியலில் தனித்தனியாக இருக்கும்.`);
-                    return;
-                }
-                savedIds.push(id);
+                };
+                if (!validateExpenseBalance(data, staged)) return;
+                staged.push(data);
             }
-            closeMultiSourceModal();
-            if (typeof refreshTransactions === "function") await refreshTransactions();
-            else if (typeof renderTransactions === "function") renderTransactions();
-            alert(`${savedIds.length} தனித்தனி செலவு பதிவுகள் சேமிக்கப்பட்டன.`);
+
+            const saveButton = document.querySelector('#multi-source-modal .save-btn');
+            if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'சேமிக்கிறது…'; }
+            try {
+                const results = await Promise.all(staged.map(data => saveTransaction(data)));
+                const failed = results.filter(id => !id).length;
+                if (failed) {
+                    // Only show a message when something actually failed; never show success popups.
+                    alert(`${staged.length - failed} பதிவுகள் சேமிக்கப்பட்டன. ${failed} பதிவுகள் சேமிக்கப்படவில்லை. பட்டியலைச் சரிபார்க்கவும்.`);
+                }
+                if (results.some(Boolean)) {
+                    closeMultiSourceModal();
+                    // Reset modal values so it is ready for the next quick entry.
+                    document.getElementById('ms-rows').innerHTML = '';
+                    addMultiSourceRow('', 'பொது', 'சம்பளம்', '');
+                    updateMultiSourceTotal();
+                    if (typeof refreshTransactions === "function") await refreshTransactions();
+                    else if (typeof renderTransactions === "function") renderTransactions();
+                }
+            } finally {
+                if (saveButton) { saveButton.disabled = false; saveButton.textContent = 'சேமி'; }
+            }
         };
 
         // ------------------ End Multi-Source Expense Logic ------------------ //
@@ -2781,7 +2805,7 @@ window.addManualTransaction = async function() {
             let saved=0;
             try{
                 for(const data of staged){ const id=await saveTransaction(data); if(id) saved++; }
-                if(saved!==staged.length) alert(`${saved} பதிவுகள் மட்டும் சேமிக்கப்பட்டன.`);
+                if(saved!==staged.length) alert(`${saved} பதிவுகள் மட்டும் சேமிக்கப்பட்டன. மீதியை பட்டியலில் சரிபார்க்கவும்.`);
             }catch(e){ console.error('Split category expense error:',e); alert('பதிவு சேமிக்க முடியவில்லை.'); }
         };
 
