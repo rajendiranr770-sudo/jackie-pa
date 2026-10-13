@@ -1428,10 +1428,27 @@
             return parseInt(matches.join(''), 10);
         }
 
-        function processInput() {
+        // Full-stop separated quick entries are processed one-by-one, preserving each title and amount.
+        let quickEntryQueue = [];
+        let quickEntryBatchActive = false;
+        function splitQuickEntries(text) {
+            // Split only on sentence-ending full stops, not decimal amounts such as 72.50.
+            return String(text || '').split(/\.(?=\s|$)/).map(x => x.trim()).filter(Boolean);
+        }
+        async function processInput() {
             const inputField = document.getElementById("voice-text-input");
             let rawText = inputField.value.trim();
             if (!rawText) return;
+
+            // If multiple full-stop separated entries are entered, queue them individually.
+            const entries = splitQuickEntries(rawText);
+            if (!quickEntryBatchActive && entries.length > 1) {
+                quickEntryQueue = entries.slice();
+                quickEntryBatchActive = true;
+                inputField.value = "";
+                processNextQuickEntry();
+                return;
+            }
 
             let amount = extractAmount(rawText);
             let lowerText = rawText.toLowerCase();
@@ -1469,14 +1486,16 @@
                 if (detectedSource !== null) {
                     txData.source = detectedSource;
                     txData.category = (detectedSource === "சம்பளம்") ? "சம்பளம் வரவு" : (detectedSource === "வீடு" ? "வீட்டு வரவு" : "இதர வரவு");
-                    saveTransaction(txData);
+                    await saveTransaction(txData);
+                    finishQuickEntryIfNeeded();
                 } else {
                     openModalByScenario(1, txData);
                 }
             } else {
                 if (detectedSource !== null && category !== "பொது") {
                     txData.source = detectedSource;
-                    saveTransaction(txData);
+                    await saveTransaction(txData);
+                    finishQuickEntryIfNeeded();
                 } 
                 else if (detectedSource === null && category !== "பொது") {
                     openModalByScenario(2, txData);
@@ -1490,6 +1509,20 @@
                 }
             }
             inputField.value = "";
+        }
+
+        function processNextQuickEntry() {
+            if (!quickEntryQueue.length) {
+                quickEntryBatchActive = false;
+                document.getElementById("voice-text-input").value = "";
+                return;
+            }
+            const next = quickEntryQueue.shift();
+            document.getElementById("voice-text-input").value = next;
+            processInput();
+        }
+        function finishQuickEntryIfNeeded() {
+            if (quickEntryBatchActive) setTimeout(processNextQuickEntry, 80);
         }
 
         window.toggleCategoryOption = function() {
@@ -1604,6 +1637,7 @@ window.addManualTransaction = async function() {
                         action.data.category = selectedCategoryChoice || "பொது";
                     }
                     await saveTransaction(action.data);
+                    finishQuickEntryIfNeeded();
                 }
                 else if (action.type === "KM") {
                     let kmData = action.data;
@@ -3278,6 +3312,7 @@ window.addManualTransaction = async function() {
                 actionData.category = catName;
                 closeModal();
                 saveTransaction(actionData);
+                finishQuickEntryIfNeeded();
             }
         }
 
