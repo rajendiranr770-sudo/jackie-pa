@@ -203,8 +203,11 @@
             background: #e2e8f0; color: #1e293b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 4px;
         }
         .multi-source-box { background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin:8px 0; }
-        .multi-source-row { display:grid; grid-template-columns: 1.2fr 1fr auto; gap:6px; align-items:center; margin-bottom:7px; }
-        .multi-source-row select, .multi-source-row input { min-height:42px; padding:8px; border:1px solid #cbd5e1; border-radius:7px; font-size:14px; width:100%; background:white; }
+        .multi-source-row { display:grid; grid-template-columns: 1fr 1fr auto; gap:6px; align-items:center; margin-bottom:10px; padding:8px; border:1px solid #dbe3ec; border-radius:9px; background:#fff; }
+        .multi-source-row select, .multi-source-row input { min-height:42px; padding:8px; border:1px solid #cbd5e1; border-radius:7px; font-size:14px; width:100%; background:white; box-sizing:border-box; }
+        .ms-item-title { grid-column:1 / 3; }
+        .ms-item-category, .ms-item-source, .ms-item-amount { min-width:0; }
+        .ms-item-label { grid-column:1 / -1; font-size:12px; font-weight:bold; color:#475569; margin:2px 0 -2px; }
         .multi-source-remove { border:none; background:#fee2e2; color:#b91c1c; border-radius:7px; min-height:42px; min-width:42px; font-weight:bold; cursor:pointer; }
         .multi-source-add { border:1px solid #93c5fd; background:#eff6ff; color:#1d4ed8; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; }
         .split-total { background:#0f172a; color:white; border-radius:8px; padding:9px; text-align:center; font-weight:bold; margin-top:8px; }
@@ -218,6 +221,7 @@
         .purchase-pay-btn { margin-top:7px; border:none; background:#7c3aed; color:white; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; }
         @media (max-width:430px) {
             .multi-source-row { grid-template-columns: 1fr 1fr auto; }
+            .multi-source-row select, .multi-source-row input { font-size:13px; padding:7px; }
         }
 
         @media (max-width: 430px) {
@@ -550,25 +554,18 @@
         <div class="modal-content">
             <h3 class="modal-title">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</h3>
 
-            <label class="modal-label">பொருள் / செலவு விவரம்:</label>
-            <input type="text" id="ms-title" class="form-input" placeholder="எ.கா: TV வாங்கியது">
-
-            <label class="modal-label">செலவு வகை:</label>
-            <select id="ms-category" class="form-input"></select>
-
+            <div style="font-size:13px;color:#475569;margin-bottom:8px;">ஒவ்வொரு பொருளையும் தனித்தனி வரியாக உள்ளிடுங்கள். சேமித்ததும் ஒவ்வொரு வரியும் பட்டியலில் தனி கார்டாக வரும்.</div>
             <label class="modal-label">தேதி:</label>
             <input type="date" id="ms-date" class="form-input">
             <label class="modal-label">நேரம் (Time):</label>
             <input type="time" id="ms-time" class="form-input">
 
             <div class="multi-source-box">
-                <div style="font-weight:bold;color:#334155;margin-bottom:7px;">பணம் எங்கெங்கிருந்து பயன்படுத்தப்பட்டது?</div>
+                <div style="font-weight:bold;color:#334155;margin-bottom:7px;">ஒவ்வொரு செலவு பதிவும் (தனி பொருள் + கணக்கு + வகை + தொகை)</div>
                 <div id="ms-rows"></div>
-                <button type="button" class="multi-source-add" onclick="addMultiSourceRow()">+ இன்னொரு கணக்கு சேர்</button>
+                <button type="button" class="multi-source-add" onclick="addMultiSourceRow()">+ இன்னொரு செலவு சேர்க்க</button>
                 <div class="split-total">மொத்தம்: <span id="ms-total">₹0.00</span></div>
-                <div style="font-size:11px;color:#64748b;margin-top:6px;text-align:center;">
-                    உதாரணம்: சம்பளம் ₹20,000 + இதர வரவு ₹60,000 + வீடு ₹20,000 = ₹1,00,000
-                </div>
+                <div style="font-size:11px;color:#64748b;margin-top:6px;text-align:center;">எ.கா. பெட்ரோல் ₹800 — சம்பளம்; மளிகை ₹500 — இதர வரவு. இவை இரண்டு தனித்தனி பதிவுகளாகச் சேமிக்கப்படும்.</div>
             </div>
 
             <div class="modal-btn-group">
@@ -2586,14 +2583,13 @@ window.addManualTransaction = async function() {
         }
 
         window.openMultiSourceModal = function() {
-            document.getElementById("ms-title").value = "";
             document.getElementById("ms-date").value = getLocalDateString();
-            document.getElementById("ms-category").innerHTML = categoryOptionsHtml("பொது");
+            const now = new Date();
+            document.getElementById("ms-time").value = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
             const rows = document.getElementById("ms-rows");
             rows.innerHTML = "";
-            addMultiSourceRow("சம்பளம்", "");
-            addMultiSourceRow("இதர வரவு", "");
-            addMultiSourceRow("வீடு", "");
+            addMultiSourceRow("பெட்ரோல் போட்டது", "பொது", "சம்பளம்", "");
+            addMultiSourceRow("மளிகைப் பொருள் வாங்கியது", "பொது", "இதர வரவு", "");
             updateMultiSourceTotal();
             document.getElementById("multi-source-modal").style.display = "flex";
         };
@@ -2602,64 +2598,82 @@ window.addManualTransaction = async function() {
             document.getElementById("multi-source-modal").style.display = "none";
         };
 
-        window.addMultiSourceRow = function(source="சம்பளம்", amount="") {
+        window.addMultiSourceRow = function(title="", category="பொது", source="சம்பளம்", amount="") {
             const rows = document.getElementById("ms-rows");
             const row = document.createElement("div");
             row.className = "multi-source-row";
             row.innerHTML = `
-                <select class="ms-source">${sourceOptionsHtml(source)}</select>
-                <input type="number" class="ms-amount" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை">
-                <button type="button" class="multi-source-remove" title="நீக்கு">✕</button>
+                <div class="ms-item-label">பொருள் / செலவு விவரம்</div>
+                <input type="text" class="ms-item-title" value="${String(title).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}" placeholder="எ.கா: பெட்ரோல் போட்டது">
+                <div class="ms-item-label">செலவு வகை</div>
+                <div class="ms-item-label">பணம் எடுத்த கணக்கு</div>
+                <select class="ms-item-category">${categoryOptionsHtml(category)}</select>
+                <select class="ms-item-source">${sourceOptionsHtml(source)}</select>
+                <input type="number" class="ms-item-amount" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை">
+                <button type="button" class="multi-source-remove" title="இந்த செலவை நீக்கு">✕</button>
             `;
-            row.querySelector(".ms-amount").addEventListener("input", updateMultiSourceTotal);
-            row.querySelector(".ms-source").addEventListener("change", updateMultiSourceTotal);
-            row.querySelector(".multi-source-remove").onclick = () => {
-                row.remove();
-                updateMultiSourceTotal();
-            };
+            row.querySelector(".ms-item-amount").addEventListener("input", updateMultiSourceTotal);
+            row.querySelector(".multi-source-remove").onclick = () => { row.remove(); updateMultiSourceTotal(); };
             rows.appendChild(row);
             updateMultiSourceTotal();
         };
 
-        function readMultiSourceRows(containerId, rowClass, sourceClass, amountClass) {
-            return Array.from(document.querySelectorAll(`#${containerId} .${rowClass}`)).map(row => ({
-                source: row.querySelector(`.${sourceClass}`).value,
-                amount: Number(row.querySelector(`.${amountClass}`).value || 0)
-            })).filter(x => x.amount > 0);
+        function readMultiSourceRows() {
+            return Array.from(document.querySelectorAll("#ms-rows .multi-source-row")).map(row => ({
+                title: row.querySelector(".ms-item-title").value.trim(),
+                category: row.querySelector(".ms-item-category").value || "பொது",
+                source: row.querySelector(".ms-item-source").value,
+                amount: Number(row.querySelector(".ms-item-amount").value || 0)
+            })).filter(x => x.title && x.amount > 0);
         }
 
         window.updateMultiSourceTotal = function() {
-            const rows = readMultiSourceRows("ms-rows", "multi-source-row", "ms-source", "ms-amount");
+            const rows = readMultiSourceRows();
             const total = rows.reduce((sum, x) => sum + x.amount, 0);
             document.getElementById("ms-total").innerText = "₹" + total.toLocaleString("en-IN", {minimumFractionDigits:2, maximumFractionDigits:2});
         };
 
         window.saveMultiSourceExpense = async function() {
-            const title = document.getElementById("ms-title").value.trim();
             const dateVal = document.getElementById("ms-date").value;
-            const category = document.getElementById("ms-category").value;
-            const splitSources = readMultiSourceRows("ms-rows", "multi-source-row", "ms-source", "ms-amount");
-            const total = splitSources.reduce((sum, x) => sum + Number(x.amount || 0), 0);
-
-            if (!title) { alert("செலவு விவரத்தை உள்ளிடவும்."); return; }
-            if (!splitSources.length || total <= 0) { alert("குறைந்தது ஒரு கணக்கில் தொகை உள்ளிடவும்."); return; }
+            const timeVal = document.getElementById("ms-time")?.value || "12:00";
+            const entries = Array.from(document.querySelectorAll("#ms-rows .multi-source-row")).map(row => ({
+                title: row.querySelector(".ms-item-title").value.trim(),
+                category: row.querySelector(".ms-item-category").value || "பொது",
+                source: row.querySelector(".ms-item-source").value,
+                amount: Number(row.querySelector(".ms-item-amount").value || 0)
+            }));
+            const invalid = entries.find(x => !x.title || x.amount <= 0);
+            if (invalid) { alert("ஒவ்வொரு செலவுக்கும் பொருள் பெயரும் தொகையும் உள்ளிடவும். முடிக்காத வரியை நீக்கவும் அல்லது நிரப்பவும்."); return; }
+            if (!entries.length) { alert("குறைந்தது ஒரு செலவு பதிவையாவது உள்ளிடவும்."); return; }
 
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            const timeVal = document.getElementById("ms-time")?.value || "12:00";
-            const [hours, minutes] = timeVal.split(':').map(Number);
-            selectedDate.setHours(hours || 0, minutes || 0, 0, 0);
+            const [hours, minutes] = timeVal.split(":").map(Number);
+            selectedDate.setHours(Number.isFinite(hours) ? hours : 0, Number.isFinite(minutes) ? minutes : 0, 0, 0);
+            const timestamp = selectedDate.getTime();
 
+            // Each item is a separate expense transaction so the list shows one card per item.
+            const savedIds = [];
+            for (const entry of entries) {
+                const id = await saveTransaction({
+                    title: entry.title,
+                    amount: entry.amount,
+                    type: "expense",
+                    category: entry.category,
+                    source: entry.source,
+                    timestamp,
+                    multiSourceExpense: true,
+                    multiSourceBatch: true
+                });
+                if (!id) {
+                    alert(`“${entry.title}” பதிவைச் சேமிக்க முடியவில்லை. இதற்கு முன் சேமிக்கப்பட்ட பதிவுகள் பட்டியலில் தனித்தனியாக இருக்கும்.`);
+                    return;
+                }
+                savedIds.push(id);
+            }
             closeMultiSourceModal();
-            await saveTransaction({
-                title,
-                amount: total,
-                type: "expense",
-                category: category || "பொது",
-                source: "பல கணக்குகள்",
-                splitSources,
-                timestamp: selectedDate.getTime(),
-                multiSourceExpense: true
-            });
+            if (typeof refreshTransactions === "function") await refreshTransactions();
+            else if (typeof renderTransactions === "function") renderTransactions();
+            alert(`${savedIds.length} தனித்தனி செலவு பதிவுகள் சேமிக்கப்பட்டன.`);
         };
 
         // ------------------ End Multi-Source Expense Logic ------------------ //
