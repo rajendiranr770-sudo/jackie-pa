@@ -151,12 +151,6 @@
             transition: 0.2s;
         }
         .btn-add-more:hover { background-color: #c7d2fe; }
-        .manual-entry-heading .btn-add-more { max-width: 100%; white-space: normal; line-height: 1.25; }
-        @media (max-width:430px) {
-            .manual-entry-heading { grid-template-columns: 1fr auto 1fr !important; gap: 4px !important; }
-            .manual-entry-heading .btn-add-more { font-size: 10px !important; padding: 6px 5px !important; }
-            .manual-entry-heading .section-title { font-size: 13px !important; }
-        }
         .target-notice {
             background-color: #fffbeb;
             color: #92400e;
@@ -203,11 +197,8 @@
             background: #e2e8f0; color: #1e293b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 4px;
         }
         .multi-source-box { background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin:8px 0; }
-        .multi-source-row { display:grid; grid-template-columns: 1fr 1fr auto; gap:6px; align-items:center; margin-bottom:10px; padding:8px; border:1px solid #dbe3ec; border-radius:9px; background:#fff; }
-        .multi-source-row select, .multi-source-row input { min-height:42px; padding:8px; border:1px solid #cbd5e1; border-radius:7px; font-size:14px; width:100%; background:white; box-sizing:border-box; }
-        .ms-item-title { grid-column:1 / 3; }
-        .ms-item-category, .ms-item-source, .ms-item-amount { min-width:0; }
-        .ms-item-label { grid-column:1 / -1; font-size:12px; font-weight:bold; color:#475569; margin:2px 0 -2px; }
+        .multi-source-row { display:grid; grid-template-columns: 1.2fr 1fr auto; gap:6px; align-items:center; margin-bottom:7px; }
+        .multi-source-row select, .multi-source-row input { min-height:42px; padding:8px; border:1px solid #cbd5e1; border-radius:7px; font-size:14px; width:100%; background:white; }
         .multi-source-remove { border:none; background:#fee2e2; color:#b91c1c; border-radius:7px; min-height:42px; min-width:42px; font-weight:bold; cursor:pointer; }
         .multi-source-add { border:1px solid #93c5fd; background:#eff6ff; color:#1d4ed8; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; }
         .split-total { background:#0f172a; color:white; border-radius:8px; padding:9px; text-align:center; font-weight:bold; margin-top:8px; }
@@ -219,17 +210,8 @@
         .purchase-status.pending { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
         .purchase-status.done { background:#dcfce7; color:#166534; border:1px solid #86efac; }
         .purchase-pay-btn { margin-top:7px; border:none; background:#7c3aed; color:white; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; }
-        /* Multi-source expense entry: full-width fields for mobile */
-        #multi-source-modal .multi-source-row { display:flex; flex-direction:column; align-items:stretch; gap:7px; }
-        #multi-source-modal .ms-item-label { display:block; width:100%; font-size:16px; line-height:1.35; margin:5px 0 0; grid-column:auto; }
-        #multi-source-modal .ms-item-title,
-        #multi-source-modal .ms-item-category,
-        #multi-source-modal .ms-item-source,
-        #multi-source-modal .ms-item-amount { display:block; width:100%; min-width:0; min-height:54px; box-sizing:border-box; font-size:17px; padding:10px 12px; }
-        #multi-source-modal .multi-source-remove { align-self:flex-end; min-width:58px; min-height:48px; font-size:22px; }
         @media (max-width:430px) {
             .multi-source-row { grid-template-columns: 1fr 1fr auto; }
-            .multi-source-row select, .multi-source-row input { font-size:13px; padding:7px; }
         }
 
         @media (max-width: 430px) {
@@ -314,8 +296,6 @@
             <button class="tab-btn" data-tab="கொல்லை" onclick="filterTab('கொல்லை', this)">🌱 கொல்லை</button>
             <button class="tab-btn" data-tab="MK செலவு" onclick="filterTab('MK செலவு', this)">🛒 MK</button>
             <button class="tab-btn" data-tab="SK செலவு" onclick="filterTab('SK செலவு', this)">📦 SK</button>
-            <button class="tab-btn" data-tab="Trip / நிகழ்வு" onclick="filterTab('Trip / நிகழ்வு', this); this.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})">➕ புதிய செலவு</button>
-            <button class="tab-btn" data-tab="புதிய வரவு" onclick="filterTab('புதிய வரவு', this); this.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})">💵 புதிய வரவு</button>
             <button class="tab-btn" data-tab="வட்டி பிசினஸ்" onclick="filterTab('வட்டி பிசினஸ்', this)">💰 வட்டி</button>
             <button class="tab-btn" data-tab="கைமாத்து" onclick="filterTab('கைமாத்து', this)">🤝 கைமாத்து</button>
             <button class="tab-btn" data-tab="நிலுவை" onclick="filterTab('நிலுவை', this)">🟠 நிலுவை / Advance</button>
@@ -375,10 +355,9 @@
 
         <div id="standard-view">
             <div class="vatti-form" id="manual-entry-form">
-                <div class="manual-entry-heading" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;margin-bottom:10px;">
-                    <button type="button" class="btn-add-more" style="justify-self:start;padding:7px 8px;" onclick="addNewIncomeCard()">💵 புதிய வரவு கார்டு சேர்</button>
-                    <div class="section-title" style="margin:0;text-align:center;white-space:nowrap;">📝 மேனுவல் பதிவு</div>
-                    <button type="button" class="btn-add-more" style="justify-self:end;padding:7px 8px;" onclick="addNewTripCategory()">➕ புதிய செலவு கார்டு சேர்</button>
+                <div style="display:flex; justify-content:space-between; align-items:center;" class="section-title">
+                    <span>📝 மேனுவல் பதிவு</span>
+                    <button type="button" class="btn-add-more" onclick="addNewTripCategory()">+ புதிய Trip சேர்</button>
                 </div>
                 <input type="text" id="m-title" class="form-input" placeholder="விவரம் அல்லது பெயர்">
                 <input type="number" id="m-amount" class="form-input" placeholder="தொகை (₹)">
@@ -405,16 +384,11 @@
                     </select>
                     <input type="date" id="m-date" class="form-input">
                 </div>
-                <label class="modal-label" for="m-time">நேரம் (Time):</label>
-                <input type="time" id="m-time" class="form-input">
-                <button class="btn-blue" type="button" id="manual-save-btn" onclick="addManualTransaction()">✅ பதிவு செய்</button>
-                <button class="btn-add-more" type="button" style="width:100%;margin-top:7px;" onclick="toggleManualActionMenu()">⚙️ மற்ற பதிவு வகைகள்　▾</button>
-                <div id="manual-action-menu" style="display:none; margin-top:8px; gap:8px; flex-direction:column;">
-                    <button class="btn-blue" type="button" onclick="addManualTransaction()">📝 சாதாரண பதிவு சேர்</button>
-                    <button class="btn-blue" style="background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
-                    <button class="btn-blue" style="background:#0891b2;" onclick="openInstallmentPurchaseModal()">🧾 அட்வான்ஸ் + மீதி செலவு</button>
-                    <button class="btn-blue" style="background:#9333ea;" onclick="openSplitCategoryExpenseModal()">🧾 ஒரே செலவை பிரித்து பதிவு</button>
-                </div>
+                <button class="btn-blue" onclick="addManualTransaction()">+ பதிவு சேர்</button>
+                <button class="btn-blue" style="margin-top:8px; background:#7c3aed;" onclick="openMultiSourceModal()">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</button>
+                <button class="btn-blue" style="margin-top:8px; background:#0891b2;" onclick="openInstallmentPurchaseModal()">🧾 அட்வான்ஸ் + மீதி செலவு</button>
+                <button class="btn-blue" style="margin-top:8px; background:#9333ea;" onclick="openSplitCategoryExpenseModal()">🧾 ஒரே செலவை பிரித்து பதிவு</button>
+                <button class="btn-blue" style="margin-top:8px; background:#0f766e;" onclick="addNewIncomeCard()">💵 புதிய வரவு Card சேர்</button>
             </div>
 
             <div id="income-cards-container"></div>
@@ -563,18 +537,23 @@
         <div class="modal-content">
             <h3 class="modal-title">➕ பல கணக்குகளில் இருந்து ஒரே செலவு</h3>
 
-            <div style="font-size:13px;color:#475569;margin-bottom:8px;">ஒவ்வொரு பொருளையும் தனித்தனி வரியாக உள்ளிடுங்கள். சேமித்ததும் ஒவ்வொரு வரியும் பட்டியலில் தனி கார்டாக வரும்.</div>
+            <label class="modal-label">பொருள் / செலவு விவரம்:</label>
+            <input type="text" id="ms-title" class="form-input" placeholder="எ.கா: TV வாங்கியது">
+
+            <label class="modal-label">செலவு வகை:</label>
+            <select id="ms-category" class="form-input"></select>
+
             <label class="modal-label">தேதி:</label>
             <input type="date" id="ms-date" class="form-input">
-            <label class="modal-label">நேரம் (Time):</label>
-            <input type="time" id="ms-time" class="form-input">
 
             <div class="multi-source-box">
-                <div style="font-weight:bold;color:#334155;margin-bottom:7px;">ஒவ்வொரு செலவு பதிவும் (தனி பொருள் + கணக்கு + வகை + தொகை)</div>
+                <div style="font-weight:bold;color:#334155;margin-bottom:7px;">பணம் எங்கெங்கிருந்து பயன்படுத்தப்பட்டது?</div>
                 <div id="ms-rows"></div>
-                <button type="button" class="multi-source-add" onclick="addMultiSourceRow()">+ இன்னொரு செலவு சேர்க்க</button>
+                <button type="button" class="multi-source-add" onclick="addMultiSourceRow()">+ இன்னொரு கணக்கு சேர்</button>
                 <div class="split-total">மொத்தம்: <span id="ms-total">₹0.00</span></div>
-                <div style="font-size:11px;color:#64748b;margin-top:6px;text-align:center;">எ.கா. பெட்ரோல் ₹800 — சம்பளம்; மளிகை ₹500 — இதர வரவு. இவை இரண்டு தனித்தனி பதிவுகளாகச் சேமிக்கப்படும்.</div>
+                <div style="font-size:11px;color:#64748b;margin-top:6px;text-align:center;">
+                    உதாரணம்: சம்பளம் ₹20,000 + இதர வரவு ₹60,000 + வீடு ₹20,000 = ₹1,00,000
+                </div>
             </div>
 
             <div class="modal-btn-group">
@@ -697,10 +676,10 @@
 
     <div id="trip-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
-            <h3 class="modal-title" id="trip-modal-title">➕ புதிய செலவு Card</h3>
+            <h3 class="modal-title" id="trip-modal-title">🧳 புதிய Trip / நிகழ்வு</h3>
             <input type="hidden" id="trip-edit-name">
-            <label class="modal-label">புதிய செலவு Card பெயர்:</label>
-            <input id="trip-name-input" class="form-input" placeholder="எ.கா: வீட்டு செலவு / பயண செலவு">
+            <label class="modal-label">Trip / நிகழ்வு பெயர்:</label>
+            <input id="trip-name-input" class="form-input" placeholder="எ.கா: அரியலூர் Trip / கல்யாணம்">
 
             <div style="font-size:12px;color:#64748b;margin:4px 0 10px;">
                 யாருடைய List-ல் இந்த Trip வர வேண்டும் என்பதை மட்டும் Tick செய்யுங்கள்.
@@ -812,9 +791,6 @@
 
         const todayStr = getLocalDateString();
         document.getElementById("m-date").value = todayStr;
-        const initialNow = new Date();
-        const initialTime = `${String(initialNow.getHours()).padStart(2,'0')}:${String(initialNow.getMinutes()).padStart(2,'0')}`;
-        if (document.getElementById("m-time")) document.getElementById("m-time").value = initialTime;
         document.getElementById("v-date").value = todayStr;
         document.getElementById("km-date").value = todayStr;
 
@@ -895,7 +871,7 @@
         // PWA service worker
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
-                navigator.serviceWorker.register("./sw.js?v=20261009-pdf1").catch(err => console.warn("SW:", err));
+                navigator.serviceWorker.register("./sw.js?v=20261023-offline1").catch(err => console.warn("SW:", err));
             });
         }
 
@@ -1106,7 +1082,7 @@
 
             nameInput.value = tripName || "";
             editName.value = mode === "edit" ? tripName : "";
-            title.innerText = mode === "edit" ? `✏️ ${tripName} — List அமைப்பு` : "➕ புதிய செலவு Card";
+            title.innerText = mode === "edit" ? `✏️ ${tripName} — List அமைப்பு` : "🧳 புதிய Trip / நிகழ்வு";
             const meta = tripName ? getTripMeta(tripName) : { linkedLists: [] };
             const links = Array.isArray(meta.linkedLists) ? meta.linkedLists : [];
 
@@ -1320,48 +1296,16 @@
         }
 
         function getCompletedTripNamesForCurrentView() {
-            const searchVal = (document.getElementById("search-input")?.value || "").trim().toLowerCase();
-            const monthFilter = document.getElementById("month-filter")?.value || "CURRENT_WEEK";
-            const typeFilter = document.getElementById("transaction-type-filter")?.value || "ALL";
-            const fromDateVal = document.getElementById("from-date")?.value || "";
-            const toDateVal = document.getElementById("to-date")?.value || "";
-            const { start: last7Start, end: last7End } = getLast7DaysRange();
-
-            // Closed Trip summary-யும் ஒரு expense card போலவே filter ஆக வேண்டும்.
-            // ஆனால் தனி Trip/Event tab-ல் பழைய/புதிய எல்லா closed Trips-யும் இருக்க வேண்டும்.
-            return Object.keys(tripMeta).filter(name => {
+            const names = Object.keys(tripMeta).filter(name => {
                 const meta = getTripMeta(name);
                 if (!meta || !meta.archived || meta.deletedFromHistory) return false;
-
-                if (activeTab === "Trip / நிகழ்வு") return true;
-                if (activeIncomeFilter || activeTripFilter) return false;
-                if (typeFilter === "INCOME") return false;
-
                 if (activeTab === "MK செலவு" || activeTab === "SK செலவு") {
-                    if (!(meta.linkedLists || []).includes(activeTab)) return false;
-                } else if (activeTab !== "All") {
-                    // Salary / house / other-source and unrelated category tabs must not
-                    // show the Trip total as though it were an individual transaction.
-                    return false;
+                    return (meta.linkedLists || []).includes(activeTab);
                 }
-
-                if (searchVal && !name.toLowerCase().includes(searchVal)) return false;
-                const timestamp = getTripActualLastEntryTimestamp(name) || Number(meta.createdAt || 0);
-                const itemDate = new Date(timestamp);
-                if (monthFilter === "CURRENT_WEEK") {
-                    if (!(itemDate >= last7Start && itemDate <= last7End)) return false;
-                } else if (monthFilter === "CUSTOM_DATE") {
-                    const start = fromDateVal ? parseLocalDate(fromDateVal) : new Date(0);
-                    const end = toDateVal ? parseLocalDate(toDateVal) : new Date(8640000000000000);
-                    if (fromDateVal) start.setHours(0,0,0,0);
-                    if (toDateVal) end.setHours(23,59,59,999);
-                    if (!(itemDate >= start && itemDate <= end)) return false;
-                } else if (monthFilter !== "ALL" && monthFilter.includes("-")) {
-                    const monthKey = `${itemDate.getFullYear()}-${String(itemDate.getMonth()+1).padStart(2,"0")}`;
-                    if (monthKey !== monthFilter) return false;
-                }
-                return true;
+                // In the general list, show every completed Trip once.
+                return activeTab === "All";
             });
+            return names;
         }
 
         function createCompletedTripSummaryElement(tripName) {
@@ -1446,32 +1390,6 @@
             let rawText = inputField.value.trim();
             if (!rawText) return;
 
-            // முற்றுப்புள்ளிக்குப் பிறகு ஒவ்வொரு விவரத்தையும் தனி batch entry-ஆகத் திறக்கவும்.
-            // தொகை/கணக்கு/வகையை பயனர் சரிபார்த்து தனித்தனியாக மாற்றலாம்.
-            const parts = rawText.split(/\.(?=\s|$)/).map(x => x.trim()).filter(Boolean);
-            if (parts.length > 1) {
-                const parsed = parts.map(part => {
-                    const cleaned = part.replace(/₹/g, '').replace(/,/g, '');
-                    const nums = cleaned.match(/\d+(?:\.\d{1,2})?/g) || [];
-                    const amount = nums.length ? Number(nums[nums.length - 1]) : 0;
-                    const title = part.replace(/₹?\s*\d[\d,]*(?:\.\d{1,2})?/g, '').trim().replace(/^[,;\s]+|[,;\s]+$/g, '');
-                    return { title: title || part, amount };
-                });
-                const box = document.getElementById('batch-rows');
-                box.innerHTML = '';
-                parsed.forEach(item => {
-                    addBatchRow();
-                    const row = box.lastElementChild;
-                    row.querySelector('.be-title').value = item.title;
-                    row.querySelector('.be-amount').value = item.amount || '';
-                    row.querySelector('.be-type').value = 'expense';
-                });
-                document.getElementById('batch-entry-modal').style.display = 'flex';
-                updateBatchTotal();
-                inputField.value = '';
-                return;
-            }
-
             let amount = extractAmount(rawText);
             let lowerText = rawText.toLowerCase();
 
@@ -1547,17 +1465,7 @@
             }
         };
 
-        window.toggleManualActionMenu = function(){
-    const menu = document.getElementById('manual-action-menu');
-    if (!menu) return;
-    menu.style.display = menu.style.display === 'none' || !menu.style.display ? 'flex' : 'none';
-};
-
-window.addManualTransaction = async function() {
-            const saveBtn = document.getElementById("manual-save-btn");
-            if (saveBtn?.dataset.saving === "1") return;
-            if (saveBtn) { saveBtn.dataset.saving = "1"; saveBtn.disabled = true; saveBtn.textContent = "சேமிக்கிறது…"; }
-            try {
+        window.addManualTransaction = async function() {
             let title = document.getElementById("m-title").value.trim();
             let amount = parseFloat(document.getElementById("m-amount").value);
             let source = document.getElementById("m-source").value;
@@ -1576,9 +1484,7 @@ window.addManualTransaction = async function() {
             
             let now = new Date();
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            const timeVal = document.getElementById("m-time")?.value || `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            const [hours, minutes] = timeVal.split(':').map(Number);
-            selectedDate.setHours(hours || 0, minutes || 0, 0, 0);
+            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
             let timestamp = selectedDate.getTime();
 
             const savedId = await saveTransaction({
@@ -1597,9 +1503,6 @@ window.addManualTransaction = async function() {
             if (savedId) {
                 document.getElementById("m-title").value = "";
                 document.getElementById("m-amount").value = "";
-            }
-            } finally {
-                if (saveBtn) { saveBtn.dataset.saving = "0"; saveBtn.disabled = false; saveBtn.textContent = "✅ பதிவு செய்"; }
             }
         };
 
@@ -1885,20 +1788,53 @@ window.addManualTransaction = async function() {
             return {income,expense,balance:income-expense};
         }
 
+        // Fast offline-first transaction save:
+        // Firestore persistentLocalCache queues writes while offline and syncs when online.
+        // Update the local UI immediately; do not wait for the server acknowledgement.
         async function saveTransaction(data) {
+            const user = auth.currentUser;
+            if (!user) { alert('உள்நுழையப்படவில்லை!'); return null; }
+            if (!validateExpenseBalance(data)) return null;
+
+            const ref = doc(collection(db, 'users', user.uid, 'transactions'));
+            const payload = {
+                ...data,
+                timestamp: Number(data.timestamp || Date.now()),
+                updatedAt: Date.now(),
+                schemaVersion: 6
+            };
+            const localRecord = { id: ref.id, ...payload, _localPending: true };
+
+            // Instant local display and cache, so slow internet does not freeze the form.
+            allTransactions = [localRecord, ...allTransactions.filter(tx => tx.id !== ref.id)]
+                .sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
             try {
-                const user=auth.currentUser;
-                if(!user){ alert('உள்நுழையப்படவில்லை!'); return null; }
-                if(!validateExpenseBalance(data)) return null;
-                const ref=await addDoc(collection(db,'users',user.uid,'transactions'),{
-                    ...data,timestamp:Number(data.timestamp||Date.now()),updatedAt:Date.now(),schemaVersion:6
-                });
-                return ref.id;
-            } catch(error) {
-                console.error('Error saving transaction:',error);
-                alert('பதிவு சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.');
-                return null;
-            }
+                localStorage.setItem(`finance_transactions_cache_${user.uid}`, JSON.stringify(allTransactions));
+            } catch (cacheErr) { console.warn('Local cache could not be updated:', cacheErr); }
+            populateMonthDropdown();
+            updateCalculations();
+            renderApp();
+
+            // Do not await this promise: Firestore persists the write locally and syncs it
+            // when connectivity returns. A definitive server/rules error rolls back the
+            // optimistic local record and informs the user.
+            setDoc(ref, payload).then(() => {
+                const current = allTransactions.find(tx => tx.id === ref.id);
+                if (current && current._localPending) {
+                    const { _localPending, ...clean } = current;
+                    allTransactions = allTransactions.map(tx => tx.id === ref.id ? clean : tx);
+                    try { localStorage.setItem(`finance_transactions_cache_${user.uid}`, JSON.stringify(allTransactions)); } catch (_) {}
+                }
+            }).catch(error => {
+                console.error('Error syncing transaction:', error);
+                allTransactions = allTransactions.filter(tx => tx.id !== ref.id);
+                try { localStorage.setItem(`finance_transactions_cache_${user.uid}`, JSON.stringify(allTransactions)); } catch (_) {}
+                populateMonthDropdown();
+                updateCalculations();
+                renderApp();
+                alert('இந்தப் பதிவு சர்வருடன் ஒத்திசைக்கப்படவில்லை. இணைய இணைப்பையும் கணக்கு இருப்பையும் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.');
+            });
+            return ref.id;
         }
 
         function populateMonthDropdown() {
@@ -2126,7 +2062,7 @@ window.addManualTransaction = async function() {
             activeTab = tabName;
             activeIncomeFilter = null;
             activeTripFilter = null;
-            document.getElementById("list-title").innerText = (tabName === "All") ? "அனைத்துப் பதிவுகள்" : (tabName === "Trip / நிகழ்வு" ? "🧳 Trip / நிகழ்வு பட்டியல்" : (tabName === "புதிய வரவு" ? "💵 புதிய வரவு கார்டுகள்" : (tabName === "புதிய செலவு" ? "➕ புதிய செலவு கார்டுகள்" : `${tabName} பதிவுகள்`)));
+            document.getElementById("list-title").innerText = (tabName === "All") ? "அனைத்துப் பதிவுகள்" : `${tabName} பதிவுகள்`;
             
             document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
             if (btnElem) btnElem.classList.add("active");
@@ -2168,35 +2104,10 @@ window.addManualTransaction = async function() {
         };
 
         window.renderApp = function() {
-            const manualForm = document.getElementById("manual-entry-form");
-            const incomeBox = document.getElementById("income-cards-container");
-            const activeTripsBox = document.getElementById("active-trips-container");
-            const completedTripsBox = document.getElementById("completed-trips-container");
-            const linkedTripBox = document.getElementById("linked-trip-container");
-            const txList = document.getElementById("tx-list-container");
-            // Reset section visibility before each render.
-            [manualForm, incomeBox, activeTripsBox, completedTripsBox, linkedTripBox, txList].forEach(el => {
-                if (el) el.style.display = "";
-            });
             if (activeTab === "வட்டி பிசினஸ்") renderVattiView();
             else if (activeTab === "கைமாத்து") renderKaiMaathuView();
             else if (activeTab === "நிலுவை") renderPendingPurchases();
-            else {
-                renderStandardView();
-                if (activeTab === "புதிய வரவு") {
-                    if (manualForm) manualForm.style.display = "none";
-                    if (activeTripsBox) activeTripsBox.style.display = "none";
-                    if (completedTripsBox) completedTripsBox.style.display = "none";
-                    if (linkedTripBox) linkedTripBox.style.display = "none";
-                    if (txList) txList.style.display = "none";
-                    if (incomeBox) incomeBox.style.display = "block";
-                } else if (activeTab === "புதிய செலவு") {
-                    if (manualForm) manualForm.style.display = "none";
-                    if (incomeBox) incomeBox.style.display = "none";
-                    if (txList) txList.style.display = "none";
-                    if (linkedTripBox) linkedTripBox.style.display = "none";
-                }
-            }
+            else renderStandardView();
         };
 
         function getPurchasePayments(tx) {
@@ -2399,15 +2310,10 @@ window.addManualTransaction = async function() {
                 } else filtered = [];
             } else if (activeTripFilter) {
                 filtered = allTransactions.filter(tx => tx.type === "expense" && tx.category === activeTripFilter);
-            } else if (activeTab === "Trip / நிகழ்வு") {
-                // Dedicated Trip/Event tab: list all trip/event cards independent of
-                // the general transaction filters. Actual expenses show after opening a trip.
-                filtered = [];
             } else {
                 filtered = filterTransactions(allTransactions).filter(tx => {
-                    // Trip/Event expenses are represented by their summary card in All.
-                    // In source/category tabs, however, actual expense records must remain filterable.
-                    if (activeTab === "All" && isTripCategory(tx.category)) return false;
+                    // Trip/Event expense rows stay inside their summary card, not the general or MK/SK list.
+                    if (isTripCategory(tx.category)) return false;
                     if (activeTab === "All") return true;
                     if (["சம்பளம்", "வீடு", "இதர வரவு"].includes(activeTab)) return transactionUsesSource(tx, activeTab);
                     if (["MK செலவு","SK செலவு"].includes(activeTab)) {
@@ -2599,13 +2505,14 @@ window.addManualTransaction = async function() {
         }
 
         window.openMultiSourceModal = function() {
+            document.getElementById("ms-title").value = "";
             document.getElementById("ms-date").value = getLocalDateString();
-            const now = new Date();
-            document.getElementById("ms-time").value = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+            document.getElementById("ms-category").innerHTML = categoryOptionsHtml("பொது");
             const rows = document.getElementById("ms-rows");
             rows.innerHTML = "";
-            addMultiSourceRow("பெட்ரோல் போட்டது", "பொது", "சம்பளம்", "");
-            addMultiSourceRow("மளிகைப் பொருள் வாங்கியது", "பொது", "இதர வரவு", "");
+            addMultiSourceRow("சம்பளம்", "");
+            addMultiSourceRow("இதர வரவு", "");
+            addMultiSourceRow("வீடு", "");
             updateMultiSourceTotal();
             document.getElementById("multi-source-modal").style.display = "flex";
         };
@@ -2614,99 +2521,63 @@ window.addManualTransaction = async function() {
             document.getElementById("multi-source-modal").style.display = "none";
         };
 
-        window.addMultiSourceRow = function(title="", category="பொது", source="சம்பளம்", amount="") {
+        window.addMultiSourceRow = function(source="சம்பளம்", amount="") {
             const rows = document.getElementById("ms-rows");
             const row = document.createElement("div");
             row.className = "multi-source-row";
             row.innerHTML = `
-                <div class="ms-item-label">பொருள் / செலவு விவரம்</div>
-                <input type="text" class="ms-item-title" value="${String(title).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}" placeholder="எ.கா: பெட்ரோல் போட்டது">
-                <div class="ms-item-label">செலவு வகை</div>
-                <select class="ms-item-category">${categoryOptionsHtml(category)}</select>
-                <div class="ms-item-label">பணம் எடுத்த கணக்கு</div>
-                <select class="ms-item-source">${sourceOptionsHtml(source)}</select>
-                <div class="ms-item-label">தொகை (₹)</div>
-                <input type="number" class="ms-item-amount" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை">
-                <button type="button" class="multi-source-remove" title="இந்த செலவை நீக்கு">✕</button>
+                <select class="ms-source">${sourceOptionsHtml(source)}</select>
+                <input type="number" class="ms-amount" min="0" step="0.01" value="${amount}" placeholder="₹ தொகை">
+                <button type="button" class="multi-source-remove" title="நீக்கு">✕</button>
             `;
-            row.querySelector(".ms-item-amount").addEventListener("input", updateMultiSourceTotal);
-            row.querySelector(".multi-source-remove").onclick = () => { row.remove(); updateMultiSourceTotal(); };
+            row.querySelector(".ms-amount").addEventListener("input", updateMultiSourceTotal);
+            row.querySelector(".ms-source").addEventListener("change", updateMultiSourceTotal);
+            row.querySelector(".multi-source-remove").onclick = () => {
+                row.remove();
+                updateMultiSourceTotal();
+            };
             rows.appendChild(row);
             updateMultiSourceTotal();
         };
 
-        function readMultiSourceRows() {
-            return Array.from(document.querySelectorAll("#ms-rows .multi-source-row")).map(row => ({
-                title: row.querySelector(".ms-item-title").value.trim(),
-                category: row.querySelector(".ms-item-category").value || "பொது",
-                source: row.querySelector(".ms-item-source").value,
-                amount: Number(row.querySelector(".ms-item-amount").value || 0)
-            })).filter(x => x.title && x.amount > 0);
+        function readMultiSourceRows(containerId, rowClass, sourceClass, amountClass) {
+            return Array.from(document.querySelectorAll(`#${containerId} .${rowClass}`)).map(row => ({
+                source: row.querySelector(`.${sourceClass}`).value,
+                amount: Number(row.querySelector(`.${amountClass}`).value || 0)
+            })).filter(x => x.amount > 0);
         }
 
         window.updateMultiSourceTotal = function() {
-            const rows = readMultiSourceRows();
+            const rows = readMultiSourceRows("ms-rows", "multi-source-row", "ms-source", "ms-amount");
             const total = rows.reduce((sum, x) => sum + x.amount, 0);
             document.getElementById("ms-total").innerText = "₹" + total.toLocaleString("en-IN", {minimumFractionDigits:2, maximumFractionDigits:2});
         };
 
         window.saveMultiSourceExpense = async function() {
+            const title = document.getElementById("ms-title").value.trim();
             const dateVal = document.getElementById("ms-date").value;
-            const timeVal = document.getElementById("ms-time")?.value || "12:00";
-            const entries = Array.from(document.querySelectorAll("#ms-rows .multi-source-row")).map(row => ({
-                title: row.querySelector(".ms-item-title").value.trim(),
-                category: row.querySelector(".ms-item-category").value || "பொது",
-                source: row.querySelector(".ms-item-source").value,
-                amount: Number(row.querySelector(".ms-item-amount").value || 0)
-            }));
-            const invalid = entries.find(x => !x.title || x.amount <= 0);
-            if (invalid) { alert("ஒவ்வொரு செலவுக்கும் பொருள் பெயரும் தொகையும் உள்ளிடவும். முடிக்காத வரியை நீக்கவும் அல்லது நிரப்பவும்."); return; }
-            if (!entries.length) { alert("குறைந்தது ஒரு செலவு பதிவையாவது உள்ளிடவும்."); return; }
+            const category = document.getElementById("ms-category").value;
+            const splitSources = readMultiSourceRows("ms-rows", "multi-source-row", "ms-source", "ms-amount");
+            const total = splitSources.reduce((sum, x) => sum + Number(x.amount || 0), 0);
+
+            if (!title) { alert("செலவு விவரத்தை உள்ளிடவும்."); return; }
+            if (!splitSources.length || total <= 0) { alert("குறைந்தது ஒரு கணக்கில் தொகை உள்ளிடவும்."); return; }
 
             let selectedDate = dateVal ? parseLocalDate(dateVal) : new Date();
-            const [hours, minutes] = timeVal.split(":").map(Number);
-            selectedDate.setHours(Number.isFinite(hours) ? hours : 0, Number.isFinite(minutes) ? minutes : 0, 0, 0);
-            const timestamp = selectedDate.getTime();
+            const now = new Date();
+            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
 
-            // Validate the batch against the current balance before writing anything.
-            // Save each item as its own transaction/card, but send writes concurrently for speed.
-            const staged = [];
-            for (const entry of entries) {
-                const data = {
-                    title: entry.title,
-                    amount: entry.amount,
-                    type: "expense",
-                    category: entry.category,
-                    source: entry.source,
-                    timestamp,
-                    multiSourceExpense: true,
-                    multiSourceBatch: true
-                };
-                if (!validateExpenseBalance(data, staged)) return;
-                staged.push(data);
-            }
-
-            const saveButton = document.querySelector('#multi-source-modal .save-btn');
-            if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'சேமிக்கிறது…'; }
-            try {
-                const results = await Promise.all(staged.map(data => saveTransaction(data)));
-                const failed = results.filter(id => !id).length;
-                if (failed) {
-                    // Only show a message when something actually failed; never show success popups.
-                    alert(`${staged.length - failed} பதிவுகள் சேமிக்கப்பட்டன. ${failed} பதிவுகள் சேமிக்கப்படவில்லை. பட்டியலைச் சரிபார்க்கவும்.`);
-                }
-                if (results.some(Boolean)) {
-                    closeMultiSourceModal();
-                    // Reset modal values so it is ready for the next quick entry.
-                    document.getElementById('ms-rows').innerHTML = '';
-                    addMultiSourceRow('', 'பொது', 'சம்பளம்', '');
-                    updateMultiSourceTotal();
-                    if (typeof refreshTransactions === "function") await refreshTransactions();
-                    else if (typeof renderTransactions === "function") renderTransactions();
-                }
-            } finally {
-                if (saveButton) { saveButton.disabled = false; saveButton.textContent = 'சேமி'; }
-            }
+            closeMultiSourceModal();
+            await saveTransaction({
+                title,
+                amount: total,
+                type: "expense",
+                category: category || "பொது",
+                source: "பல கணக்குகள்",
+                splitSources,
+                timestamp: selectedDate.getTime(),
+                multiSourceExpense: true
+            });
         };
 
         // ------------------ End Multi-Source Expense Logic ------------------ //
@@ -2805,7 +2676,7 @@ window.addManualTransaction = async function() {
             let saved=0;
             try{
                 for(const data of staged){ const id=await saveTransaction(data); if(id) saved++; }
-                if(saved!==staged.length) alert(`${saved} பதிவுகள் மட்டும் சேமிக்கப்பட்டன. மீதியை பட்டியலில் சரிபார்க்கவும்.`);
+                if(saved!==staged.length) alert(`${saved} பதிவுகள் மட்டும் சேமிக்கப்பட்டன.`);
             }catch(e){ console.error('Split category expense error:',e); alert('பதிவு சேமிக்க முடியவில்லை.'); }
         };
 
@@ -2817,7 +2688,7 @@ window.addManualTransaction = async function() {
             const now=new Date();
             const date=getLocalDateString(now);
             const time=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            r.innerHTML=`<input class="be-title" placeholder="விவரம்"><input class="be-amount" type="number" min="0" step="0.01" placeholder="₹"><select class="be-type"><option value="expense">செலவு (-)</option><option value="income">வரவு (+)</option></select><select class="be-source"><option>சம்பளம்</option><option>வீடு</option><option>இதர வரவு</option></select><select class="be-category"><option>பொது</option><option>MK செலவு</option><option>SK செலவு</option><option>கொல்லை</option></select><input class="be-date" type="date" value="${date}"><input class="be-time" type="time" value="${time}">`;
+            r.innerHTML=`<input class="be-title" placeholder="விவரம்"><input class="be-amount" type="number" min="0" step="0.01" placeholder="₹"><select class="be-type"><option value="expense">செலவு (-)</option><option value="income">வரவு (+)</option></select><select class="be-source"><option>சம்பளம்</option><option>வீடு</option><option>இதர வரவு</option></select><input class="be-date" type="date" value="${date}"><input class="be-time" type="time" value="${time}">`;
             r.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',updateBatchTotal));
             box.appendChild(r);
         };
@@ -2827,11 +2698,11 @@ window.addManualTransaction = async function() {
                 const dateVal=r.querySelector('.be-date').value; const timeVal=r.querySelector('.be-time').value;
                 let d=dateVal?parseLocalDate(dateVal):new Date();
                 if(timeVal){const [h,m]=timeVal.split(':').map(Number); d.setHours(h,m,0,0);}
-                return {title:r.querySelector('.be-title').value.trim(),amount:Number(r.querySelector('.be-amount').value||0),type:r.querySelector('.be-type').value,source:r.querySelector('.be-source').value,category:r.querySelector('.be-category')?.value||'பொது',timestamp:d.getTime()};
+                return {title:r.querySelector('.be-title').value.trim(),amount:Number(r.querySelector('.be-amount').value||0),type:r.querySelector('.be-type').value,source:r.querySelector('.be-source').value,timestamp:d.getTime()};
             }).filter(x=>x.title&&x.amount>0);
             if(!rows.length){alert('குறைந்தது ஒரு பதிவாவது உள்ளிடவும்.');return;}
             const staged=[]; let ok=0;
-            for(const x of rows){ const data={...x,category:x.type==='income'?(x.source==='சம்பளம்'?'சம்பளம் வரவு':x.source==='வீடு'?'வீட்டு வரவு':'இதர வரவு'):x.category}; if(!validateExpenseBalance(data,staged)) continue; staged.push(data); }
+            for(const x of rows){ const data={...x,category:x.type==='income'?(x.source==='சம்பளம்'?'சம்பளம் வரவு':x.source==='வீடு'?'வீட்டு வரவு':'இதர வரவு'):'பொது'}; if(!validateExpenseBalance(data,staged)) continue; staged.push(data); }
             closeBatchEntryModal();
             for(const data of staged){ if(await saveTransaction(data)) ok++; }
             if(ok<rows.length) alert(`${ok} பதிவுகள் மட்டும் சேமிக்கப்பட்டன. போதுமான பேலன்ஸ் இல்லாத செலவுகள் சேமிக்கப்படவில்லை.`);
